@@ -49,7 +49,7 @@ def upgrade() -> None:
         sa.Column("abandonment_risk", sa.Float),
         sa.Column("friction_score", sa.Float),
         sa.Column("intent_label", sa.String(32)),
-        sa.Column("country_code", sa.String(2)),
+        sa.Column("country_code", sa.CHAR(2)),
         sa.Column("device_type", sa.String(16)),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("outcome IN ('purchase','abandon','unknown')", name="ck_sessions_outcome"),
@@ -138,7 +138,7 @@ def upgrade() -> None:
     op.create_index("idx_sessions_risk", "sessions", ["merchant_id", sa.text("abandonment_risk DESC")])
 
     # Events: session detail and feature extraction
-    op.create_index("idx_events_session_ts", "events", ["session_id", sa.text("ts")])
+    op.create_index("idx_events_session_ts", "events", ["session_id", "ts"])
 
     # Experiments: merchant history and semantic search
     op.create_index("idx_experiments_merchant", "experiments", ["merchant_id", sa.text("ran_at DESC")])

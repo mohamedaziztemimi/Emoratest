@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Float, String, Text
+from sqlalchemy import CHAR, CheckConstraint, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,6 +28,7 @@ class Session(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     merchant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
+        ForeignKey("merchants.id", ondelete="CASCADE"),
         nullable=False,
     )
     page_url: Mapped[str] = mapped_column(Text, nullable=False)
@@ -41,7 +42,7 @@ class Session(Base):
     abandonment_risk: Mapped[float | None] = mapped_column(Float)
     friction_score: Mapped[float | None] = mapped_column(Float)
     intent_label: Mapped[str | None] = mapped_column(String(32))
-    country_code: Mapped[str | None] = mapped_column(String(2))
+    country_code: Mapped[str | None] = mapped_column(CHAR(2))
     device_type: Mapped[str | None] = mapped_column(String(16))
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

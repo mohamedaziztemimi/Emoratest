@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,7 +12,9 @@ class SessionFeatures(Base):
     __tablename__ = "session_features"
 
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     hesitation_score: Mapped[float | None] = mapped_column(Float)
     price_dwell_time_s: Mapped[float | None] = mapped_column(Float)

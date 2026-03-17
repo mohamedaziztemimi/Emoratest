@@ -1,4 +1,4 @@
-.PHONY: help install install-backend install-ml install-frontend lint lint-backend lint-ml lint-frontend format format-backend format-ml test test-backend test-ml dev-backend dev-frontend
+.PHONY: help install install-backend install-ml install-frontend lint lint-backend lint-ml lint-frontend format format-backend format-ml test test-backend test-ml dev-backend dev-frontend migrate migration
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -48,6 +48,14 @@ test-backend: ## Run backend tests
 
 test-ml: ## Run ML tests
 	cd ml && pytest -v
+
+# ── Database ─────────────────────────────────────────────
+
+migrate: ## Run Alembic migrations to latest
+	cd backend && alembic upgrade head
+
+migration: ## Create new Alembic migration (usage: make migration msg="description")
+	cd backend && alembic revision --autogenerate -m "$(msg)"
 
 # ── Dev servers ──────────────────────────────────────────
 
