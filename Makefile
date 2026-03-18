@@ -57,6 +57,9 @@ migrate: ## Run Alembic migrations to latest
 migration: ## Create new Alembic migration (usage: make migration msg="description")
 	cd backend && alembic revision --autogenerate -m "$(msg)"
 
+seed: ## Seed database with 5k labeled sessions for ML training (CONV-16)
+	cd backend && python -m scripts.seed_sessions
+
 # ── Dev servers ──────────────────────────────────────────
 
 dev-backend: ## Start backend dev server

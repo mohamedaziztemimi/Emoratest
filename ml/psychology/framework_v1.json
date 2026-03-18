@@ -1,0 +1,231 @@
+{
+  "version": "1.0",
+  "description": "Conversiono Psychology Framework — maps behavioral features to psychological states and interventions",
+  "states": [
+    {
+      "id": "loss_aversion",
+      "label": "Loss Aversion",
+      "description": "User perceives potential loss as more painful than equivalent gain. Manifests as prolonged price inspection and hesitation at checkout — the user wants the product but fears making a bad financial decision.",
+      "academic_basis": "Kahneman & Tversky, Prospect Theory (1979)",
+      "trigger_features": {
+        "checkout_hesitation_s": { "operator": ">=", "threshold": 15.0 },
+        "price_dwell_time_s": { "operator": ">=", "threshold": 10.0 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.85,
+      "interventions": [
+        {
+          "id": "money_back_guarantee",
+          "type": "trust_signal",
+          "message": "30-day money-back guarantee — no questions asked",
+          "placement": "near_price",
+          "expected_lift": 0.12
+        },
+        {
+          "id": "loss_frame_discount",
+          "type": "urgency",
+          "message": "This price expires in {countdown} — save {amount} today",
+          "placement": "sticky_bar",
+          "expected_lift": 0.18
+        }
+      ]
+    },
+    {
+      "id": "decision_fatigue",
+      "label": "Decision Fatigue",
+      "description": "Extended browsing with repeated direction changes indicates cognitive overload. The user has been evaluating too many options and their decision-making quality is degrading.",
+      "academic_basis": "Baumeister et al., Ego Depletion (1998); Iyengar & Lepper, Choice Overload (2000)",
+      "trigger_features": {
+        "session_duration_s": { "operator": ">=", "threshold": 300.0 },
+        "scroll_retreat_count": { "operator": ">=", "threshold": 5 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.70,
+      "interventions": [
+        {
+          "id": "simplify_choices",
+          "type": "ux_modification",
+          "message": "Most popular choice: {product_name} — chosen by {pct}% of shoppers",
+          "placement": "product_grid",
+          "expected_lift": 0.15
+        },
+        {
+          "id": "comparison_assist",
+          "type": "content",
+          "message": "Not sure which to pick? Compare your top 3 side by side",
+          "placement": "floating_widget",
+          "expected_lift": 0.10
+        }
+      ]
+    },
+    {
+      "id": "decision_uncertainty",
+      "label": "Decision Uncertainty",
+      "description": "User shows interest but cannot commit — hovering over action buttons without clicking, scrolling back to re-read details. They need more information or social validation to feel confident.",
+      "academic_basis": "Festinger, Cognitive Dissonance (1957); Cialdini, Social Proof (1984)",
+      "trigger_features": {
+        "hesitation_score": { "operator": ">=", "threshold": 0.4 },
+        "scroll_retreat_count": { "operator": ">=", "threshold": 3 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.65,
+      "interventions": [
+        {
+          "id": "social_proof",
+          "type": "trust_signal",
+          "message": "{count} people bought this in the last 24 hours",
+          "placement": "below_cta",
+          "expected_lift": 0.14
+        },
+        {
+          "id": "review_highlight",
+          "type": "content",
+          "message": "Top review: \"{review_snippet}\" — {reviewer_name}",
+          "placement": "product_detail",
+          "expected_lift": 0.11
+        }
+      ]
+    },
+    {
+      "id": "ui_frustration",
+      "label": "UI Frustration",
+      "description": "Rapid repeated clicks on the same area and erratic mouse movement indicate the user is fighting the interface. Something is broken, unresponsive, or confusing.",
+      "academic_basis": "Nielsen, Usability Heuristics (1994); Ceaparu et al., Frustration with Technology (2004)",
+      "trigger_features": {
+        "rage_click_score": { "operator": ">=", "threshold": 0.3 },
+        "velocity_variance": { "operator": ">=", "threshold": 100000.0 }
+      },
+      "trigger_logic": "ANY",
+      "severity_weight": 0.90,
+      "interventions": [
+        {
+          "id": "live_help",
+          "type": "support",
+          "message": "Having trouble? Chat with us — we're here to help",
+          "placement": "bottom_right",
+          "expected_lift": 0.20
+        },
+        {
+          "id": "report_issue",
+          "type": "feedback",
+          "message": "Something not working? Let us know and get 10% off",
+          "placement": "modal",
+          "expected_lift": 0.08
+        }
+      ]
+    },
+    {
+      "id": "abandonment_intent",
+      "label": "Abandonment Intent",
+      "description": "User is actively trying to leave — mouse moving toward browser controls, switching tabs, or triggering back navigation. This is the last chance to retain them.",
+      "academic_basis": "Weinberg, Exit Intent Detection (2013); Park & Fader, Customer Retention Models (2004)",
+      "trigger_features": {
+        "exit_intent_count": { "operator": ">=", "threshold": 2 },
+        "session_duration_s": { "operator": "<=", "threshold": 120.0 }
+      },
+      "trigger_logic": "ANY",
+      "severity_weight": 0.95,
+      "interventions": [
+        {
+          "id": "exit_discount",
+          "type": "incentive",
+          "message": "Wait — here's {discount}% off your order. Use code {code}",
+          "placement": "exit_intent_modal",
+          "expected_lift": 0.22
+        },
+        {
+          "id": "save_cart",
+          "type": "retention",
+          "message": "We'll save your cart — enter your email to pick up where you left off",
+          "placement": "exit_intent_modal",
+          "expected_lift": 0.09
+        }
+      ]
+    },
+    {
+      "id": "trust_gap",
+      "label": "Trust Gap",
+      "description": "User is interested in purchasing but does not feel safe completing the transaction. They spend excessive time on price and payment details, looking for reasons to trust or distrust the store.",
+      "academic_basis": "McKnight et al., Trust in E-Commerce (2002); Kim et al., Online Consumer Trust (2008)",
+      "trigger_features": {
+        "price_dwell_time_s": { "operator": ">=", "threshold": 8.0 },
+        "checkout_hesitation_s": { "operator": ">=", "threshold": 20.0 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.80,
+      "interventions": [
+        {
+          "id": "security_badges",
+          "type": "trust_signal",
+          "message": "Secure checkout — SSL encrypted, PCI compliant",
+          "placement": "payment_form",
+          "expected_lift": 0.13
+        },
+        {
+          "id": "trust_reviews",
+          "type": "trust_signal",
+          "message": "Rated {rating}/5 by {count} verified buyers on {platform}",
+          "placement": "below_price",
+          "expected_lift": 0.16
+        }
+      ]
+    },
+    {
+      "id": "price_shock",
+      "label": "Price Shock",
+      "description": "User is fixated on pricing but not progressing toward checkout. The price is higher than their mental anchor — they expected it to cost less and are now reconsidering.",
+      "academic_basis": "Thaler, Mental Accounting (1985); Ariely, Predictably Irrational — Anchoring Effect (2008)",
+      "trigger_features": {
+        "price_dwell_time_s": { "operator": ">=", "threshold": 15.0 },
+        "checkout_hesitation_s": { "operator": "<=", "threshold": 5.0 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.75,
+      "interventions": [
+        {
+          "id": "value_reframe",
+          "type": "content",
+          "message": "That's only {daily_cost}/day — less than a coffee",
+          "placement": "near_price",
+          "expected_lift": 0.14
+        },
+        {
+          "id": "installment_offer",
+          "type": "payment",
+          "message": "Split into {n} payments of {amount} — 0% interest",
+          "placement": "below_price",
+          "expected_lift": 0.19
+        }
+      ]
+    },
+    {
+      "id": "approach_avoidance",
+      "label": "Approach-Avoidance Conflict",
+      "description": "User oscillates between buying signals (adding to cart, clicking CTA) and retreat signals (hesitating, scrolling back). They want the product but an unresolved concern is holding them back.",
+      "academic_basis": "Lewin, Approach-Avoidance Conflict (1935); Miller, Goal Gradient Hypothesis (1944)",
+      "trigger_features": {
+        "hesitation_score": { "operator": ">=", "threshold": 0.3 },
+        "exit_intent_count": { "operator": ">=", "threshold": 1 },
+        "scroll_retreat_count": { "operator": ">=", "threshold": 2 }
+      },
+      "trigger_logic": "ALL",
+      "severity_weight": 0.72,
+      "interventions": [
+        {
+          "id": "faq_nudge",
+          "type": "content",
+          "message": "Common question: \"{faq_question}\" — {faq_answer}",
+          "placement": "floating_widget",
+          "expected_lift": 0.10
+        },
+        {
+          "id": "low_risk_trial",
+          "type": "incentive",
+          "message": "Try it risk-free — free returns within {days} days",
+          "placement": "below_cta",
+          "expected_lift": 0.17
+        }
+      ]
+    }
+  ]
+}

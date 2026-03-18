@@ -127,9 +127,9 @@ def upgrade() -> None:
     )
 
     # ── pgvector extension + embedding column ──────────────────────
-    # pgvector must be enabled in Supabase (Extensions dashboard)
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
-    op.add_column("experiments", sa.Column("embedding", sa.literal_column("vector(384)")))
+    op.execute("CREATE SCHEMA IF NOT EXISTS extensions")
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector SCHEMA extensions")
+    op.execute("ALTER TABLE experiments ADD COLUMN embedding extensions.vector(384)")
 
     # ── Indexes (Section 4.2) ──────────────────────────────────────
     # Sessions: merchant dashboard queries
@@ -147,7 +147,7 @@ def upgrade() -> None:
     # ivfflat index for pgvector semantic search
     op.execute(
         "CREATE INDEX idx_experiments_embed ON experiments "
-        "USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)"
+        "USING ivfflat (embedding extensions.vector_cosine_ops) WITH (lists = 100)"
     )
 
 
@@ -167,4 +167,5 @@ def downgrade() -> None:
     op.drop_table("sessions")
     op.drop_table("merchants")
 
-    op.execute("DROP EXTENSION IF EXISTS vector")
+    op.execute("DROP EXTENSION IF EXISTS vector CASCADE")
+    op.execute("DROP SCHEMA IF EXISTS extensions")

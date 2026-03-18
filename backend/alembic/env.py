@@ -17,7 +17,8 @@ import app.models.experiment  # noqa: F401
 import app.models.intervention_result  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Escape % for configparser interpolation
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
