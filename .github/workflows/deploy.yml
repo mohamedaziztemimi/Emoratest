@@ -1,4 +1,4 @@
-name: CI / Deploy
+name: CI
 
 on:
   push:
@@ -53,42 +53,33 @@ jobs:
       - name: Pytest — ML
         run: cd ml && pytest -v --tb=short || [ $? -eq 5 ] && echo "No ML tests yet — skipping"
 
-  # ── Job 2: Deploy to staging (auto on staging branch) ───
-  deploy-staging:
-    name: Deploy → Staging
-    needs: test
-    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    environment: staging
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway staging
-        run: railway up --service ${{ vars.RAILWAY_SERVICE_ID }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
-
-  # ── Job 3: Deploy to production (manual approval on main)
-  deploy-production:
-    name: Deploy → Production
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    environment: production
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway production
-        run: railway up --service ${{ vars.RAILWAY_SERVICE_ID }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+  # ── Deploy jobs disabled until Railway is configured (Sprint 7) ───
+  # deploy-staging:
+  #   name: Deploy → Staging
+  #   needs: test
+  #   if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   environment: staging
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Railway CLI
+  #       run: npm install -g @railway/cli
+  #     - name: Deploy to Railway staging
+  #       run: railway up --service ${{ vars.RAILWAY_SERVICE_ID }}
+  #       env:
+  #         RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+  #
+  # deploy-production:
+  #   name: Deploy → Production
+  #   needs: test
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Railway CLI
+  #       run: npm install -g @railway/cli
+  #     - name: Deploy to Railway production
+  #       run: railway up --service ${{ vars.RAILWAY_SERVICE_ID }}
+  #       env:
+  #         RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
