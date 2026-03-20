@@ -14,6 +14,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
+import shap
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -95,12 +96,23 @@ def train(database_url: str | None = None) -> dict:
     print(f"  Accuracy: {accuracy:.4f}")
     print(f"\n{report}")
 
-    # 6. Save model
+    # 6. Build SHAP explainer (CONV-23)
+    print("Building SHAP TreeExplainer...")
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_test[:5])
+    print(f"  SHAP values shape: {np.array(shap_values).shape}")
+
+    # 7. Save model + SHAP explainer
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     model_path = ARTIFACTS_DIR / "predictor_v1.pkl"
     with open(model_path, "wb") as f:
         pickle.dump(model, f)
     print(f"  Model saved: {model_path}")
+
+    shap_path = ARTIFACTS_DIR / "predictor_v1_shap.pkl"
+    with open(shap_path, "wb") as f:
+        pickle.dump(explainer, f)
+    print(f"  SHAP explainer saved: {shap_path}")
 
     # Also save feature names for inference
     meta_path = ARTIFACTS_DIR / "predictor_v1_meta.pkl"
@@ -114,6 +126,7 @@ def train(database_url: str | None = None) -> dict:
         "accuracy": accuracy,
         "classification_report": report,
         "model_path": str(model_path),
+        "shap_path": str(shap_path),
         "best_iteration": model.best_iteration,
     }
 
