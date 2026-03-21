@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.security import sanitize_text
 from app.models.experiment import Experiment
 from app.schemas.experiments import (
@@ -60,7 +61,9 @@ def _experiment_to_out(exp: Experiment) -> ExperimentOut:
 
 
 @router.post("", response_model=ExperimentOut, status_code=201)
+@limiter.limit("100/minute")
 async def create_experiment(
+    request: Request,
     body: ExperimentCreateRequest,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -90,7 +93,9 @@ async def create_experiment(
 
 
 @router.get("", response_model=ExperimentListResponse)
+@limiter.limit("100/minute")
 async def list_experiments(
+    request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     friction_type: str | None = Query(
@@ -135,7 +140,9 @@ async def list_experiments(
 
 
 @router.get("/{experiment_id}", response_model=ExperimentOut)
+@limiter.limit("100/minute")
 async def get_experiment(
+    request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -162,7 +169,9 @@ async def get_experiment(
 
 
 @router.put("/{experiment_id}", response_model=ExperimentOut)
+@limiter.limit("100/minute")
 async def update_experiment(
+    request: Request,
     experiment_id: str,
     body: ExperimentUpdateRequest,
     db: AsyncSession = Depends(get_db),
@@ -223,7 +232,9 @@ async def update_experiment(
 
 
 @router.delete("/{experiment_id}", status_code=204)
+@limiter.limit("100/minute")
 async def delete_experiment(
+    request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -251,7 +262,9 @@ async def delete_experiment(
 
 
 @router.post("/{experiment_id}/result", response_model=ExperimentOut)
+@limiter.limit("100/minute")
 async def record_ab_result(
+    request: Request,
     experiment_id: str,
     body: ABResultRecordRequest,
     db: AsyncSession = Depends(get_db),
@@ -290,7 +303,9 @@ async def record_ab_result(
 
 
 @router.get("/{experiment_id}/stats", response_model=ABStatisticalSummary)
+@limiter.limit("100/minute")
 async def get_experiment_stats(
+    request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),

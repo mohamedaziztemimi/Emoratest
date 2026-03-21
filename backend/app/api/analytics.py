@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.session import Session
 from app.schemas.analytics import (
     CohortAnalyticsResponse,
@@ -32,7 +33,9 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
 @router.get("/cohorts", response_model=CohortAnalyticsResponse)
+@limiter.limit("200/minute")
 async def get_cohort_analytics(
+    request: Request,
     dimension: str = Query(
         ..., pattern=r"^(device_type|country_code|outcome|intent_label)$",
         description="Dimension to segment sessions by",
@@ -131,7 +134,9 @@ async def get_cohort_analytics(
 
 
 @router.get("/risk-distribution", response_model=RiskDistributionResponse)
+@limiter.limit("200/minute")
 async def get_risk_distribution(
+    request: Request,
     buckets_count: int = Query(10, ge=2, le=20, alias="buckets"),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),

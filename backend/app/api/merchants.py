@@ -14,12 +14,13 @@ import hashlib
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.experiment import Experiment
 from app.models.merchant import Merchant
@@ -47,6 +48,22 @@ class KeyRotationResponse(BaseModel):
     rotated_at: datetime
 
 
+class MerchantCreateRequest(BaseModel):
+    email: EmailStr
+    shop_domain: str
+    plan: str = "free"
+
+
+class MerchantCreateResponse(BaseModel):
+    id: str
+    email: str
+    shop_domain: str
+    plan: str
+    sdk_key: str
+    message: str
+    created_at: datetime
+
+
 class UsageSummary(BaseModel):
     total_sessions: int
     total_events: int
@@ -56,11 +73,73 @@ class UsageSummary(BaseModel):
     checked_at: datetime
 
 
+# ── POST / — create merchant + issue initial SDK key (CONV-43) ────
+
+
+@router.post("", response_model=MerchantCreateResponse, status_code=201)
+@limiter.limit("10/minute")
+async def create_merchant(
+    request: Request,
+    body: MerchantCreateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new merchant and issue their first SDK key.
+
+    The raw SDK key is returned ONCE — it cannot be retrieved again.
+    The database stores only the SHA-256 hash.
+    """
+    # Check if email already exists
+    existing = await db.execute(
+        select(Merchant).where(Merchant.email == body.email)
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="A merchant with this email already exists")
+
+    # Check if shop_domain already exists
+    existing_domain = await db.execute(
+        select(Merchant).where(Merchant.shop_domain == body.shop_domain)
+    )
+    if existing_domain.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="A merchant with this shop domain already exists")
+
+    # Generate SDK key
+    raw_key = secrets.token_hex(32)
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    now = datetime.now(UTC)
+
+    merchant = Merchant(
+        email=body.email,
+        shop_domain=body.shop_domain,
+        plan=body.plan,
+        sdk_key_hash=key_hash,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+    db.add(merchant)
+    await db.commit()
+    await db.refresh(merchant)
+
+    return MerchantCreateResponse(
+        id=str(merchant.id),
+        email=merchant.email,
+        shop_domain=merchant.shop_domain,
+        plan=merchant.plan,
+        sdk_key=raw_key,
+        message="Merchant created. Store the SDK key securely — it cannot be retrieved again.",
+        created_at=merchant.created_at,
+    )
+
+
 # ── GET /me ───────────────────────────────────────────────────────
 
 
 @router.get("/me", response_model=MerchantProfile)
+@limiter.limit("50/minute")
 async def get_merchant_profile(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):
@@ -81,7 +160,9 @@ async def get_merchant_profile(
 
 
 @router.post("/rotate-key", response_model=KeyRotationResponse)
+@limiter.limit("50/minute")
 async def rotate_sdk_key(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):
@@ -118,7 +199,9 @@ async def rotate_sdk_key(
 
 
 @router.get("/usage", response_model=UsageSummary)
+@limiter.limit("50/minute")
 async def get_usage_summary(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):

@@ -12,11 +12,12 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.session import Session
 from app.schemas.sdk import (
@@ -34,7 +35,9 @@ router = APIRouter(tags=["sdk"])
 
 
 @router.post("/sessions", response_model=SessionCreateResponse)
+@limiter.limit("2000/minute")
 async def create_session(
+    request: Request,
     body: SessionCreateRequest,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -63,7 +66,9 @@ async def create_session(
 
 
 @router.put("/sessions/{session_id}/end")
+@limiter.limit("2000/minute")
 async def end_session(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -96,7 +101,9 @@ async def end_session(
 
 
 @router.put("/sessions/{session_id}/outcome")
+@limiter.limit("2000/minute")
 async def update_outcome(
+    request: Request,
     session_id: str,
     body: SessionOutcomeRequest,
     db: AsyncSession = Depends(get_db),
@@ -127,7 +134,9 @@ async def update_outcome(
 
 
 @router.post("/events/batch")
+@limiter.limit("2000/minute")
 async def ingest_events(
+    request: Request,
     body: EventBatchRequest,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),

@@ -17,6 +17,7 @@ Security:
     - Merchant can only subscribe to their own sessions
     - Connection auto-closes after 30 minutes idle
     - Max 10 subscribed sessions per connection
+    - Max 5 concurrent connections per merchant
 """
 
 from __future__ import annotations
@@ -39,12 +40,14 @@ logger = logging.getLogger("conversiono.ws")
 
 router = APIRouter(tags=["websocket"])
 
-# In-memory registry of active connections
+# In-memory registry of active connections (protected by _lock)
 # Maps merchant_id -> list of (websocket, subscribed_session_ids)
 _connections: dict[str, list[tuple[WebSocket, set[str]]]] = {}
+_lock = asyncio.Lock()
 
 # Limits
 MAX_SUBSCRIPTIONS_PER_CONNECTION = 10
+MAX_CONNECTIONS_PER_MERCHANT = 5
 IDLE_TIMEOUT_S = 1800  # 30 minutes
 HEARTBEAT_INTERVAL_S = 30
 
@@ -65,21 +68,36 @@ async def _validate_session_ownership(
     merchant_id: uuid.UUID, session_ids: list[str]
 ) -> list[str]:
     """Return only session IDs that belong to the merchant."""
-    valid = []
+    if not session_ids:
+        return []
+    valid_uuids = []
+    for sid_str in session_ids:
+        try:
+            valid_uuids.append(uuid.UUID(sid_str))
+        except ValueError:
+            continue
+
+    if not valid_uuids:
+        return []
+
     async with async_session() as db:
-        for sid_str in session_ids:
-            try:
-                sid = uuid.UUID(sid_str)
-            except ValueError:
-                continue
-            result = await db.execute(
-                select(Session.id).where(
-                    Session.id == sid, Session.merchant_id == merchant_id
-                )
+        result = await db.execute(
+            select(Session.id).where(
+                Session.id.in_(valid_uuids),
+                Session.merchant_id == merchant_id,
             )
-            if result.scalar_one_or_none() is not None:
-                valid.append(sid_str)
-    return valid
+        )
+        return [str(row) for row in result.scalars().all()]
+
+
+async def _heartbeat(websocket: WebSocket) -> None:
+    """Send periodic heartbeat pings to keep the connection alive."""
+    try:
+        while True:
+            await asyncio.sleep(HEARTBEAT_INTERVAL_S)
+            await websocket.send_json({"action": "heartbeat", "ts": datetime.now(UTC).isoformat()})
+    except Exception:
+        pass  # Connection closed, task will be cancelled
 
 
 @router.websocket("/ws/scores")
@@ -97,15 +115,29 @@ async def websocket_scores(websocket: WebSocket):
         await websocket.close(code=4001, reason="Invalid or inactive SDK key")
         return
 
+    merchant_key = str(merchant.id)
+
+    # Check max connections per merchant
+    async with _lock:
+        existing = _connections.get(merchant_key, [])
+        if len(existing) >= MAX_CONNECTIONS_PER_MERCHANT:
+            await websocket.close(
+                code=4002, reason=f"Max {MAX_CONNECTIONS_PER_MERCHANT} connections per merchant"
+            )
+            return
+
     await websocket.accept()
 
-    merchant_key = str(merchant.id)
     subscribed_sessions: set[str] = set()
 
     # Register connection
-    if merchant_key not in _connections:
-        _connections[merchant_key] = []
-    _connections[merchant_key].append((websocket, subscribed_sessions))
+    async with _lock:
+        if merchant_key not in _connections:
+            _connections[merchant_key] = []
+        _connections[merchant_key].append((websocket, subscribed_sessions))
+
+    # Start heartbeat task
+    heartbeat_task = asyncio.create_task(_heartbeat(websocket))
 
     try:
         await websocket.send_json({
@@ -157,7 +189,7 @@ async def websocket_scores(websocket: WebSocket):
                     })
                     continue
 
-                # Validate ownership
+                # Validate ownership (batch query instead of N+1)
                 valid_ids = await _validate_session_ownership(
                     merchant.id, session_ids
                 )
@@ -185,15 +217,18 @@ async def websocket_scores(websocket: WebSocket):
     except Exception:
         logger.exception("WebSocket error for merchant %s", merchant_key)
     finally:
-        # Unregister
-        if merchant_key in _connections:
-            _connections[merchant_key] = [
-                (ws, sids)
-                for ws, sids in _connections[merchant_key]
-                if ws is not websocket
-            ]
-            if not _connections[merchant_key]:
-                del _connections[merchant_key]
+        # Cancel heartbeat
+        heartbeat_task.cancel()
+        # Unregister (thread-safe)
+        async with _lock:
+            if merchant_key in _connections:
+                _connections[merchant_key] = [
+                    (ws, sids)
+                    for ws, sids in _connections[merchant_key]
+                    if ws is not websocket
+                ]
+                if not _connections[merchant_key]:
+                    del _connections[merchant_key]
 
 
 async def broadcast_scoring_update(
@@ -204,7 +239,9 @@ async def broadcast_scoring_update(
     Called by the feature worker after ML scoring completes.
     Returns the number of clients notified.
     """
-    conns = _connections.get(merchant_id, [])
+    async with _lock:
+        conns = list(_connections.get(merchant_id, []))
+
     notified = 0
 
     payload = {

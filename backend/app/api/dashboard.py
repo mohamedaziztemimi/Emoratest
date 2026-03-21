@@ -15,11 +15,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
@@ -43,9 +44,9 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/sessions", response_model=SessionListResponse)
-
+@limiter.limit("200/minute")
 async def list_sessions(
-
+    request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     outcome: str | None = Query(None, pattern=r"^(purchase|abandon|unknown)$"),
@@ -113,9 +114,9 @@ async def list_sessions(
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
-
+@limiter.limit("200/minute")
 async def get_session_detail(
-
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -194,9 +195,9 @@ async def get_session_detail(
 
 
 @router.get("/analytics/friction-map", response_model=FrictionMapResponse)
-
+@limiter.limit("200/minute")
 async def get_friction_map(
-
+    request: Request,
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
@@ -220,7 +221,7 @@ async def get_friction_map(
     if date_to:
         session_ids = session_ids.where(Session.started_at <= date_to)
 
-    # Aggregate events by element_id
+    # Single aggregation query — no N+1 (CONV-44)
     query = (
         select(
             Event.element_id,
@@ -229,10 +230,14 @@ async def get_friction_map(
                 case((Event.type == "click", 1))
             ).label("click_count"),
             func.count(
-                case(
-                    (Event.type == "mouse_move", 1),
-                )
-            ).label("mouse_count"),
+                case((
+                    (Event.type == "click") & (Event.metadata_.isnot(None)),
+                    1,
+                ))
+            ).label("rage_click_count"),
+            func.avg(
+                case((Event.velocity.isnot(None), Event.velocity))
+            ).label("avg_velocity"),
         )
         .where(
             Event.session_id.in_(session_ids),
@@ -246,45 +251,19 @@ async def get_friction_map(
     result = await db.execute(query)
     rows = result.all()
 
-    elements = []
+    elements: list[FrictionMapItem] = []
     for row in rows:
-        element_id = row.element_id
-        event_count = row.event_count
-        click_count = row.click_count
-
-        # Calculate rage click rate from metadata
-        rage_query = (
-            select(func.count())
-            .where(
-                Event.session_id.in_(session_ids),
-                Event.element_id == element_id,
-                Event.type == "click",
-                Event.metadata_.isnot(None),
-            )
-        )
-        rage_result = await db.execute(rage_query)
-        rage_count = rage_result.scalar() or 0
-
+        click_count = row.click_count or 0
+        rage_count = row.rage_click_count or 0
         rage_rate = rage_count / click_count if click_count > 0 else 0.0
-
-        # Avg hesitation: average velocity on this element (lower = more hesitation)
-        avg_vel_query = (
-            select(func.avg(Event.velocity))
-            .where(
-                Event.session_id.in_(session_ids),
-                Event.element_id == element_id,
-                Event.velocity.isnot(None),
-            )
-        )
-        avg_vel_result = await db.execute(avg_vel_query)
-        avg_velocity = avg_vel_result.scalar() or 0.0
+        avg_velocity = float(row.avg_velocity) if row.avg_velocity is not None else 0.0
         # Invert: low velocity = high hesitation. Normalize to 0-1 scale.
         avg_hesitation = min(1.0, 1.0 / (1.0 + avg_velocity / 100.0))
 
         elements.append(
             FrictionMapItem(
-                element_id=element_id,
-                event_count=event_count,
+                element_id=row.element_id,
+                event_count=row.event_count,
                 avg_hesitation=round(avg_hesitation, 4),
                 click_count=click_count,
                 rage_click_count=rage_count,
@@ -304,9 +283,9 @@ async def get_friction_map(
 
 
 @router.get("/analytics/funnel", response_model=FunnelResponse)
-
+@limiter.limit("200/minute")
 async def get_funnel(
-
+    request: Request,
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
     db: AsyncSession = Depends(get_db),

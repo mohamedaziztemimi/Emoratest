@@ -13,11 +13,12 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.intervention_result import InterventionResult
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
@@ -38,7 +39,9 @@ router = APIRouter(prefix="/interventions", tags=["interventions"])
 
 
 @router.get("/recommend/{session_id}", response_model=SessionInterventionsResponse)
+@limiter.limit("300/minute")
 async def get_recommendations(
+    request: Request,
     session_id: str,
     max_results: int = Query(3, ge=1, le=8),
     db: AsyncSession = Depends(get_db),
@@ -105,7 +108,9 @@ async def get_recommendations(
 
 
 @router.post("/record", response_model=InterventionResultOut, status_code=201)
+@limiter.limit("300/minute")
 async def record_intervention_result(
+    request: Request,
     body: InterventionResultRecordRequest,
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
@@ -163,7 +168,9 @@ async def record_intervention_result(
 
 
 @router.get("/stats", response_model=list[InterventionStatsResponse])
+@limiter.limit("300/minute")
 async def get_intervention_stats(
+    request: Request,
     intervention_id: str | None = Query(None, max_length=16),
     db: AsyncSession = Depends(get_db),
     sdk_key_hash: str = Depends(get_sdk_key_header),
