@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* ── Primitive & Semantic Design Tokens ──────────────────── */
+:root {
+  --background: 0 0% 98%;
+  --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --primary: 152 52% 51%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 150 30% 95%;
+  --secondary-foreground: 152 30% 35%;
+  --muted: 150 20% 96%;
+  --muted-foreground: 200 10% 46%;
+  --accent: 152 40% 93%;
+  --accent-foreground: 152 52% 40%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 45 100% 51%;
+  --warning-foreground: 0 0% 20%;
+  --border: 150 15% 90%;
+  --input: 150 15% 90%;
+  --ring: 152 52% 51%;
+  --radius: 0.75rem;
+  --sidebar-width: 272px;
+  --header-height: 64px;
+}
+
+.dark {
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+  --card: 224 50% 8%;
+  --card-foreground: 210 20% 98%;
+  --popover: 224 50% 8%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 152 52% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 160 20% 15%;
+  --secondary-foreground: 150 20% 80%;
+  --muted: 160 20% 15%;
+  --muted-foreground: 160 10% 60%;
+  --accent: 152 30% 18%;
+  --accent-foreground: 152 52% 70%;
+  --destructive: 0 63% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 45 100% 51%;
+  --warning-foreground: 0 0% 20%;
+  --border: 160 20% 15%;
+  --input: 160 20% 15%;
+  --ring: 152 52% 58%;
+}
+
+/* ── Base Styles ─────────────────────────────────────────── */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ── Utility Layer ───────────────────────────────────────── */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
