@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.database import get_db
@@ -29,20 +30,23 @@ def make_merchant() -> MagicMock:
     return m
 
 
-# Mock DB
-mock_db = AsyncMock()
-mock_db.add = MagicMock()
-mock_db.add_all = MagicMock()
-mock_db.commit = AsyncMock()
-mock_db.execute = AsyncMock()
+@pytest.fixture(autouse=True)
+def _reset_mock_db():
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+    mock_db.add_all = MagicMock()
+    mock_db.commit = AsyncMock()
+    mock_db.execute = AsyncMock()
+
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    _reset_mock_db.db = mock_db
+    yield
 
 
-async def override_get_db():
-    yield mock_db
-
-
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 # Patch path for authenticate_sdk_key (it's called in app.api.sdk)
 AUTH_PATCH = "app.api.sdk.authenticate_sdk_key"
@@ -113,9 +117,10 @@ class TestEndSession:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_end_session_success(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.put(
             f"/api/v1/sessions/{uuid.uuid4()}/end",
@@ -126,9 +131,10 @@ class TestEndSession:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_end_session_not_found(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.put(
             f"/api/v1/sessions/{uuid.uuid4()}/end",
@@ -151,9 +157,10 @@ class TestEndSession:
 class TestUpdateOutcome:
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_outcome_purchase(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.put(
             f"/api/v1/sessions/{uuid.uuid4()}/outcome",
@@ -165,9 +172,10 @@ class TestUpdateOutcome:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_outcome_abandon(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.put(
             f"/api/v1/sessions/{uuid.uuid4()}/outcome",
@@ -199,9 +207,10 @@ class TestUpdateOutcome:
 class TestIngestEvents:
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_batch_success(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.post(
             "/api/v1/events/batch",
@@ -224,9 +233,10 @@ class TestIngestEvents:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_batch_all_event_types(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         events = [
             {"type": "mouse_move", "ts": "2026-01-01T00:00:00Z", "x": 10, "y": 20, "velocity": 1.5},
@@ -283,9 +293,10 @@ class TestIngestEvents:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_batch_session_not_found(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.post(
             "/api/v1/events/batch",
@@ -342,9 +353,10 @@ class TestSchemaValidation:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_event_metadata_dict(self, mock_auth):
+        db = _reset_mock_db.db
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = uuid.uuid4()
-        mock_db.execute.return_value = mock_result
+        db.execute = AsyncMock(return_value=mock_result)
 
         response = client.post(
             "/api/v1/events/batch",

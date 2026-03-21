@@ -27,7 +27,7 @@ from app.schemas.sdk import (
 )
 from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
-router = APIRouter()
+router = APIRouter(tags=["sdk"])
 
 
 # ── Session endpoints ──────────────────────────────────────────
@@ -86,6 +86,12 @@ async def end_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     await db.commit()
+
+    # Session ended — trigger full ML scoring pipeline (CONV-35)
+    from app.services.feature_worker import enqueue_session_processing
+
+    enqueue_session_processing(session_id)
+
     return {"status": "ended"}
 
 
@@ -160,5 +166,10 @@ async def ingest_events(
 
     db.add_all(events)
     await db.commit()
+
+    # Enqueue background feature processing (CONV-34)
+    from app.services.feature_worker import enqueue_session_processing
+
+    enqueue_session_processing(body.session_id)
 
     return {"status": "ok", "count": len(events)}
