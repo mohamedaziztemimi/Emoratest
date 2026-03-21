@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
 import { fetchSessions, type SessionFilters } from "@/lib/api";
@@ -19,14 +19,13 @@ export default function SessionsPage() {
     page_size: PAGE_SIZE,
   });
 
-  const { data, error, loading, refetch } = useQuery(
-    useCallback(() => fetchSessions(filters), [filters]),
-    [JSON.stringify(filters)]
-  );
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const fetcher = useCallback(() => fetchSessions(filters), [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data, error, loading, refetch } = useQuery(fetcher, [filtersKey], `sessions-${filtersKey}`);
 
-  function setFilter<K extends keyof SessionFilters>(key: K, value: SessionFilters[K]) {
+  const setFilter = useCallback(<K extends keyof SessionFilters>(key: K, value: SessionFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
-  }
+  }, []);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -46,23 +45,13 @@ export default function SessionsPage() {
             label="Outcome"
             value={filters.outcome || ""}
             onChange={(v) => setFilter("outcome", v || undefined)}
-            options={[
-              { value: "", label: "All" },
-              { value: "purchase", label: "Purchase" },
-              { value: "abandon", label: "Abandon" },
-              { value: "browse", label: "Browse" },
-            ]}
+            options={OUTCOME_OPTIONS}
           />
           <FilterSelect
             label="Device"
             value={filters.device_type || ""}
             onChange={(v) => setFilter("device_type", v || undefined)}
-            options={[
-              { value: "", label: "All" },
-              { value: "desktop", label: "Desktop" },
-              { value: "mobile", label: "Mobile" },
-              { value: "tablet", label: "Tablet" },
-            ]}
+            options={DEVICE_OPTIONS}
           />
           <FilterInput
             label="Risk min"
@@ -173,8 +162,23 @@ export default function SessionsPage() {
   );
 }
 
-/* ── Reusable filter controls ────────────────────────────── */
-function FilterSelect({
+/* ── Constants (stable references) ─────────────────────── */
+const OUTCOME_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "purchase", label: "Purchase" },
+  { value: "abandon", label: "Abandon" },
+  { value: "browse", label: "Browse" },
+];
+
+const DEVICE_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "desktop", label: "Desktop" },
+  { value: "mobile", label: "Mobile" },
+  { value: "tablet", label: "Tablet" },
+];
+
+/* ── Memoized filter controls ──────────────────────────── */
+const FilterSelect = memo(function FilterSelect({
   label,
   value,
   onChange,
@@ -199,9 +203,9 @@ function FilterSelect({
       </select>
     </label>
   );
-}
+});
 
-function FilterInput({
+const FilterInput = memo(function FilterInput({
   label,
   type,
   value,
@@ -225,9 +229,9 @@ function FilterInput({
       />
     </label>
   );
-}
+});
 
-function PaginationBtn({
+const PaginationBtn = memo(function PaginationBtn({
   children,
   disabled,
   onClick,
@@ -245,4 +249,4 @@ function PaginationBtn({
       {children}
     </button>
   );
-}
+});

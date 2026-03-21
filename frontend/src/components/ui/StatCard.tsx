@@ -1,3 +1,4 @@
+import { memo } from "react";
 import clsx from "clsx";
 
 interface StatCardProps {
@@ -9,7 +10,7 @@ interface StatCardProps {
   className?: string;
 }
 
-export default function StatCard({ label, value, sub, trend, icon, className }: StatCardProps) {
+export default memo(function StatCard({ label, value, sub, trend, icon, className }: StatCardProps) {
   return (
     <div
       className={clsx(
@@ -18,7 +19,7 @@ export default function StatCard({ label, value, sub, trend, icon, className }: 
       )}
     >
       {/* Decorative gradient blob */}
-      <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-[hsl(var(--primary)/0.06)] transition-transform duration-300 group-hover:scale-125" />
+      <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-[hsl(var(--primary)/0.06)] transition-transform duration-300 will-change-transform group-hover:scale-125" />
 
       <div className="relative flex items-start justify-between">
         <div>
@@ -59,4 +60,4 @@ export default function StatCard({ label, value, sub, trend, icon, className }: 
       </div>
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery } from "@/lib/hooks";
 import { fetchMerchantProfile, rotateKey } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -9,18 +9,22 @@ import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 
+const profileFetcher = () => fetchMerchantProfile();
+
 export default function SettingsPage() {
-  const profile = useQuery(() => fetchMerchantProfile());
+  const profile = useQuery(profileFetcher, [], "merchant-profile");
   const [sdkKey, setSdkKey] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("conversiono_sdk_key") || "" : ""
   );
+  const [saved, setSaved] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [rotateResult, setRotateResult] = useState<string | null>(null);
 
-  function handleSaveKey() {
+  const handleSaveKey = useCallback(() => {
     localStorage.setItem("conversiono_sdk_key", sdkKey);
-    window.location.reload();
-  }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }, [sdkKey]);
 
   async function handleRotateKey() {
     if (!confirm("Rotate your SDK key? The old key will stop working immediately.")) return;
@@ -75,7 +79,7 @@ export default function SettingsPage() {
                 onClick={handleSaveKey}
                 className="rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-[13px] font-semibold text-white shadow-lg shadow-[hsl(var(--primary)/0.25)] transition-all hover:shadow-xl"
               >
-                Save
+                {saved ? "Saved!" : "Save"}
               </button>
             </div>
             <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">

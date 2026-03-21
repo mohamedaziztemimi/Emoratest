@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@/lib/hooks";
 import {
   fetchFunnel, fetchFrictionMap, fetchCohorts, fetchRiskDistribution,
@@ -13,30 +13,33 @@ import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 import Badge from "@/components/ui/Badge";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line,
-} from "recharts";
+  LazyBarChart, LazyLineChart, LazyResponsiveContainer,
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip, Line,
+  chartTooltipStyle, tickStyle,
+} from "@/components/charts/LazyRecharts";
 
 const COHORT_DIMENSIONS = ["device_type", "country_code", "outcome", "intent_label"] as const;
+const smallTickStyle = { ...tickStyle, fontSize: 10 } as const;
 
-const chartTooltipStyle = {
-  backgroundColor: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "12px",
-  fontSize: "12px",
-};
-const tickStyle = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
+const funnelFetcher = () => fetchFunnel();
+const frictionFetcher = () => fetchFrictionMap(30);
+const riskFetcher = () => fetchRiskDistribution(10);
 
 export default function AnalyticsPage() {
   const [cohortDim, setCohortDim] = useState<string>("device_type");
 
-  const funnel = useQuery(() => fetchFunnel());
-  const friction = useQuery(() => fetchFrictionMap(30));
-  const cohorts = useQuery(
-    useCallback(() => fetchCohorts(cohortDim), [cohortDim]),
-    [cohortDim]
+  const funnel = useQuery(funnelFetcher, [], "funnel");
+  const friction = useQuery(frictionFetcher, [], "friction-30");
+  const cohortFetcher = useCallback(() => fetchCohorts(cohortDim), [cohortDim]);
+  const cohorts = useQuery(cohortFetcher, [cohortDim], `cohorts-${cohortDim}`);
+  const risk = useQuery(riskFetcher, [], "risk-10");
+
+  const funnelFormatter = useMemo(() => (v: unknown) => formatNumber(v as number), []);
+  const cohortFormatter = useMemo(
+    () => (v: unknown, name?: string | number) =>
+      name === "conversion_rate" ? formatPercent(v as number) : formatNumber(v as number),
+    []
   );
-  const risk = useQuery(() => fetchRiskDistribution(10));
 
   return (
     <div className="space-y-8">
@@ -70,16 +73,16 @@ export default function AnalyticsPage() {
           {funnel.loading ? <Spinner /> : funnel.error ? (
             <ErrorBox message={funnel.error} onRetry={funnel.refetch} />
           ) : funnel.data && funnel.data.steps.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={funnel.data.steps} barSize={28}>
+            <LazyResponsiveContainer width="100%" height={300}>
+              <LazyBarChart data={funnel.data.steps} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="step" tick={tickStyle} />
                 <YAxis tick={tickStyle} />
-                <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => formatNumber(v as number)} />
+                <Tooltip contentStyle={chartTooltipStyle} formatter={funnelFormatter} />
                 <Bar dataKey="sessions" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="drop_off" fill="hsl(var(--destructive)/0.6)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+              </LazyBarChart>
+            </LazyResponsiveContainer>
           ) : <EmptyState title="No funnel data" />}
         </CardBody>
       </Card>
@@ -136,15 +139,15 @@ export default function AnalyticsPage() {
             {risk.loading ? <Spinner /> : risk.error ? (
               <ErrorBox message={risk.error} onRetry={risk.refetch} />
             ) : risk.data && risk.data.buckets.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={risk.data.buckets} barSize={24}>
+              <LazyResponsiveContainer width="100%" height={280}>
+                <LazyBarChart data={risk.data.buckets} barSize={24}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="range_label" tick={{ ...tickStyle, fontSize: 10 }} />
+                  <XAxis dataKey="range_label" tick={smallTickStyle} />
                   <YAxis tick={tickStyle} />
                   <Tooltip contentStyle={chartTooltipStyle} />
                   <Bar dataKey="session_count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                </LazyBarChart>
+              </LazyResponsiveContainer>
             ) : <EmptyState title="No risk data" />}
           </CardBody>
         </Card>
@@ -170,22 +173,17 @@ export default function AnalyticsPage() {
           {cohorts.loading ? <Spinner /> : cohorts.error ? (
             <ErrorBox message={cohorts.error} onRetry={cohorts.refetch} />
           ) : cohorts.data && cohorts.data.buckets.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={cohorts.data.buckets}>
+            <LazyResponsiveContainer width="100%" height={300}>
+              <LazyLineChart data={cohorts.data.buckets}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={tickStyle} />
                 <YAxis yAxisId="left" tick={tickStyle} />
                 <YAxis yAxisId="right" orientation="right" tick={tickStyle} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  formatter={(v, name) =>
-                    name === "conversion_rate" ? formatPercent(v as number) : formatNumber(v as number)
-                  }
-                />
+                <Tooltip contentStyle={chartTooltipStyle} formatter={cohortFormatter} />
                 <Bar yAxisId="left" dataKey="session_count" fill="hsl(var(--primary)/0.15)" />
                 <Line yAxisId="right" type="monotone" dataKey="conversion_rate" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
-              </LineChart>
-            </ResponsiveContainer>
+              </LazyLineChart>
+            </LazyResponsiveContainer>
           ) : <EmptyState title="No cohort data" />}
         </CardBody>
       </Card>

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://localhost:5432/conversiono"
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 

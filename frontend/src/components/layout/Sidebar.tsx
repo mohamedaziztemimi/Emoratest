@@ -26,6 +26,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           alt="Conversiono"
           width={30}
           height={30}
+          priority
           className="rounded-md"
         />
         <div>

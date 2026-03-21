@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, memo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
@@ -16,8 +17,10 @@ import EmptyState from "@/components/ui/EmptyState";
 
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const session = useQuery(() => fetchSessionDetail(id), [id]);
-  const interventions = useQuery(() => fetchInterventionRecs(id), [id]);
+  const sessionFetcher = useCallback(() => fetchSessionDetail(id), [id]);
+  const interventionFetcher = useCallback(() => fetchInterventionRecs(id), [id]);
+  const session = useQuery(sessionFetcher, [id], `session-${id}`);
+  const interventions = useQuery(interventionFetcher, [id], `interventions-${id}`);
 
   if (session.loading) return <Spinner />;
   if (session.error) return <ErrorBox message={session.error} onRetry={session.refetch} />;
@@ -172,7 +175,7 @@ export default function SessionDetailPage() {
   );
 }
 
-function MetricBox({ label, value, variant }: { label: string; value: string; variant?: string }) {
+const MetricBox = memo(function MetricBox({ label, value, variant }: { label: string; value: string; variant?: string }) {
   return (
     <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition-shadow hover:shadow-sm">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{label}</p>
@@ -186,13 +189,13 @@ function MetricBox({ label, value, variant }: { label: string; value: string; va
       </p>
     </div>
   );
-}
+});
 
-function Feature({ label, value }: { label: string; value: string }) {
+const Feature = memo(function Feature({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-[hsl(var(--muted-foreground))]">{label}</dt>
       <dd className="mt-0.5 font-semibold text-[hsl(var(--foreground))]">{value}</dd>
     </div>
   );
-}
+});

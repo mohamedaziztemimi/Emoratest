@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@/lib/hooks";
 import { fetchInterventionStats } from "@/lib/api";
 import { formatPercent, formatNumber } from "@/lib/format";
@@ -9,19 +10,21 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+  LazyBarChart, LazyResponsiveContainer,
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  chartTooltipStyle, tickStyle,
+} from "@/components/charts/LazyRecharts";
 
-const chartTooltipStyle = {
-  backgroundColor: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "12px",
-  fontSize: "12px",
-};
-const tickStyle = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
+const statsFetcher = () => fetchInterventionStats();
 
 export default function InterventionsPage() {
-  const { data, error, loading, refetch } = useQuery(() => fetchInterventionStats());
+  const { data, error, loading, refetch } = useQuery(statsFetcher, [], "intervention-stats");
+
+  const tooltipFormatter = useMemo(
+    () => (v: unknown, name?: string | number) =>
+      name === "conversion_rate" ? formatPercent(v as number) : formatNumber(v as number),
+    []
+  );
 
   return (
     <div className="space-y-8">
@@ -44,19 +47,19 @@ export default function InterventionsPage() {
               <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">Performance Overview</h2>
             </CardHeader>
             <CardBody>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={data} barSize={28}>
+              <LazyResponsiveContainer width="100%" height={320}>
+                <LazyBarChart data={data} barSize={28}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="intervention_id" tick={tickStyle} />
                   <YAxis tick={tickStyle} />
-                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v, name) => name === "conversion_rate" ? formatPercent(v as number) : formatNumber(v as number)} />
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={tooltipFormatter} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
                   <Bar dataKey="converted" fill="hsl(var(--success))" stackId="a" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="dismissed" fill="hsl(var(--warning))" stackId="a" />
                   <Bar dataKey="ignored" fill="hsl(var(--muted-foreground)/0.3)" stackId="a" />
                   <Bar dataKey="bounced" fill="hsl(var(--destructive))" stackId="a" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                </LazyBarChart>
+              </LazyResponsiveContainer>
             </CardBody>
           </Card>
 

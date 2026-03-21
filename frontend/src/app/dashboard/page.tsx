@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@/lib/hooks";
 import { fetchUsage, fetchFunnel, fetchRiskDistribution } from "@/lib/api";
 import { formatPercent, formatNumber } from "@/lib/format";
@@ -8,16 +9,23 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from "recharts";
+  LazyBarChart, LazyPieChart, LazyResponsiveContainer,
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip, Pie, Cell, Legend,
+  chartTooltipStyle, tickStyle,
+} from "@/components/charts/LazyRecharts";
 
 const RISK_COLORS = ["#4CAF50", "#88D4AB", "#FFD700", "#F97316", "#E53935"];
 
+const funnelFetcher = () => fetchFunnel();
+const usageFetcher = () => fetchUsage();
+const riskFetcher = () => fetchRiskDistribution(5);
+
 export default function OverviewPage() {
-  const usage = useQuery(() => fetchUsage());
-  const funnel = useQuery(() => fetchFunnel());
-  const risk = useQuery(() => fetchRiskDistribution(5));
+  const usage = useQuery(usageFetcher, [], "usage");
+  const funnel = useQuery(funnelFetcher, [], "funnel");
+  const risk = useQuery(riskFetcher, [], "risk-5");
+
+  const funnelFormatter = useMemo(() => (v: unknown) => formatNumber(v as number), []);
 
   if (usage.loading && funnel.loading) return <Spinner />;
 
@@ -109,23 +117,18 @@ export default function OverviewPage() {
             ) : funnel.error ? (
               <ErrorBox message={funnel.error} onRetry={funnel.refetch} />
             ) : funnel.data ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={funnel.data.steps} layout="vertical" barSize={20}>
+              <LazyResponsiveContainer width="100%" height={280}>
+                <LazyBarChart data={funnel.data.steps} layout="vertical" barSize={20}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis type="category" dataKey="step" width={100} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <XAxis type="number" tick={tickStyle} />
+                  <YAxis type="category" dataKey="step" width={100} tick={tickStyle} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                    }}
-                    formatter={(v) => formatNumber(v as number)}
+                    contentStyle={chartTooltipStyle}
+                    formatter={funnelFormatter}
                   />
                   <Bar dataKey="sessions" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                </LazyBarChart>
+              </LazyResponsiveContainer>
             ) : null}
           </CardBody>
         </Card>
@@ -158,8 +161,8 @@ export default function OverviewPage() {
             ) : risk.error ? (
               <ErrorBox message={risk.error} onRetry={risk.refetch} />
             ) : risk.data ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
+              <LazyResponsiveContainer width="100%" height={280}>
+                <LazyPieChart>
                   <Pie
                     data={risk.data.buckets}
                     dataKey="session_count"
@@ -180,16 +183,9 @@ export default function OverviewPage() {
                     iconSize={8}
                     wrapperStyle={{ fontSize: "11px" }}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                </LazyPieChart>
+              </LazyResponsiveContainer>
             ) : null}
           </CardBody>
         </Card>
