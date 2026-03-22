@@ -20,8 +20,6 @@ Security:
     - Max 5 concurrent connections per merchant
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging

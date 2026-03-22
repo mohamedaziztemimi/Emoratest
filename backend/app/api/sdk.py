@@ -7,8 +7,6 @@ Endpoints:
     POST   /api/v1/events/batch           — ingest a batch of events
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime, timedelta
 

@@ -13,6 +13,27 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 
+const RESULT_LABELS: Record<string, string> = {
+  winner_a: "Original Wins",
+  winner_b: "New Version Wins",
+  a_wins: "Original Wins",
+  b_wins: "New Version Wins",
+  no_significant_difference: "No Clear Winner",
+  no_diff: "No Clear Winner",
+  inconclusive: "Not Enough Data",
+};
+
+const FRICTION_LABELS: Record<string, string> = {
+  checkout_hesitation: "Checkout Hesitation",
+  price_shock: "Price Sensitivity",
+  decision_fatigue: "Too Many Choices",
+  trust_gap: "Trust Issues",
+  ui_frustration: "Confusing Interface",
+  exit_intent: "About to Leave",
+  loss_aversion: "Fear of Missing Out",
+  approach_avoidance: "Can't Decide",
+};
+
 export default function ExperimentsPage() {
   const [page, setPage] = useState(1);
   const { data, error, loading, refetch } = useQuery(() => fetchExperiments(page), [page]);
@@ -51,8 +72,8 @@ export default function ExperimentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Experiments</h1>
-          <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">Manage A/B experiments and view results</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">A/B Tests</h1>
+          <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">Test different approaches and see which one sells more</p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
@@ -101,8 +122,8 @@ function ExperimentCard({ experiment: exp, onDelete, onViewStats }: { experiment
             <h3 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">{exp.title}</h3>
             {exp.hypothesis && <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{exp.hypothesis}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {exp.friction_type && <Badge variant="outline">{exp.friction_type}</Badge>}
-              {exp.result && <Badge variant={resultVariant}>{exp.result}</Badge>}
+              {exp.friction_type && <Badge variant="outline">{FRICTION_LABELS[exp.friction_type] || exp.friction_type}</Badge>}
+              {exp.result && <Badge variant={resultVariant}>{RESULT_LABELS[exp.result] || exp.result}</Badge>}
               {exp.conversion_delta != null && (
                 <span className="text-[12px] text-[hsl(var(--muted-foreground))]">Delta: {formatPercent(exp.conversion_delta)}</span>
               )}
@@ -149,10 +170,10 @@ function StatsPanel({ stats, onClose }: { stats: ExperimentStats; onClose: () =>
           <button onClick={onClose} className="text-[12px] font-medium text-[hsl(var(--primary))] hover:underline">Close</button>
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 text-[13px] sm:grid-cols-4">
-          <StatItem label="Conv. Delta" value={formatPercent(stats.conversion_delta)} />
-          <StatItem label="p-value" value={stats.p_value?.toFixed(4) ?? "--"} />
-          <StatItem label="Significant?" value={stats.is_significant ? "Yes" : "No"} />
-          <StatItem label="Power" value={stats.power?.toFixed(2) ?? "--"} />
+          <StatItem label="Sales Difference" value={formatPercent(stats.conversion_delta)} />
+          <StatItem label="Confidence" value={stats.p_value != null ? `${Math.round((1 - stats.p_value) * 100)}%` : "--"} />
+          <StatItem label="Reliable Result?" value={stats.is_significant ? "Yes" : "Not Yet"} />
+          <StatItem label="Test Strength" value={stats.power != null ? `${Math.round(stats.power * 100)}%` : "--"} />
         </dl>
         <p className="mt-4 rounded-xl bg-[hsl(var(--card))] p-4 text-[13px] text-[hsl(var(--muted-foreground))]">{stats.recommendation}</p>
       </CardBody>
@@ -202,7 +223,7 @@ function CreateForm({ onSubmit }: { onSubmit: (f: { title: string; hypothesis?: 
             </label>
             <label className="flex flex-col gap-1.5 text-[12px]">
               <span className="font-semibold text-[hsl(var(--muted-foreground))]">Friction Type</span>
-              <input name="friction_type" maxLength={100} className={inputCls} placeholder="e.g. checkout_hesitation" />
+              <input name="friction_type" maxLength={100} className={inputCls} placeholder="e.g. checkout_hesitation, price_shock" />
             </label>
           </div>
           <label className="flex flex-col gap-1.5 text-[12px]">

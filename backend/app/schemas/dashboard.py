@@ -1,7 +1,5 @@
 """Pydantic schemas for dashboard API endpoints (CONV-37 to CONV-42)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from pydantic import BaseModel, Field

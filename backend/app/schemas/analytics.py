@@ -1,7 +1,5 @@
 """Pydantic schemas for Cohort & Segment Analytics (CONV-40)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from pydantic import BaseModel

@@ -1,7 +1,5 @@
 """Pydantic schemas for Experiment CRUD and A/B test results (CONV-38, CONV-41)."""
 
-from __future__ import annotations
-
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field

@@ -15,6 +15,39 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 
+const OUTCOME_LABELS = {
+  purchase: "Bought",
+  abandon: "Left Without Buying",
+  browse: "Browsing Only",
+  unknown: "Unknown",
+} as const;
+
+const INTENT_LABELS = {
+  browsing: "Just Browsing",
+  comparing: "Comparing Options",
+  deciding: "Ready to Decide",
+  buying: "Ready to Buy",
+  exiting: "About to Leave",
+  returning: "Returning Visitor",
+} as const;
+
+const DEVICE_LABELS = {
+  desktop: "Desktop",
+  mobile: "Mobile",
+  tablet: "Tablet",
+} as const;
+
+const FEATURE_LABELS: Record<string, { label: string; tip: string }> = {
+  hesitation_score: { label: "Decision Hesitation", tip: "How much this visitor paused before acting" },
+  price_dwell_time_s: { label: "Time Studying Price", tip: "How long they looked at pricing" },
+  rage_click_score: { label: "Frustration Level", tip: "Repeated clicks suggesting confusion or frustration" },
+  scroll_retreat_count: { label: "Back-and-Forth Scrolling", tip: "Scrolled down then back up, indicating uncertainty" },
+  exit_intent_count: { label: "Times Almost Left", tip: "Moved cursor toward closing the page" },
+  checkout_hesitation_s: { label: "Checkout Hesitation", tip: "Time spent pausing during checkout" },
+  velocity_variance: { label: "Browsing Erraticness", tip: "How erratic their navigation pattern was" },
+  session_duration_s: { label: "Time on Site", tip: "Total time spent shopping" },
+};
+
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionFetcher = useCallback(() => fetchSessionDetail(id), [id]);
@@ -46,19 +79,19 @@ export default function SessionDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">
-            Session Detail
+            Visitor Session
           </h1>
           <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{s.page_url}</p>
         </div>
-        <Badge variant={outcomeVariant(s.outcome)}>{s.outcome}</Badge>
+        <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome}</Badge>
       </div>
 
       {/* Metric boxes */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricBox label="Abandonment Risk" value={formatRisk(s.abandonment_risk)} variant={riskVariant(s.abandonment_risk)} />
-        <MetricBox label="Friction Score" value={formatPercent(s.friction_score)} />
-        <MetricBox label="Intent" value={s.intent_label || "--"} />
-        <MetricBox label="Device" value={s.device_type || "--"} />
+        <MetricBox label="Likelihood to Leave" value={formatRisk(s.abandonment_risk)} variant={riskVariant(s.abandonment_risk)} />
+        <MetricBox label="Shopping Friction" value={formatPercent(s.friction_score)} />
+        <MetricBox label="Shopping Mode" value={INTENT_LABELS[s.intent_label as keyof typeof INTENT_LABELS] || s.intent_label || "--"} />
+        <MetricBox label="Device" value={DEVICE_LABELS[s.device_type as keyof typeof DEVICE_LABELS] || s.device_type || "--"} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -66,23 +99,26 @@ export default function SessionDetailPage() {
         <Card>
           <CardHeader>
             <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
-              Behavioral Features
+              Visitor Behavior Signals
             </h2>
+            <p className="mt-0.5 text-[12px] text-[hsl(var(--muted-foreground))]">
+              What this visitor&apos;s actions reveal about their shopping experience
+            </p>
           </CardHeader>
           <CardBody>
             {f ? (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
-                <Feature label="Hesitation Score" value={formatPercent(f.hesitation_score)} />
-                <Feature label="Price Dwell Time" value={formatDuration(f.price_dwell_time_s)} />
-                <Feature label="Rage Click Score" value={formatPercent(f.rage_click_score)} />
-                <Feature label="Scroll Retreats" value={String(f.scroll_retreat_count ?? "--")} />
-                <Feature label="Exit Intent Count" value={String(f.exit_intent_count ?? "--")} />
-                <Feature label="Checkout Hesitation" value={formatDuration(f.checkout_hesitation_s)} />
-                <Feature label="Velocity Variance" value={f.velocity_variance?.toFixed(2) ?? "--"} />
-                <Feature label="Session Duration" value={formatDuration(f.session_duration_s)} />
+                <Feature label={FEATURE_LABELS.hesitation_score.label} value={formatPercent(f.hesitation_score)} tip={FEATURE_LABELS.hesitation_score.tip} />
+                <Feature label={FEATURE_LABELS.price_dwell_time_s.label} value={formatDuration(f.price_dwell_time_s)} tip={FEATURE_LABELS.price_dwell_time_s.tip} />
+                <Feature label={FEATURE_LABELS.rage_click_score.label} value={formatPercent(f.rage_click_score)} tip={FEATURE_LABELS.rage_click_score.tip} />
+                <Feature label={FEATURE_LABELS.scroll_retreat_count.label} value={String(f.scroll_retreat_count ?? "--")} tip={FEATURE_LABELS.scroll_retreat_count.tip} />
+                <Feature label={FEATURE_LABELS.exit_intent_count.label} value={String(f.exit_intent_count ?? "--")} tip={FEATURE_LABELS.exit_intent_count.tip} />
+                <Feature label={FEATURE_LABELS.checkout_hesitation_s.label} value={formatDuration(f.checkout_hesitation_s)} tip={FEATURE_LABELS.checkout_hesitation_s.tip} />
+                <Feature label={FEATURE_LABELS.velocity_variance.label} value={f.velocity_variance?.toFixed(2) ?? "--"} tip={FEATURE_LABELS.velocity_variance.tip} />
+                <Feature label={FEATURE_LABELS.session_duration_s.label} value={formatDuration(f.session_duration_s)} tip={FEATURE_LABELS.session_duration_s.tip} />
               </dl>
             ) : (
-              <p className="text-[13px] text-[hsl(var(--muted-foreground))]">Features not yet computed.</p>
+              <p className="text-[13px] text-[hsl(var(--muted-foreground))]">Behavior signals not yet computed for this session.</p>
             )}
           </CardBody>
         </Card>
@@ -191,10 +227,10 @@ const MetricBox = memo(function MetricBox({ label, value, variant }: { label: st
   );
 });
 
-const Feature = memo(function Feature({ label, value }: { label: string; value: string }) {
+const Feature = memo(function Feature({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
     <div>
-      <dt className="text-[hsl(var(--muted-foreground))]">{label}</dt>
+      <dt className="text-[hsl(var(--muted-foreground))]" title={tip}>{label}</dt>
       <dd className="mt-0.5 font-semibold text-[hsl(var(--foreground))]">{value}</dd>
     </div>
   );

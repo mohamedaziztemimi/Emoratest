@@ -1,7 +1,5 @@
 """Pydantic schemas for Intervention Recommendation Engine (CONV-39)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from pydantic import BaseModel, Field

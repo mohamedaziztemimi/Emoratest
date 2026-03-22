@@ -1,6 +1,6 @@
 """SDK key authentication service (CONV-34)."""
 
-from __future__ import annotations
+import hashlib
 
 from fastapi import Header, HTTPException
 from sqlalchemy import select
@@ -11,12 +11,13 @@ from app.models.merchant import Merchant
 
 async def authenticate_sdk_key(
     db: AsyncSession,
-    sdk_key_hash: str,
+    raw_sdk_key: str,
 ) -> Merchant:
     """Look up a merchant by SDK key hash. Raise 401 if not found or inactive."""
+    key_hash = hashlib.sha256(raw_sdk_key.encode()).hexdigest()
     result = await db.execute(
         select(Merchant).where(
-            Merchant.sdk_key_hash == sdk_key_hash,
+            Merchant.sdk_key_hash == key_hash,
             Merchant.is_active.is_(True),
         )
     )

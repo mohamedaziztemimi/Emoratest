@@ -1,7 +1,5 @@
 """Pydantic schemas for SDK API endpoints (CONV-34)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from pydantic import BaseModel, Field

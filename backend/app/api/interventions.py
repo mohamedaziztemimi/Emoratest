@@ -8,8 +8,6 @@ Provides:
 All endpoints are merchant-scoped via SDK key authentication.
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 

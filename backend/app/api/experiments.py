@@ -12,8 +12,6 @@ Provides full lifecycle management for experiments:
 All endpoints are merchant-scoped via SDK key authentication.
 """
 
-from __future__ import annotations
-
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request

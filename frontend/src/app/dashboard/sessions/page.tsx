@@ -13,6 +13,13 @@ import EmptyState from "@/components/ui/EmptyState";
 
 const PAGE_SIZE = 20;
 
+const OUTCOME_DISPLAY: Record<string, string> = {
+  purchase: "Bought",
+  abandon: "Left",
+  browse: "Browsing",
+  unknown: "Unknown",
+};
+
 export default function SessionsPage() {
   const [filters, setFilters] = useState<SessionFilters>({
     page: 1,
@@ -32,9 +39,9 @@ export default function SessionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Sessions</h1>
+        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Visitor Sessions</h1>
         <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">
-          Browse and filter all tracked sessions
+          Every shopping visit to your store, and what happened
         </p>
       </div>
 
@@ -54,7 +61,7 @@ export default function SessionsPage() {
             options={DEVICE_OPTIONS}
           />
           <FilterInput
-            label="Risk min"
+            label="Min leave risk"
             type="number"
             value={filters.risk_min ?? ""}
             onChange={(v) => setFilter("risk_min", v ? Number(v) : undefined)}
@@ -88,7 +95,7 @@ export default function SessionsPage() {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)]">
                 <tr>
-                  {["Session", "Page", "Started", "Outcome", "Risk", "Device"].map((h) => (
+                  {["Visitor", "Page Visited", "Started", "Result", "Leave Risk", "Device"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -119,7 +126,7 @@ export default function SessionsPage() {
                       {formatDate(s.started_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={outcomeVariant(s.outcome)}>{s.outcome}</Badge>
+                      <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_DISPLAY[s.outcome] || s.outcome}</Badge>
                     </td>
                     <td className="px-5 py-3.5">
                       <Badge variant={riskVariant(s.abandonment_risk)}>
@@ -164,14 +171,14 @@ export default function SessionsPage() {
 
 /* ── Constants (stable references) ─────────────────────── */
 const OUTCOME_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "purchase", label: "Purchase" },
-  { value: "abandon", label: "Abandon" },
-  { value: "browse", label: "Browse" },
+  { value: "", label: "All Results" },
+  { value: "purchase", label: "Bought" },
+  { value: "abandon", label: "Left Without Buying" },
+  { value: "browse", label: "Browsing Only" },
 ];
 
 const DEVICE_OPTIONS = [
-  { value: "", label: "All" },
+  { value: "", label: "All Devices" },
   { value: "desktop", label: "Desktop" },
   { value: "mobile", label: "Mobile" },
   { value: "tablet", label: "Tablet" },

@@ -15,6 +15,26 @@ import {
   chartTooltipStyle, tickStyle,
 } from "@/components/charts/LazyRecharts";
 
+const INTERVENTION_LABELS: Record<string, string> = {
+  exit_intent_popup: "Exit Intent Popup",
+  urgency_timer: "Urgency Timer",
+  social_proof: "Social Proof Nudge",
+  price_anchor: "Price Anchoring",
+  trust_badge: "Trust Badges",
+  free_shipping_bar: "Free Shipping Bar",
+  cart_reminder: "Cart Reminder",
+  discount_popup: "Discount Offer",
+  review_highlight: "Review Highlight",
+  scarcity_alert: "Scarcity Alert",
+};
+
+function humanizeInterventionId(id: string): string {
+  if (INTERVENTION_LABELS[id]) return INTERVENTION_LABELS[id];
+  return id
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const statsFetcher = () => fetchInterventionStats();
 
 export default function InterventionsPage() {
@@ -26,12 +46,17 @@ export default function InterventionsPage() {
     []
   );
 
+  const chartData = useMemo(
+    () => data?.map((d) => ({ ...d, label: humanizeInterventionId(d.intervention_id) })) ?? [],
+    [data]
+  );
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Interventions</h1>
+        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Recovery Actions</h1>
         <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">
-          Psychology-based intervention performance metrics
+          How well each save-the-sale tactic is working for your store
         </p>
       </div>
 
@@ -48,9 +73,9 @@ export default function InterventionsPage() {
             </CardHeader>
             <CardBody>
               <LazyResponsiveContainer width="100%" height={320}>
-                <LazyBarChart data={data} barSize={28}>
+                <LazyBarChart data={chartData} barSize={28}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="intervention_id" tick={tickStyle} />
+                  <XAxis dataKey="label" tick={tickStyle} angle={-20} textAnchor="end" height={60} />
                   <YAxis tick={tickStyle} />
                   <Tooltip contentStyle={chartTooltipStyle} formatter={tooltipFormatter} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
@@ -72,7 +97,7 @@ export default function InterventionsPage() {
               <table className="w-full text-left text-[13px]">
                 <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)]">
                   <tr>
-                    {["Intervention", "Triggers", "Converted", "Dismissed", "Ignored", "Bounced", "Conv Rate", "Avg Delta"].map((h) => (
+                    {["Tactic", "Times Shown", "Saved Sale", "Closed", "No Response", "Left Anyway", "Success Rate", "Avg Lift"].map((h) => (
                       <th key={h} className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{h}</th>
                     ))}
                   </tr>
@@ -80,7 +105,7 @@ export default function InterventionsPage() {
                 <tbody className="divide-y divide-[hsl(var(--border)/0.5)]">
                   {data.map((s) => (
                     <tr key={s.intervention_id} className="transition-colors hover:bg-[hsl(var(--accent)/0.5)]">
-                      <td className="px-5 py-3.5 font-medium text-[hsl(var(--foreground))]">{s.intervention_id}</td>
+                      <td className="px-5 py-3.5 font-medium text-[hsl(var(--foreground))]">{humanizeInterventionId(s.intervention_id)}</td>
                       <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">{formatNumber(s.total_triggers)}</td>
                       <td className="px-5 py-3.5"><Badge variant="success">{formatNumber(s.converted)}</Badge></td>
                       <td className="px-5 py-3.5"><Badge variant="warning">{formatNumber(s.dismissed)}</Badge></td>

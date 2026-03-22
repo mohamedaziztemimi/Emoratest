@@ -7,8 +7,6 @@ Provides:
 All endpoints are merchant-scoped via SDK key authentication.
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -72,9 +70,10 @@ async def get_cohort_analytics(
         base_filter.append(Session.started_at <= date_to)
 
     # Aggregate by dimension
+    label_expr = func.coalesce(dim_col, "unknown").label("label")
     query = (
         select(
-            func.coalesce(dim_col, "unknown").label("label"),
+            label_expr,
             func.count().label("session_count"),
             func.count(
                 case((Session.outcome == "purchase", 1))
@@ -86,7 +85,7 @@ async def get_cohort_analytics(
             func.avg(Session.friction_score).label("avg_friction"),
         )
         .where(*base_filter)
-        .group_by(func.coalesce(dim_col, "unknown"))
+        .group_by(label_expr)
         .order_by(func.count().desc())
     )
 

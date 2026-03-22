@@ -10,8 +10,6 @@ Endpoints:
     GET  /api/v1/dashboard/analytics/funnel       — conversion funnel
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import datetime
 
