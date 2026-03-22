@@ -28,7 +28,6 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session
 from app.models.merchant import Merchant
@@ -149,7 +148,7 @@ async def websocket_scores(websocket: WebSocket):
                 raw = await asyncio.wait_for(
                     websocket.receive_text(), timeout=IDLE_TIMEOUT_S
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await websocket.send_json({
                     "action": "timeout",
                     "reason": "idle_timeout",

@@ -98,7 +98,10 @@ async def create_merchant(
         select(Merchant).where(Merchant.shop_domain == body.shop_domain)
     )
     if existing_domain.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="A merchant with this shop domain already exists")
+        raise HTTPException(
+            status_code=409,
+            detail="A merchant with this shop domain already exists",
+        )
 
     # Generate SDK key
     raw_key = secrets.token_hex(32)
@@ -188,7 +191,10 @@ async def rotate_sdk_key(
 
     return KeyRotationResponse(
         new_sdk_key=new_raw_key,
-        message="SDK key rotated successfully. Store this key securely — it cannot be retrieved again.",
+        message=(
+            "SDK key rotated successfully."
+            " Store this key securely — it cannot be retrieved again."
+        ),
         rotated_at=now,
     )
 
@@ -237,7 +243,6 @@ async def get_usage_summary(
     total_experiments = exp_result.scalar() or 0
 
     # Active sessions today
-    from datetime import timedelta
 
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     active_result = await db.execute(

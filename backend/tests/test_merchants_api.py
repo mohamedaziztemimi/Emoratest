@@ -83,7 +83,6 @@ class TestKeyRotation:
 
     @patch(AUTH_PATCH, new_callable=AsyncMock, return_value=make_merchant())
     def test_rotate_success(self, mock_auth):
-        db = _reset_mock_db.db
         response = client.post(
             "/api/v1/merchants/rotate-key",
             headers={"X-SDK-Key": SDK_KEY_HASH},

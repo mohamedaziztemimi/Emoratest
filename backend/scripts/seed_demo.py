@@ -304,7 +304,7 @@ def generate_events(session: dict, arch: dict) -> list[dict]:
     elem_pool = elem_pool + ELEMENTS["navigation"]
 
     events = []
-    for i in range(n_events):
+    for _i in range(n_events):
         t_offset = random.uniform(0, duration)
         ts = started + timedelta(seconds=t_offset)
 
@@ -350,8 +350,10 @@ def generate_events(session: dict, arch: dict) -> list[dict]:
                 }
 
             # Price element clicks with dwell for price-shocked users
-            if session["_archetype"] in ("price_shock_abandoner", "loss_aversion_buyer"):
-                if random.random() < 0.25:
+            if (
+                session["_archetype"] in ("price_shock_abandoner", "loss_aversion_buyer")
+                and random.random() < 0.25
+            ):
                     element_id = "price-tag"
                     metadata = {"dwell_ms": random.randint(3000, 15000)}
 
@@ -434,11 +436,18 @@ def compute_features(session: dict, arch: dict, events: list[dict]) -> dict:
 EXPERIMENTS = [
     {
         "title": "Exit-intent discount popup vs no popup",
-        "hypothesis": "Loss aversion: framing discount as 'Don't lose your 15% off' will reduce exit rate more than standard 'Get 15% off' (Kahneman & Tversky, Prospect Theory)",
+        "hypothesis": (
+            "Loss aversion: framing discount as 'Don't lose your 15% off'"
+            " will reduce exit rate more than standard 'Get 15% off'"
+            " (Kahneman & Tversky, Prospect Theory)"
+        ),
         "page_element": "exit-intent-modal",
         "friction_type": "abandonment_intent",
         "variant_a": "Standard popup: 'Get 15% off your order today!'",
-        "variant_b": "Loss-framed popup: 'Don't lose your 15% discount — it expires when you leave'",
+        "variant_b": (
+            "Loss-framed popup: 'Don't lose your 15% discount"
+            " — it expires when you leave'"
+        ),
         "result": "b_wins",
         "conversion_delta": 0.18,
         "sample_size": 2400,
@@ -446,7 +455,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Shipping cost reveal: cart vs checkout",
-        "hypothesis": "Price shock at checkout triggers loss aversion. Showing shipping cost earlier (in cart) reduces sticker shock and checkout abandonment (Thaler, Mental Accounting)",
+        "hypothesis": (
+            "Price shock at checkout triggers loss aversion."
+            " Showing shipping cost earlier (in cart) reduces sticker"
+            " shock and checkout abandonment (Thaler, Mental Accounting)"
+        ),
         "page_element": "shipping-cost-display",
         "friction_type": "price_shock",
         "variant_a": "Show shipping cost only at checkout/shipping step",
@@ -458,7 +471,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Trust badges placement on payment page",
-        "hypothesis": "Trust gap at payment entry can be reduced by displaying security badges near card input (McKnight et al., Trust in E-Commerce)",
+        "hypothesis": (
+            "Trust gap at payment entry can be reduced by displaying"
+            " security badges near card input"
+            " (McKnight et al., Trust in E-Commerce)"
+        ),
         "page_element": "trust-badge",
         "friction_type": "trust_gap",
         "variant_a": "Trust badges in footer only",
@@ -470,7 +487,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Product page: review count vs star display",
-        "hypothesis": "Social proof (Cialdini): showing '2,847 reviews' with average stars reduces decision uncertainty more than stars alone",
+        "hypothesis": (
+            "Social proof (Cialdini): showing '2,847 reviews' with"
+            " average stars reduces decision uncertainty"
+            " more than stars alone"
+        ),
         "page_element": "review-section",
         "friction_type": "decision_uncertainty",
         "variant_a": "Star rating only (4.6 stars)",
@@ -482,7 +503,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Simplify color picker from 12 to 4 options",
-        "hypothesis": "Choice overload (Iyengar & Lepper): reducing options from 12 colors to 4 best-sellers reduces decision fatigue",
+        "hypothesis": (
+            "Choice overload (Iyengar & Lepper): reducing options"
+            " from 12 colors to 4 best-sellers reduces"
+            " decision fatigue"
+        ),
         "page_element": "color-picker",
         "friction_type": "decision_fatigue",
         "variant_a": "Show all 12 color swatches at once",
@@ -494,7 +519,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Mobile checkout: single page vs multi-step",
-        "hypothesis": "Mobile users experience higher cognitive load. Single-page checkout reduces form fatigue but may overwhelm (Baumeister, Ego Depletion)",
+        "hypothesis": (
+            "Mobile users experience higher cognitive load."
+            " Single-page checkout reduces form fatigue"
+            " but may overwhelm (Baumeister, Ego Depletion)"
+        ),
         "page_element": "checkout-form",
         "friction_type": "decision_fatigue",
         "variant_a": "Multi-step checkout (3 screens: shipping → payment → review)",
@@ -506,7 +535,10 @@ EXPERIMENTS = [
     },
     {
         "title": "Add-to-cart button: urgency text vs neutral",
-        "hypothesis": "Scarcity principle (Cialdini): 'Only 3 left — Add to Cart' creates urgency but may feel manipulative",
+        "hypothesis": (
+            "Scarcity principle (Cialdini): 'Only 3 left — Add to"
+            " Cart' creates urgency but may feel manipulative"
+        ),
         "page_element": "add-to-cart-btn",
         "friction_type": "approach_avoidance",
         "variant_a": "Neutral: 'Add to Cart'",
@@ -518,7 +550,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Live chat widget on high-friction pages",
-        "hypothesis": "UI frustration (Nielsen usability heuristics): proactive live chat on pages with rage clicks reduces bounce (Ceaparu et al., Frustration with Technology)",
+        "hypothesis": (
+            "UI frustration (Nielsen usability heuristics): proactive"
+            " live chat on pages with rage clicks reduces bounce"
+            " (Ceaparu et al., Frustration with Technology)"
+        ),
         "page_element": "live-chat-widget",
         "friction_type": "ui_frustration",
         "variant_a": "No chat widget, standard help link in footer",
@@ -530,7 +566,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Installment payment option visibility",
-        "hypothesis": "Mental accounting (Thaler): breaking $120 into '4 payments of $30' reduces perceived cost and price shock",
+        "hypothesis": (
+            "Mental accounting (Thaler): breaking $120 into"
+            " '4 payments of $30' reduces perceived cost"
+            " and price shock"
+        ),
         "page_element": "payment-form",
         "friction_type": "price_shock",
         "variant_a": "Show total price only: '$120.00'",
@@ -542,7 +582,11 @@ EXPERIMENTS = [
     },
     {
         "title": "Return policy prominence on product page",
-        "hypothesis": "Approach-avoidance conflict (Lewin): prominent '30-day free returns' near buy button reduces purchase anxiety",
+        "hypothesis": (
+            "Approach-avoidance conflict (Lewin): prominent"
+            " '30-day free returns' near buy button"
+            " reduces purchase anxiety"
+        ),
         "page_element": "returns-policy",
         "friction_type": "approach_avoidance",
         "variant_a": "Return policy link in footer",
@@ -751,7 +795,7 @@ async def seed() -> None:
         print(f"  Features:       {len(all_features)}")
         print(f"  Experiments:    {len(EXPERIMENTS)}")
         print(f"  Interventions:  {len(intervention_rows)}")
-        print(f"\n  Archetype breakdown:")
+        print("\n  Archetype breakdown:")
         for name, cnt in sorted(archetype_counts.items(), key=lambda x: -x[1]):
             pct = cnt / len(all_sessions) * 100
             print(f"    {name:30s} {cnt:4d} ({pct:5.1f}%)")
