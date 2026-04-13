@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────
-   AnimatedLogo - Simple "E" logo with subtle animation
+   AnimatedLogo - Simple static "E" logo
    ──────────────────────────────────────────────── */
 
 interface AnimatedLogoProps {
@@ -16,7 +16,7 @@ export function AnimatedLogo({ className = "", size = "md" }: AnimatedLogoProps)
 
   return (
     <div className={`${sizes[size]} ${className}`}>
-      <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold animate-bounce-slight">
+      <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
         E
       </div>
     </div>
