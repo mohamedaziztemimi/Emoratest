@@ -4,7 +4,6 @@
 
 import { HeroSection } from "@/components/hero/HeroSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { SocialProofSection } from "@/components/landing/SocialProofSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { IntegrationsSection } from "@/components/landing/IntegrationsSection";
 import { PricingSection } from "@/components/landing/PricingSection";
@@ -18,13 +17,10 @@ export default function LandingPage() {
       {/* Hero Section */}
       <HeroSection id="hero" />
 
-      {/* Features Section - Pain-Agitation-Solution */}
+      {/* Features Section */}
       <FeaturesSection id="features" />
 
-      {/* Social Proof Section */}
-      <SocialProofSection />
-
-      {/* How It Works Section - Interactive Demo */}
+      {/* How It Works Section */}
       <HowItWorksSection id="how-it-works" />
 
       {/* Integrations Section */}
