@@ -2,6 +2,8 @@
    StickyAuditBar - Fixed bottom CTA bar with dismiss
    ──────────────────────────────────────────────────────── */
 
+"use client";
+
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "et_audit_dismissed";
