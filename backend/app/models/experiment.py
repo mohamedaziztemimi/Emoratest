@@ -4,7 +4,9 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Date,
@@ -12,19 +14,17 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from pydantic import ValidationError as PydanticValidationError
 
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
+    pass
 
 
 class Experiment(Base):

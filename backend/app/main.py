@@ -22,8 +22,8 @@ from app.api.experiments import router as experiments_router
 from app.api.feature_flags import router as feature_flags_router
 from app.api.interventions import router as interventions_router
 from app.api.merchants import router as merchants_router
-from app.api.segments import router as segments_router
 from app.api.sdk import router as sdk_router
+from app.api.segments import router as segments_router
 from app.api.webhook import router as webhook_router
 from app.api.ws import router as ws_router
 from app.core.audit import AuditLogMiddleware

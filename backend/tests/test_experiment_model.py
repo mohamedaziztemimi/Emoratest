@@ -7,8 +7,7 @@ schema serialization, and new fields (n_variants, flicker_free, etc.).
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, date
-from unittest.mock import MagicMock
+from datetime import UTC, date, datetime
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
@@ -16,12 +15,12 @@ from pydantic import ValidationError as PydanticValidationError
 from app.models.experiment import Experiment
 from app.schemas.experiments import (
     ExperimentCreateRequest,
-    ExperimentUpdateRequest,
     ExperimentOut,
-    SplitUrlConfig,
-    ExperimentType,
-    FrictionType,
     ExperimentResult,
+    ExperimentType,
+    ExperimentUpdateRequest,
+    FrictionType,
+    SplitUrlConfig,
 )
 
 MERCHANT_ID = uuid.uuid4()

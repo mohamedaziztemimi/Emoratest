@@ -7,20 +7,17 @@ and relationships to experiments and revenue outcomes.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
-    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
     Index,
-    Integer,
-    JSON,
     String,
-    Text,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID

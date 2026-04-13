@@ -15,10 +15,8 @@ from app.models.feature_flag import FeatureFlag, FeatureFlagStatus
 from app.services.feature_flag_service import (
     FeatureFlagService,
     FlagResult,
-    RuleOperator,
     create_flag_result,
 )
-
 
 # ── Mock Flag Factory ───────────────────────────────────────────────────
 

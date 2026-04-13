@@ -3,14 +3,11 @@
 import pytest
 
 from app.models.integration import (
-    Integration,
-    IntegrationType,
     EventType,
-    WebhookLog,
+    Integration,
 )
 from app.services.integration_service import (
     IntegrationService,
-    WebhookDispatchResult,
 )
 
 
@@ -45,8 +42,8 @@ class TestSignatureVerification:
         secret = "test_secret"
 
         # Generate valid signature
-        import hmac
         import hashlib
+        import hmac
         signature = hmac.new(
             secret.encode(), payload, hashlib.sha256
         ).hexdigest()

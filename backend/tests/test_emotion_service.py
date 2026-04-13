@@ -6,21 +6,16 @@ churn prediction, ROI ranking, and frustration spike detection.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
-from app.models.emotion_event import EmotionSource, EmotionEvent, EmotionSession
+from app.models.emotion_event import EmotionEvent, EmotionSession, EmotionSource
 from app.services.emotion_service import (
-    EmotionService,
-    EmotionResult,
-    EmotionEventSummary,
     EmotionDropOff,
-    WhyAnalysis,
+    EmotionResult,
+    EmotionService,
     ExperimentROI,
+    WhyAnalysis,
 )
-
 
 # ── Sample Data ────────────────────────────────────────────────────────
 

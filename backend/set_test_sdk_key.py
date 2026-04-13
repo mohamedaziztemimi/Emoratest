@@ -4,9 +4,9 @@ import asyncio
 import hashlib
 
 from sqlalchemy import select, update
+
 from app.core.database import async_session
 from app.models.merchant import Merchant
-
 
 TEST_SDK_KEY = "test_sdk_key_123456"  # Use this in the test page
 
@@ -38,7 +38,7 @@ async def set_test_sdk_key():
         print(f"✅ Set SDK key for merchant: {merchant.email}")
         print(f"   SDK Key: {TEST_SDK_KEY}")
         print(f"   Hash: {key_hash}")
-        print(f"\nUse this SDK key in the test page: http://localhost:8000/static/test-page.html")
+        print("\nUse this SDK key in the test page: http://localhost:8000/static/test-page.html")
 
 
 if __name__ == "__main__":

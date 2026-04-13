@@ -6,31 +6,28 @@ with progressive rollouts, kill switches, and targeting rules.
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field, field_validator
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.feature_flag import FeatureFlag, FeatureFlagStatus
-from app.models.merchant import Merchant
 from app.schemas.feature_flags import (
-    FeatureFlagCreateRequest,
-    FeatureFlagUpdateRequest,
-    FeatureFlagOut,
-    FeatureFlagListResponse,
-    FlagEvaluationRequest,
-    FlagEvaluationResponse,
     BulkEvaluationRequest,
     BulkEvaluationResponse,
+    ExposureStatsResponse,
+    FeatureFlagCreateRequest,
+    FeatureFlagListResponse,
+    FeatureFlagOut,
+    FeatureFlagUpdateRequest,
+    FlagEvaluationRequest,
+    FlagEvaluationResponse,
     KillSwitchRequest,
     RolloutUpdateRequest,
-    ExposureStatsResponse,
 )
-from app.services.feature_flag_service import FeatureFlagService, FlagResult
+from app.services.feature_flag_service import FeatureFlagService
 from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 router = APIRouter(prefix="/api/v1/flags", tags=["feature_flags"])
@@ -115,7 +112,7 @@ async def create_flag(
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Check for duplicate key
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -168,7 +165,7 @@ async def get_flag(
     """Get detailed information about a specific feature flag."""
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -207,7 +204,7 @@ async def update_flag(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -258,7 +255,7 @@ async def evaluate_flag(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -356,7 +353,7 @@ async def toggle_kill_switch(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -401,7 +398,7 @@ async def update_rollout(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -447,7 +444,7 @@ async def get_exposure_stats(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
@@ -490,7 +487,7 @@ async def archive_flag(
     """
     merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db

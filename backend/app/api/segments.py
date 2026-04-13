@@ -7,36 +7,31 @@ with flexible condition-based targeting for experiments.
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.models.merchant import Merchant
-from app.models.segment import Segment, SegmentType
+from app.models.segment import Segment
 from app.schemas.segments import (
-    SegmentCreateRequest,
-    SegmentUpdateRequest,
-    SegmentOut,
-    SegmentListResponse,
-    SegmentEvaluateRequest,
-    SegmentEvaluateResponse,
     CRMSyncRequest,
     CRMSyncResponse,
-    SegmentPreviewResponse,
-    SampleUser,
-    EmotionProfileOut,
     EmotionalCohortRequest,
     EmotionalCohortResponse,
+    EmotionProfileOut,
+    SampleUser,
+    SegmentCreateRequest,
+    SegmentEvaluateRequest,
+    SegmentEvaluateResponse,
+    SegmentListResponse,
+    SegmentOut,
+    SegmentPreviewResponse,
+    SegmentUpdateRequest,
 )
 from app.services.targeting_service import (
     TargetingService,
-    SegmentEvaluationResult,
-    SegmentSizeEstimate,
-    EmotionProfile,
 )
 
 router = APIRouter(prefix="/api/v1/segments", tags=["segments"])
@@ -60,7 +55,7 @@ async def list_segments(
 
     Optionally filter by type (static, dynamic, emotional).
     """
-    from sqlalchemy import select, and_, func
+    from sqlalchemy import func, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     # Note: For SDK access, use authenticate_sdk_key like other endpoints
@@ -120,9 +115,9 @@ async def create_segment(
     Supports nested AND/OR conditions up to 5 levels deep.
     Attributes can be from user, session, event, or custom namespaces.
     """
-    from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
     from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
 
@@ -159,16 +154,19 @@ async def get_segment(
     db: Any = Depends(get_db),
 ):
     """Get detailed information about a specific segment."""
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -197,16 +195,19 @@ async def get_segment_with_profile(
     db: Any = Depends(get_db),
 ):
     """Get segment details along with emotional profile."""
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -244,16 +245,19 @@ async def update_segment(
 
     Partial update - only provided fields are modified.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -295,16 +299,19 @@ async def delete_segment(
     db: Any = Depends(get_db),
 ):
     """Delete a segment."""
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -338,16 +345,19 @@ async def evaluate_segment(
     Useful for validating segment conditions before deployment.
     Returns which conditions matched and which failed.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -439,17 +449,20 @@ async def preview_segment(
 
     Useful for understanding who a segment targets before deployment.
     """
+    import hashlib
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
-    import hashlib
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)
@@ -514,8 +527,9 @@ async def create_emotional_cohort(
     Creates a segment that matches users with a specific emotion
     score threshold for a given experiment.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
     from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
 
@@ -559,16 +573,19 @@ async def refresh_segment_size(
     Normally updated by background task every 6 hours for dynamic segments.
     Can be triggered manually via this endpoint.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         segment_uuid = UUID(segment_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid segment ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Segment).where(Segment.id == segment_uuid)

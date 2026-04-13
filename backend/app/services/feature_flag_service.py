@@ -7,12 +7,11 @@ and multivariate variant selection.
 from __future__ import annotations
 
 import hashlib
-import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
-import re
 
 if TYPE_CHECKING:
     from app.models.feature_flag import FeatureFlag
@@ -303,7 +302,7 @@ class FeatureFlagService:
             Integer bucket value (0-99).
         """
         # Create deterministic hash
-        hash_input = f"{user_id}:{flag_key}".encode("utf-8")
+        hash_input = f"{user_id}:{flag_key}".encode()
         hash_bytes = hashlib.sha256(hash_input).digest()
 
         # Convert first 4 bytes to integer and modulo 100

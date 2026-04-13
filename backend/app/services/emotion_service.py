@@ -10,22 +10,19 @@ Provides:
 
 from __future__ import annotations
 
-import json
 import math
 import sys
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-from collections import defaultdict
+from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, case, func, select, desc
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
-    from app.models.emotion_event import EmotionEvent, EmotionSession
-    from app.models.experiment import Experiment
-    from app.models.session import Session
+    pass
 
 # Add parent directory to path for ml module import
 backend_dir = Path(__file__).parent.parent.parent
@@ -37,11 +34,9 @@ if str(parent_dir) not in sys.path:
 from ml.src import (
     BehavioralFeatureExtractor,
     EmotionClassifier,
-    Emotion,
     EmotionResult,
     generate_synthetic_training_data,
 )
-
 
 # ── Result Classes ────────────────────────────────────────────────────────
 
@@ -434,7 +429,6 @@ class EmotionService:
 
     def _calculate_drop_offs(self, sessions: list) -> dict[str, EmotionDropOff]:
         """Calculate drop-off analysis by emotion."""
-        from app.models.emotion_event import EmotionSession
 
         # Count sessions by dominant emotion
         emotion_counts = defaultdict(int)
@@ -483,7 +477,6 @@ class EmotionService:
 
         Returns correlation coefficient for each emotion.
         """
-        from app.models.emotion_event import EmotionSession
 
         emotion_metrics = defaultdict(lambda: {"converted": 0, "total": 0})
 
@@ -524,7 +517,6 @@ class EmotionService:
 
     def _calculate_revenue_by_emotion(self, sessions: list) -> dict[str, float]:
         """Calculate total revenue by dominant emotion."""
-        from app.models.emotion_event import EmotionSession
 
         revenue_by_emotion = defaultdict(float)
         emotion_sessions = defaultdict(int)

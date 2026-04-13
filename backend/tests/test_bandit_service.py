@@ -7,8 +7,7 @@ convergence detection, sequential testing (mSPRT), and storage.
 from __future__ import annotations
 
 import math
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pytest
@@ -16,12 +15,11 @@ import pytest
 from app.services.bandit_service import (
     BanditAlgorithm,
     BanditArm,
-    BanditState,
-    BanditService,
     BanditRepository,
+    BanditService,
+    BanditState,
     get_or_create_bandit,
 )
-
 
 # ── BanditArm Tests ───────────────────────────────────────────────────
 

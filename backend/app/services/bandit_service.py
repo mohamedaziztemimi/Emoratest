@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -76,7 +76,7 @@ class BanditArm:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "BanditArm":
+    def from_dict(cls, data: dict) -> BanditArm:
         """Deserialize from dictionary."""
         return cls(**data)
 
@@ -137,7 +137,7 @@ class BanditState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "BanditState":
+    def from_dict(cls, data: dict) -> BanditState:
         """Deserialize from dictionary."""
         return cls(
             experiment_id=data["experiment_id"],

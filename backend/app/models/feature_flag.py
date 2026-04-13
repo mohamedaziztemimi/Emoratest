@@ -6,18 +6,17 @@ Supports targeting rules, multivariate variants, and environment-specific config
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
-    Integer,
-    JSON,
     String,
     Text,
     text,

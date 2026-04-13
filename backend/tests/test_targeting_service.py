@@ -4,13 +4,9 @@ import pytest
 
 from app.models.segment import (
     Segment,
-    SegmentType,
-    SegmentOperator,
-    ConditionOperator,
 )
 from app.services.targeting_service import (
     TargetingService,
-    VariantAssignment,
 )
 
 

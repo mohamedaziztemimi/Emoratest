@@ -16,25 +16,24 @@ import asyncio
 import hashlib
 import hmac
 import json
-import logging
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.integration import (
+    EventType,
     Integration,
     IntegrationType,
-    EventType,
     WebhookLog,
 )
 
 if TYPE_CHECKING:
-    from app.models.merchant import Merchant
+    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -873,7 +872,6 @@ h3. Recommended Action
         duration_ms: int,
     ) -> None:
         """Log webhook dispatch result."""
-        from sqlalchemy import insert
 
         log_entry = WebhookLog(
             integration_id=integration_id,

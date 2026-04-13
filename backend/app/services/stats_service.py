@@ -13,17 +13,16 @@ from __future__ import annotations
 
 import math
 import statistics
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
-from sqlalchemy import and_, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
-    from app.models.experiment import Experiment
-    from app.models.emotion_event import EmotionSession
+    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -157,8 +156,9 @@ class StatsService:
         Returns variant-level metrics with conversion rates, relative lift,
         p-values, confidence intervals, and significance status.
         """
-        from sqlalchemy import select, and_, func
-        from app.models.experiment import Experiment, Event
+        from sqlalchemy import select
+
+        from app.models.experiment import Experiment
 
         # Fetch experiment
         result = await db.execute(
@@ -170,7 +170,6 @@ class StatsService:
             raise ValueError(f"Experiment {experiment_id} not found")
 
         # Fetch events grouped by variant
-        from datetime import timedelta
 
         # Placeholder: In production, would query actual event data
         # For now, return mock results
@@ -418,7 +417,7 @@ class StatsService:
         chi2 = 0.0
         affected_variants: list[str] = []
 
-        for variant in expected_splits.keys():
+        for variant in expected_splits:
             actual = actual_counts.get(variant, 0)
             expected = expected_counts.get(variant, 0)
 
@@ -485,7 +484,6 @@ class StatsService:
         # Placeholder: In production, would fetch actual time series data
         # For now, generate mock data points
         import random
-        from datetime import timedelta
 
         now = datetime.now(UTC)
         data_points: list[dict] = []
@@ -576,7 +574,6 @@ class StatsService:
                 emotion: random.uniform(0.1, 0.4)
                 for emotion in self.FUNNEL_EMOTIONS
             }
-            import random
 
             # Find dominant emotion
             dominant_emotion = max(

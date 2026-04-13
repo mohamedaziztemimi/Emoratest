@@ -13,9 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import re
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -23,9 +21,9 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from app.models.segment import (
+    ConditionOperator,
     Segment,
     SegmentOperator,
-    ConditionOperator,
     SegmentType,
 )
 
@@ -367,6 +365,7 @@ class TargetingService:
             SegmentSizeEstimate with estimated size and confidence
         """
         from sqlalchemy import func, select
+
         from app.models.session import Session
 
         # Get total unique users in the period
@@ -459,6 +458,7 @@ class TargetingService:
             EmotionProfile with emotion statistics
         """
         from sqlalchemy import func, select
+
         from app.models.emotion_event import EmotionSession
 
         since = datetime.now(UTC) - timedelta(days=days)

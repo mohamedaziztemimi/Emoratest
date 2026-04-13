@@ -15,22 +15,16 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.models.merchant import Merchant
 from app.models.integration import (
     Integration,
-    IntegrationType,
-    EventType,
     WebhookLog,
 )
-from app.schemas import dashboard
 from app.services.integration_service import (
     IntegrationService,
-    WebhookDispatchResult,
     get_integration_service,
 )
 
@@ -57,7 +51,7 @@ async def list_integrations(
 
     Optionally filter by type (slack, jira, amplitude, posthog, etc.).
     """
-    from sqlalchemy import select, and_, func
+    from sqlalchemy import func, select
     from sqlalchemy.ext.asyncio import AsyncSession
 
     # Note: For SDK access, use authenticate_sdk_key like other endpoints
@@ -135,9 +129,9 @@ async def create_integration(
     Config is encrypted before saving (in production).
     Validates required fields for integration type.
     """
-    from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
     from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
 
@@ -209,16 +203,19 @@ async def update_integration(
 
     Partial update - only provided fields are modified.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         integration_uuid = UUID(integration_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid integration ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid integration ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Integration).where(Integration.id == integration_uuid)
@@ -259,16 +256,19 @@ async def delete_integration(
     db: Any = Depends(get_db),
 ):
     """Delete an integration."""
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         integration_uuid = UUID(integration_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid integration ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid integration ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Integration).where(Integration.id == integration_uuid)
@@ -323,16 +323,19 @@ async def test_integration(
 
     Useful for validating webhook URLs and credentials.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         integration_uuid = UUID(integration_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid integration ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid integration ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Integration).where(Integration.id == integration_uuid)
@@ -380,16 +383,19 @@ async def get_webhook_logs(
 
     Useful for debugging failed webhooks.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         integration_uuid = UUID(integration_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid integration ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid integration ID format"
+        ) from None
 
     result = await async_db.execute(
         select(WebhookLog)
@@ -425,8 +431,8 @@ async def receive_inbound_webhook(
     Verifies HMAC-SHA256 signature before processing.
     Dispatches to appropriate handler based on integration type.
     """
-    # Get signature from various header names
-    signature = x_signature or x_hub_signature or x_amplitude_signature
+    # Get signature from various header names (for future verification)
+    _ = x_signature or x_hub_signature or x_amplitude_signature
 
     # Get raw request body
     body_bytes = await request.body()
@@ -444,7 +450,7 @@ async def receive_inbound_webhook(
     try:
         payload = json.loads(body_bytes.decode())
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from None
 
     # Handle webhook
     async with get_db() as db:
@@ -474,11 +480,6 @@ async def zapier_trigger(
     Returns recent experiment data for Zapier to process.
     Zapier polls this endpoint periodically to check for new data.
     """
-    from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    async_db: AsyncSession = db
-
     # Get recent experiments (placeholder implementation)
     # In production, would query actual experiment data
     return {
@@ -562,16 +563,19 @@ async def retry_failed_integration(
 
     Useful for recovering from temporary failures.
     """
+    from uuid import UUID
+
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import AsyncSession
-    from uuid import UUID
 
     async_db: AsyncSession = db
 
     try:
         integration_uuid = UUID(integration_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid integration ID format")
+        raise HTTPException(
+            status_code=400, detail="Invalid integration ID format"
+        ) from None
 
     result = await async_db.execute(
         select(Integration).where(Integration.id == integration_uuid)

@@ -5,25 +5,31 @@ REST endpoints and WebSocket for real-time emotion tracking.
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import UTC, datetime
 from typing import Any
-from enum import Enum
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.models.emotion_event import EmotionSource, EmotionSession
+from app.models.emotion_event import EmotionSession
 from app.services.emotion_service import (
-    EmotionService,
     EmotionResult,
-    WhyAnalysis,
+    EmotionService,
     ExperimentROI,
+    WhyAnalysis,
 )
 from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
@@ -143,7 +149,11 @@ ws_manager = ConnectionManager()
 # ── ENDPOINTS: Event Ingestion ───────────────────────────────────
 
 
-@router.post("/events", response_model=EmotionEventResponse, summary="Ingest and classify emotion events")
+@router.post(
+    "/events",
+    response_model=EmotionEventResponse,
+    summary="Ingest and classify emotion events",
+)
 @limiter.limit("100/minute")
 async def ingest_emotion_events(
     request: Request,
@@ -156,7 +166,7 @@ async def ingest_emotion_events(
     Immediately returns classification result while persisting
     events asynchronously.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Validate session exists (would check Session table)
     # For now, proceed
@@ -185,7 +195,11 @@ async def ingest_emotion_events(
 # ── ENDPOINTS: Session Summary ───────────────────────────────────
 
 
-@router.get("/session/{session_id}", response_model=SessionEmotionSummary, summary="Get session emotion summary")
+@router.get(
+    "/session/{session_id}",
+    response_model=SessionEmotionSummary,
+    summary="Get session emotion summary",
+)
 @limiter.limit("200/minute")
 async def get_session_emotion_summary(
     request: Request,
@@ -194,7 +208,7 @@ async def get_session_emotion_summary(
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):
     """Get aggregated emotion summary for a session."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Query emotion session
     async_db: AsyncSession = db
@@ -237,7 +251,7 @@ async def get_why_analysis(
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):
     """Generate why-analysis linking emotions to behaviors and revenue."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Run why-analysis
     analysis: WhyAnalysis = await service.get_why_analysis(
@@ -288,7 +302,7 @@ async def get_experiment_prioritization(
     Returns sorted list with ROI scores, primary emotion opportunities,
     and estimated conversion lift.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Parse experiment IDs
     exp_id_list = [e.strip() for e in experiment_ids.split(",")]
@@ -331,7 +345,7 @@ async def predict_churn_risk(
     sdk_key_hash: str = Depends(get_sdk_key_header),
 ):
     """Predict churn risk for a session using emotion scores."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     churn_risk = await service.predict_churn_risk(
         session_id=session_id,
@@ -366,7 +380,7 @@ async def check_frustration_spike(
     Returns True if frustration events exceed 2 standard deviations
     above rolling mean in the specified window.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    await authenticate_sdk_key(db, sdk_key_hash)
 
     spike_detected = await service.check_frustration_spike(
         experiment_id=experiment_id,

@@ -6,7 +6,7 @@ Extended to support A/B/n, MVT, split URL, multi-page, and server-side experimen
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 # ── Experiment CRUD ──────────────────────────────────────────────
 

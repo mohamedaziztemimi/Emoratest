@@ -5,8 +5,6 @@ from typing import Any, Literal, Union
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.segment import SegmentOperator, ConditionOperator
-
 # ── Types ────────────────────────────────────────────────────────
 
 SegmentType = Literal["static", "dynamic", "emotional"]
@@ -42,7 +40,7 @@ class SegmentConditions(BaseModel):
     """Root condition tree for a segment."""
 
     operator: SegmentOperatorType = Field(default="AND", description="AND or OR logic")
-    conditions: list[Union[LeafCondition, ConditionGroup]] = Field(
+    conditions: list[LeafCondition | ConditionGroup] = Field(
         default_factory=list,
         description="List of conditions"
     )
