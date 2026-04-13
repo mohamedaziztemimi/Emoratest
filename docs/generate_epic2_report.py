@@ -32,7 +32,7 @@ class CoursePDF(FPDF):
             return
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 8, "Conversiono - Epic 2: ML Ensemble + SHAP", align="L")
+        self.cell(0, 8, "EmoraTest - Epic 2: ML Ensemble + SHAP", align="L")
         self.cell(0, 8, f"Page {self.page_no()}", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*self.PRIMARY)
         self.set_line_width(0.3)
@@ -43,7 +43,7 @@ class CoursePDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 10, "Conversiono AI Platform - Course Documentation", align="C")
+        self.cell(0, 10, "EmoraTest AI Platform - Course Documentation", align="C")
 
     # ── Styling helpers ──────────────────────────────────────
 
@@ -189,7 +189,7 @@ def build_pdf():
     pdf.ln(40)
     pdf.set_font("Helvetica", "B", 32)
     pdf.set_text_color(*CoursePDF.PRIMARY)
-    pdf.cell(0, 15, "Conversiono", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 15, "EmoraTest", align="C", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 14)
     pdf.set_text_color(*CoursePDF.GRAY)
@@ -541,7 +541,7 @@ def build_pdf():
 
     pdf.section_title("4.1", "Bridging ML and Business Action")
     pdf.body(
-        "This is where Conversiono's true value proposition lives. Many ML "
+        "This is where EmoraTest's true value proposition lives. Many ML "
         "systems stop at prediction: 'this user will abandon with 73% probability.' "
         "But a merchant can't act on that number. They need to know WHAT to do."
     )

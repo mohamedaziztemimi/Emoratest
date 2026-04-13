@@ -1,9 +1,9 @@
 {
-  "name": "@conversiono/sdk",
+  "name": "@emoratest/sdk",
   "version": "0.1.0",
-  "description": "Conversiono behavioral intelligence SDK — captures user behavior for AI-powered conversion optimization",
-  "main": "dist/conversiono.umd.js",
-  "module": "dist/conversiono.esm.js",
+  "description": "EmoraTest behavioral intelligence SDK — captures user behavior for AI-powered conversion optimization",
+  "main": "dist/emoratest.umd.js",
+  "module": "dist/emoratest.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/"

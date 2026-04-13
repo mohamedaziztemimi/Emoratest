@@ -1,5 +1,5 @@
 /**
- * Conversiono SDK type definitions.
+ * EmoraTest SDK type definitions.
  *
  * These types mirror the backend database schema (events, sessions)
  * and define the SDK's public configuration API.
@@ -32,7 +32,6 @@ export interface BatchPayload {
 // ── Session ───────────────────────────────────────────────────
 
 export interface SessionCreatePayload {
-  merchant_id: string;
   page_url: string;
   started_at: string;
   country_code?: string | null;
@@ -45,8 +44,8 @@ export interface SessionCreateResponse {
 
 // ── SDK configuration ─────────────────────────────────────────
 
-export interface ConversionoConfig {
-  /** Merchant SDK key (will be SHA-256 hashed before sending). */
+export interface EmoraTestConfig {
+  /** Merchant SDK key (sent raw, hashed server-side for auth). */
   sdkKey: string;
 
   /** Backend API base URL. Default: window.location.origin */
@@ -66,17 +65,4 @@ export interface ConversionoConfig {
 
   /** Disable all tracking (opt-out). Default: false */
   disabled?: boolean;
-}
-
-// ── Resolved config (all fields required) ─────────────────────
-
-export interface ResolvedConfig {
-  sdkKey: string;
-  sdkKeyHash: string;
-  apiUrl: string;
-  flushIntervalMs: number;
-  maxBatchSize: number;
-  mouseMoveThrottleMs: number;
-  debug: boolean;
-  disabled: boolean;
 }

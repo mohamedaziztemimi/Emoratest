@@ -1,0 +1,213 @@
+/* ────────────────────────────────────────────────────────
+   EmoraTest Design System - Brand Tokens & Custom Properties
+   Tagline: "Unlock Emotions, Win Tests"
+   Foundation: Everything else imports from here
+   ──────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand Identity */
+  --et-blue: #007BFF;
+  --et-purple: #7C3AED;
+  --et-blue-purple: linear-gradient(135deg, var(--et-blue) 0%, var(--et-purple) 100%);
+  --et-glow-blue: 0 0 20px 30px rgba(0, 123, 255, 0.35);
+  --et-glow-purple: 0 0 20px 30px rgba(124, 58, 237, 0.35);
+  --et-glass-bg: rgba(255, 255, 255, 0.08);
+  --et-glass-border: rgba(255, 255, 255, 0.15);
+  --et-glass-blur: blur(12px);
+  --et-glass-dark: rgba(0, 0, 0, 0.25);
+
+  /* Emotion Colors */
+  --et-confusion: #F59E0B;
+  --et-frustration: #EF4444;
+  --et-delight: #10B981;
+  --et-focus: #3B82F6;
+  --et-anxiety: #F97316;
+  --et-boredom: #6B7280;
+  --et-hesitation: #8B5CF6;
+  --et-satisfaction: #059669;
+  --et-satisfaction-emerald: #10B981;
+
+  /* Dark Mode Base (default) */
+  --et-bg-900: #0A0B0F;
+  --et-bg-800: #111318;
+  --et-bg-700: #1A1D26;
+  --et-bg-card: #1E2130;
+  --et-text-primary: #F1F2F6;
+  --et-text-secondary: #9CA3AF;
+  --et-border: rgba(255, 255, 255, 0.08);
+  --et-text-muted: rgba(255, 255, 255, 0.5);
+  --et-glass-bg: rgba(255, 255, 255, 0.05);
+  --et-glass-border: rgba(255, 255, 255, 0.1);
+  --et-glass-blur: blur(12px);
+  --et-glass-dark: rgba(0, 0, 0, 0.15);
+
+  /* Dark mode emotion adjustments */
+  --et-confusion: #FBBF24;
+  --et-frustration: #F87171;
+  --et-delight: #34D399;
+  --et-focus: #60A5FA;
+  --et-anxiety: #C084FC;
+  --et-boredom: #7C3AED;
+  --et-hesitation: #9D4EDD;
+  --et-satisfaction: #6EE7B6;
+  --et-satisfaction-emerald: #34D399;
+
+  /* Gradients */
+  --gradient-blue: linear-gradient(135deg, #1E3A8A 0%, #7C3AED 100%);
+  --gradient-purple: linear-gradient(135deg, #7C3AED 0%, #5B24A5 100%);
+  --gradient-sunset: linear-gradient(135deg, #FFD966 0%, #FF9F43 100%);
+
+  /* Ghost Colors */
+  --et-ghost-blue: #E8F4FD;
+  --et-ghost-purple: #E8D8F0;
+  --et-ghost-green: #D1FAE5;
+  --et-ghost-red: #FEE2E2;
+  --et-ghost-amber: #FCD34D;
+
+  /* Primary Buttons */
+  --et-primary-gradient: linear-gradient(135deg, var(--et-blue) 0%, var(--et-purple) 100%);
+  --et-primary-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
+
+  /* Cards */
+  --et-card-bg: var(--et-bg-card);
+  --et-card-border: var(--et-border);
+  --et-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  --et-card-hover-bg: var(--et-bg-800);
+  --et-card-hover-border: var(--et-glass-bg);
+  --et-card-hover-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  /* Inputs */
+  --et-input-bg: var(--et-bg-card);
+  --et-input-border: var(--et-border);
+  --et-input-focus-ring: 0 0 4px rgba(0, 123, 255, 0.15);
+
+  /* Text Gradients */
+  --text-gradient-blue: linear-gradient(90deg, var(--et-blue) 0%, #60A5FA 100%);
+  --text-gradient-purple: linear-gradient(90deg, var(--et-blue) 0%, #C084FC 100%);
+
+  /* Glow Effects */
+  --glow-sm: 0 0 8px 16px rgba(0, 0, 0, 0.04);
+  --glow-md: 0 0 16px 24px rgba(0, 0, 0, 0.08);
+  --glow-lg: 0 0 24px 32px rgba(0, 0, 0, 0.12);
+  --glow-blue: 0 0 20px 30px rgba(0, 123, 255, 0.4);
+  --glow-purple: 0 0 20px 30px rgba(124, 58, 237, 0.4);
+  --glow-inner: inset 0 4px 8px rgba(255, 255, 255, 0.15);
+
+  /* Scrollbar */
+  --scrollbar-track: var(--et-bg-800);
+  --scrollbar-thumb: var(--et-bg-700);
+
+  /* Typography */
+  --et-font: 'Inter', 'Figtree', system-ui, sans-serif;
+  --et-hero: clamp(36px, 6vw, 72px);
+  --et-h2: clamp(24px, 4vw, 48px);
+  --et-h3: 24px;
+  --et-body: 16px;
+  --et-small: 13px;
+  --et-font-xs: 11px;
+  --et-font-sm: 13px;
+  --et-font-base: 16px;
+  --et-font-lg: 18px;
+  --et-font-xl: 20px;
+  --et-font-2xl: 24px;
+
+  /* Spacing Scale */
+  --et-space-xs: 4px;
+  --et-space-sm: 8px;
+  --et-space-md: 16px;
+  --et-space-lg: 24px;
+  --et-space-xl: 40px;
+  --et-space-2xl: 64px;
+
+  /* Radius */
+  --et-radius-sm: 8px;
+  --et-radius-md: 12px;
+  --et-radius-lg: 20px;
+  --et-radius-xl: 28px;
+  --et-radius-pill: 9999px;
+
+  /* Duration */
+  --et-duration-fast: 150ms;
+  --et-duration-base: 300ms;
+  --et-duration-slow: 500ms;
+
+  /* Easing */
+  --et-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --et-ease-in: cubic-bezier(0.32, 0, 0.67, 1);
+}
+
+/* ── LIGHT MODE ─────────────────────────────────────────────── */
+
+.light-mode {
+  --et-bg-900: #F8F9FF;
+  --et-bg-800: #FFFFFF;
+  --et-bg-card: #FFFFFF;
+  --et-text-primary: #111318;
+  --et-text-secondary: #4B5563;
+  --et-border: rgba(0, 0, 0, 0.08);
+  --et-text-muted: rgba(0, 0, 0, 0.5);
+  --et-glass-bg: rgba(255, 255, 255, 0.12);
+  --et-glass-border: rgba(255, 255, 255, 0.2);
+}
+
+/* ── ANIMATIONS ─────────────────────────────────────────────── */
+
+@keyframes pulse-emotion {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 40px rgba(0, 123, 255, 0.5);
+  }
+}
+
+@keyframes scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ── UTILITY CLASSES ─────────────────────────────────────── */
+
+.shadow-glow-blue {
+  box-shadow: var(--glow-blue);
+}
+
+.shadow-glow-purple {
+  box-shadow: var(--glow-purple);
+}
+
+.hover\\:shadow-glow-blue:hover {
+  box-shadow: var(--glow-blue);
+}
+
+.hover\\:shadow-glow-purple:hover {
+  box-shadow: var(--glow-purple);
+}

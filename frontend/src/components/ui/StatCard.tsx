@@ -1,63 +1,143 @@
-import { memo } from "react";
-import clsx from "clsx";
+/* ────────────────────────────────────────────────────────
+   StatCard - Stats display with animated counter
+   ──────────────────────────────────────────────────────── */
+
+"use client";
+
+import { clsx } from "clsx";
+import { ReactNode, useEffect, useState } from "react";
 
 interface StatCardProps {
   label: string;
-  value: string;
-  sub?: string;
-  trend?: "up" | "down" | "neutral";
-  icon?: React.ReactNode;
+  value: string | number;
+  delta?: string;
+  deltaPositive?: boolean;
+  icon?: ReactNode;
+  animate?: boolean;
   className?: string;
 }
 
-export default memo(function StatCard({ label, value, sub, trend, icon, className }: StatCardProps) {
-  return (
-    <div
-      className={clsx(
-        "group relative overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-        className
-      )}
-    >
-      {/* Decorative gradient blob */}
-      <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-[hsl(var(--primary)/0.06)] transition-transform duration-300 will-change-transform group-hover:scale-125" />
+// Animated counter hook
+function useAnimatedCounter(
+  target: number,
+  duration: number = 1200,
+  start: number = 0
+) {
+  const [current, setCurrent] = useState(start);
 
-      <div className="relative flex items-start justify-between">
-        <div>
-          <p className="text-[13px] font-medium text-[hsl(var(--muted-foreground))]">{label}</p>
-          <p className="mt-1.5 text-[22px] font-bold tracking-tight text-[hsl(var(--foreground))]">
-            {value}
-          </p>
-          {sub && (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              {trend === "up" && (
-                <svg className="h-3.5 w-3.5 text-[hsl(var(--success))]" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                </svg>
-              )}
-              {trend === "down" && (
-                <svg className="h-3.5 w-3.5 text-[hsl(var(--destructive))]" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5l15 15m0 0V8.25m0 11.25H8.25" />
-                </svg>
-              )}
-              <p
-                className={clsx(
-                  "text-[12px] font-medium",
-                  trend === "up" && "text-[hsl(var(--success))]",
-                  trend === "down" && "text-[hsl(var(--destructive))]",
-                  (!trend || trend === "neutral") && "text-[hsl(var(--muted-foreground))]"
-                )}
-              >
-                {sub}
-              </p>
-            </div>
-          )}
-        </div>
-        {icon && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]">
-            {icon}
-          </div>
+  useEffect(() => {
+    if (target === start) {
+      setCurrent(target);
+      return;
+    }
+
+    let startTime: number | null = null;
+    let animationFrameId: number;
+
+    const animate = (timestamp: number) => {
+      if (startTime === null) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease out cubic
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const newValue = start + (target - start) * easeOut;
+
+      setCurrent(newValue);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [target, duration, start]);
+
+  return current;
+}
+
+interface AnimatedCounterProps {
+  value: number;
+  duration?: number;
+  start?: number;
+  className?: string;
+}
+
+function AnimatedCounter({
+  value,
+  duration = 1200,
+  start = 0,
+  className,
+}: AnimatedCounterProps) {
+  const current = useAnimatedCounter(value, duration, start);
+
+  return (
+    <span className={className}>
+      {Math.round(current).toLocaleString()}
+    </span>
+  );
+}
+
+export function StatCard({
+  label,
+  value,
+  delta,
+  deltaPositive,
+  icon,
+  animate = true,
+  className,
+}: StatCardProps) {
+  const isNumeric = typeof value === "number";
+
+  return (
+    <div className={clsx(
+      "bg-[var(--et-glass-bg)]",
+      "backdrop-blur-[var(--et-glass-blur)]",
+      "border border-[var(--et-glass-border)]",
+      "rounded-[var(--et-radius-lg)]",
+      "p-4",
+      className
+    )}>
+      {/* Label + Icon */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[12px] text-[var(--et-text-muted)] font-medium">
+          {label}
+        </span>
+        {icon && <div className="text-[var(--et-text-secondary)]">{icon}</div>}
+      </div>
+
+      {/* Value */}
+      <div className="text-[32px] font-bold text-[var(--et-text-primary)] mb-1">
+        {isNumeric && animate ? (
+          <AnimatedCounter value={value} />
+        ) : (
+          value
         )}
       </div>
+
+      {/* Delta Badge */}
+      {delta && (
+        <div
+          className={clsx(
+            "inline-flex items-center px-2 py-0.5 rounded-[var(--et-radius-sm)] text-[12px] font-medium",
+            deltaPositive
+              ? "bg-[var(--et-satisfaction)]/20 text-[var(--et-satisfaction)]"
+              : "bg-[var(--et-frustration)]/20 text-[var(--et-frustration)]"
+          )}
+        >
+          {deltaPositive && "↑"}
+          {!deltaPositive && "↓"}
+          {delta}
+        </div>
+      )}
     </div>
   );
-});
+}
+
+export { AnimatedCounter, useAnimatedCounter };

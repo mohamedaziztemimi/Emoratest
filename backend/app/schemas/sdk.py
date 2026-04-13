@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 # ── Session ────────────────────────────────────────────────────
 
 class SessionCreateRequest(BaseModel):
-    merchant_id: str
     page_url: str
     started_at: datetime
     country_code: str | None = None

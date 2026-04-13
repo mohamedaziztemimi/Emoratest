@@ -9,9 +9,9 @@ export default [
   {
     input,
     output: {
-      file: "dist/conversiono.umd.js",
+      file: "dist/emoratest.umd.js",
       format: "umd",
-      name: "Conversiono",
+      name: "EmoraTest",
       sourcemap: true,
     },
     plugins: [
@@ -23,7 +23,7 @@ export default [
   {
     input,
     output: {
-      file: "dist/conversiono.esm.js",
+      file: "dist/emoratest.esm.js",
       format: "esm",
       sourcemap: true,
     },

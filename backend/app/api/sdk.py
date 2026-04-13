@@ -38,10 +38,12 @@ async def create_session(
     request: Request,
     body: SessionCreateRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    sdk_key: str = Depends(get_sdk_key_header),
 ):
-    """Create a new tracking session for the authenticated merchant."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    """Create a new tracking session for the authenticated merchant.
+    Merchant is identified via X-SDK-Key header, not request body.
+    """
+    merchant = await authenticate_sdk_key(db, sdk_key)
 
     session_id = uuid.uuid4()
     now = datetime.now(UTC)
@@ -69,10 +71,10 @@ async def end_session(
     request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    sdk_key: str = Depends(get_sdk_key_header),
 ):
     """Mark a session as ended (set ended_at to now)."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    merchant = await authenticate_sdk_key(db, sdk_key)
 
     try:
         sid = uuid.UUID(session_id)
@@ -105,10 +107,10 @@ async def update_outcome(
     session_id: str,
     body: SessionOutcomeRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    sdk_key: str = Depends(get_sdk_key_header),
 ):
     """Report a conversion outcome for a session."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    merchant = await authenticate_sdk_key(db, sdk_key)
 
     try:
         sid = uuid.UUID(session_id)
@@ -137,10 +139,10 @@ async def ingest_events(
     request: Request,
     body: EventBatchRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    sdk_key: str = Depends(get_sdk_key_header),
 ):
     """Ingest a batch of behavioral events for a session."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
+    merchant = await authenticate_sdk_key(db, sdk_key)
 
     # Verify session belongs to this merchant
     try:

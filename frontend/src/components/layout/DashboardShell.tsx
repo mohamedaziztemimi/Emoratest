@@ -9,7 +9,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("conversiono_theme");
+    const saved = localStorage.getItem("emoratest_theme");
     if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
       setDark(true);
       document.documentElement.classList.add("dark");
@@ -20,7 +20,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     setDark((d) => {
       const next = !d;
       document.documentElement.classList.toggle("dark", next);
-      localStorage.setItem("conversiono_theme", next ? "dark" : "light");
+      localStorage.setItem("emoratest_theme", next ? "dark" : "light");
       return next;
     });
   }, []);

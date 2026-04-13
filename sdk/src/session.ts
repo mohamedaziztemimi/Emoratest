@@ -9,11 +9,10 @@
 import type { Transport } from "./transport";
 import { detectCountryCode, detectDeviceType, isoNow, uuid4 } from "./utils";
 
-const SESSION_KEY = "__conversiono_session";
+const SESSION_KEY = "__emoratest_session";
 
 export interface SessionInfo {
   sessionId: string;
-  merchantId: string;
   startedAt: string;
 }
 
@@ -28,13 +27,13 @@ export class SessionManager {
   }
 
   /** Get or create a session. */
-  async start(merchantId: string): Promise<SessionInfo> {
+  async start(): Promise<SessionInfo> {
     // Check sessionStorage for existing session
     const stored = this.loadFromStorage();
-    if (stored && stored.merchantId === merchantId) {
+    if (stored) {
       this.session = stored;
       if (this.debug) {
-        console.debug("[Conversiono] Resumed session:", stored.sessionId);
+        console.debug("[EmoraTest] Resumed session:", stored.sessionId);
       }
       return stored;
     }
@@ -45,7 +44,6 @@ export class SessionManager {
 
     try {
       await this.transport.createSession({
-        merchant_id: merchantId,
         page_url: window.location.href,
         started_at: startedAt,
         country_code: detectCountryCode(),
@@ -53,16 +51,16 @@ export class SessionManager {
       });
     } catch (err) {
       if (this.debug) {
-        console.error("[Conversiono] Session creation failed:", err);
+        console.error("[EmoraTest] Session creation failed:", err);
       }
       // Still track locally even if backend is down
     }
 
-    this.session = { sessionId, merchantId, startedAt };
+    this.session = { sessionId, startedAt };
     this.saveToStorage(this.session);
 
     if (this.debug) {
-      console.debug("[Conversiono] New session:", sessionId);
+      console.debug("[EmoraTest] New session:", sessionId);
     }
 
     return this.session;

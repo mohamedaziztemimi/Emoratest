@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Conversiono Psychology Framework — maps behavioral features to psychological states and interventions",
+  "description": "EmoraTest Psychology Framework — maps behavioral features to psychological states and interventions",
   "states": [
     {
       "id": "loss_aversion",

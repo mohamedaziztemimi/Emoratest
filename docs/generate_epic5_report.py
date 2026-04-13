@@ -31,7 +31,7 @@ class CoursePDF(FPDF):
             return
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 8, "Conversiono - Epic 5: Merchant Dashboard v1", align="L")
+        self.cell(0, 8, "EmoraTest - Epic 5: Merchant Dashboard v1", align="L")
         self.cell(0, 8, f"Page {self.page_no()}", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*self.PRIMARY)
         self.set_line_width(0.3)
@@ -42,7 +42,7 @@ class CoursePDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 10, "Conversiono AI Platform - Course Documentation", align="C")
+        self.cell(0, 10, "EmoraTest AI Platform - Course Documentation", align="C")
 
     def chapter_title(self, num: str, title: str):
         self.add_page()
@@ -173,7 +173,7 @@ def _cover(pdf: CoursePDF) -> None:
     pdf.ln(30)
     pdf.set_font("Helvetica", "B", 32)
     pdf.set_text_color(*pdf.PRIMARY)
-    pdf.cell(0, 14, "Conversiono AI Platform", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 14, "EmoraTest AI Platform", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 22)
     pdf.set_text_color(*pdf.DARK)
@@ -247,7 +247,7 @@ def _ch01(pdf: CoursePDF) -> None:
 
     pdf.section_title("1.1", "Layered Architecture")
     pdf.body(
-        "The Conversiono frontend follows a clean layered architecture that separates concerns into "
+        "The EmoraTest frontend follows a clean layered architecture that separates concerns into "
         "distinct tiers. Each layer has a single responsibility and communicates only with its "
         "adjacent layers. This pattern ensures maintainability, testability, and scalability as "
         "the application grows."
@@ -791,7 +791,7 @@ def _ch05(pdf: CoursePDF) -> None:
 
     pdf.section_title("5.2", "Sidebar Navigation")
     pdf.body(
-        "The Sidebar component renders the Conversiono logo, navigation links, and handles "
+        "The Sidebar component renders the EmoraTest logo, navigation links, and handles "
         "active state highlighting. It uses Next.js usePathname() to determine which link is "
         "currently active."
     )
@@ -2108,7 +2108,7 @@ def _ch16(pdf: CoursePDF) -> None:
     pdf.body(
         "Before deploying to production, verify the following items:"
     )
-    pdf.numbered(1, "Set NEXT_PUBLIC_API_URL to the production backend URL (e.g., https://api.conversiono.com).")
+    pdf.numbered(1, "Set NEXT_PUBLIC_API_URL to the production backend URL (e.g., https://api.emoratest.com).")
     pdf.numbered(2, "Update CORS_ORIGINS in the backend to include the production frontend domain.")
     pdf.numbered(3, "Replace localStorage SDK key storage with httpOnly cookies or a secure token exchange.")
     pdf.numbered(4, "Enable CSP (Content Security Policy) headers to prevent XSS attacks.")

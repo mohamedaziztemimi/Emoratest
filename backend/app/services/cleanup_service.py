@@ -22,7 +22,7 @@ from app.models.intervention_result import InterventionResult
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 
-logger = logging.getLogger("conversiono.cleanup")
+logger = logging.getLogger("emoratest.cleanup")
 
 # Maximum sessions to delete per cleanup run (prevent long transactions)
 BATCH_SIZE = 500

@@ -5,7 +5,7 @@ import { useQuery } from "@/lib/hooks";
 import { fetchUsage, fetchFunnel, fetchRiskDistribution } from "@/lib/api";
 import type { RiskDistributionResponse } from "@/lib/api";
 import { formatPercent, formatNumber } from "@/lib/format";
-import StatCard from "@/components/ui/StatCard";
+import { StatCard } from "@/components/ui/StatCard";
 import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -69,7 +69,7 @@ export default function OverviewPage() {
           Store Overview
         </h1>
         <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">
-          How your visitors are behaving right now and where you're losing sales
+          How your visitors are behaving right now and where you&apos;re losing sales
         </p>
       </div>
 

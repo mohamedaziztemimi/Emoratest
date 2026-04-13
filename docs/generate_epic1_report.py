@@ -1,4 +1,4 @@
-"""Generate Epic 1 Documentation PDF — Conversiono Project."""
+"""Generate Epic 1 Documentation PDF — EmoraTest Project."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class ReportPDF(FPDF):
             return
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 8, "Conversiono - Epic 1 Documentation", align="L")
+        self.cell(0, 8, "EmoraTest - Epic 1 Documentation", align="L")
         self.cell(0, 8, f"Page {self.page_no()}", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*self.PRIMARY)
         self.set_line_width(0.3)
@@ -34,7 +34,7 @@ class ReportPDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 10, "Confidential - Conversiono AI Platform", align="C")
+        self.cell(0, 10, "Confidential - EmoraTest AI Platform", align="C")
 
     # ── Styling helpers ──────────────────────────────────────
 
@@ -152,7 +152,7 @@ def build_pdf() -> str:
     pdf.ln(35)
     pdf.set_font("Helvetica", "B", 32)
     pdf.set_text_color(*ReportPDF.DARK)
-    pdf.cell(0, 14, "CONVERSIONO", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 14, "EMORATEST", align="C", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 14)
     pdf.set_text_color(*ReportPDF.GRAY)
@@ -246,7 +246,7 @@ def build_pdf() -> str:
     pdf.section_title("1", "Project Overview")
 
     pdf.body_text(
-        "Conversiono is an AI-powered behavioral intelligence platform for e-commerce. "
+        "EmoraTest is an AI-powered behavioral intelligence platform for e-commerce. "
         "It detects psychological friction preventing conversions, explains friction in plain "
         "language using behavioral science principles, recommends evidence-based interventions "
         "in real time, and uses ML to predict user intent and abandonment risk."
@@ -254,7 +254,7 @@ def build_pdf() -> str:
 
     pdf.subsection("Core Value Proposition")
     pdf.body_text(
-        "Instead of showing a merchant '67% abandonment rate', Conversiono says: "
+        "Instead of showing a merchant '67% abandonment rate', EmoraTest says: "
         "'42% of abandonments are caused by price shock - show a 10% discount popup "
         "on the pricing page and conversions increase by 18%'. That is actionable intelligence."
     )
@@ -276,7 +276,7 @@ def build_pdf() -> str:
 
     pdf.subsection("Monorepo Structure")
     pdf.code_block(
-        "conversiono/\n"
+        "emoratest/\n"
         "  backend/        FastAPI API server (Python 3.11)\n"
         "  frontend/       Next.js 14 dashboard (React + TypeScript)\n"
         "  ml/             ML training pipeline + models\n"
@@ -580,7 +580,7 @@ def build_pdf() -> str:
 
     pdf.body_text(
         "Maps the 8 behavioral features to 8 psychological states, each backed by behavioral science "
-        "research. Located at ml/psychology/framework_v1.json. This is what makes Conversiono's "
+        "research. Located at ml/psychology/framework_v1.json. This is what makes EmoraTest's "
         "insights human-readable and actionable."
     )
 
@@ -833,7 +833,7 @@ def build_pdf() -> str:
     pdf.body_text("Epic 3 (Sprint 3) will build the JavaScript SDK for real-time event collection.")
 
     # Save
-    out_path = "C:/Conversiono/docs/Epic1_Data_Foundation_ML_Baseline.pdf"
+    out_path = "C:/EmoraTest/docs/Epic1_Data_Foundation_ML_Baseline.pdf"
     pdf.output(out_path)
     return out_path
 

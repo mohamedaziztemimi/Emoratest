@@ -1,8 +1,8 @@
-# Conversiono
+# EmoraTest
 
 AI-Powered Behavioral Intelligence for E-Commerce.
 
-Conversiono detects the psychological friction killing conversion, explains it in plain language grounded in behavioral science, and recommends evidence-based interventions — all in real time.
+EmoraTest detects the psychological friction killing conversion, explains it in plain language grounded in behavioral science, and recommends evidence-based interventions — all in real time.
 
 ## Architecture
 

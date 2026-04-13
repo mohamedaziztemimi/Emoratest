@@ -1,7 +1,7 @@
 [project]
-name = "conversiono-ml"
+name = "emoratest-ml"
 version = "0.1.0"
-description = "Conversiono ML training pipeline — behavioral prediction models"
+description = "EmoraTest ML training pipeline — behavioral prediction models"
 requires-python = ">=3.11"
 dependencies = [
     "pandas>=2.2.0",

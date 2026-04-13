@@ -49,7 +49,7 @@ describe("SessionManager", () => {
     it("saves session to sessionStorage", async () => {
       await manager.start("merchant-1");
 
-      const stored = sessionStorage.getItem("__conversiono_session");
+      const stored = sessionStorage.getItem("__emoratest_session");
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed.merchantId).toBe("merchant-1");
@@ -62,7 +62,7 @@ describe("SessionManager", () => {
         startedAt: "2026-01-01T00:00:00.000Z",
       };
       sessionStorage.setItem(
-        "__conversiono_session",
+        "__emoratest_session",
         JSON.stringify(existingSession),
       );
 
@@ -80,7 +80,7 @@ describe("SessionManager", () => {
         startedAt: "2026-01-01T00:00:00.000Z",
       };
       sessionStorage.setItem(
-        "__conversiono_session",
+        "__emoratest_session",
         JSON.stringify(existingSession),
       );
 
@@ -116,7 +116,7 @@ describe("SessionManager", () => {
       await manager.start("merchant-1");
       await manager.end();
 
-      expect(sessionStorage.getItem("__conversiono_session")).toBeNull();
+      expect(sessionStorage.getItem("__emoratest_session")).toBeNull();
     });
 
     it("nulls the session", async () => {

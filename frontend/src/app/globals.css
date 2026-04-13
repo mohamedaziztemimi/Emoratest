@@ -57,6 +57,10 @@
 }
 
 /* ── Base Styles ─────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   border-color: hsl(var(--border));
 }
@@ -83,6 +87,15 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* No scrollbar utility for horizontal scrolling containers */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
 }
 
 /* ── Utility Layer ───────────────────────────────────────── */
@@ -112,4 +125,32 @@ body {
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes gradient-shift {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+@keyframes bounce-slight {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.animate-float_6s_ease-in-out_infinite {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+.animate-bounce-slight {
+  animation: bounce-slight 3s ease-in-out infinite;
+}
+.animate-gradient-shift {
+  animation: gradient-shift 8s ease-in-out infinite;
 }

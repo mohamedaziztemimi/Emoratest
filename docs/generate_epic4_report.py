@@ -31,7 +31,7 @@ class CoursePDF(FPDF):
             return
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 8, "Conversiono - Epic 4: Backend API Complete", align="L")
+        self.cell(0, 8, "EmoraTest - Epic 4: Backend API Complete", align="L")
         self.cell(0, 8, f"Page {self.page_no()}", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*self.PRIMARY)
         self.set_line_width(0.3)
@@ -42,7 +42,7 @@ class CoursePDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 10, "Conversiono AI Platform - Course Documentation", align="C")
+        self.cell(0, 10, "EmoraTest AI Platform - Course Documentation", align="C")
 
     def chapter_title(self, num: str, title: str):
         self.add_page()
@@ -173,7 +173,7 @@ def build():
     pdf.ln(40)
     pdf.set_font("Helvetica", "B", 36)
     pdf.set_text_color(*pdf.PRIMARY)
-    pdf.cell(0, 16, "CONVERSIONO", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 16, "EMORATEST", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 14)
     pdf.set_text_color(*pdf.GRAY)
     pdf.cell(0, 8, "AI Behavioral Intelligence Platform", align="C", new_x="LMARGIN", new_y="NEXT")
@@ -228,7 +228,7 @@ def build():
     pdf.chapter_title("1", "Epic 4 Overview & Architecture")
 
     pdf.body(
-        "Epic 4 completes the Conversiono backend API, transforming it from a data ingestion "
+        "Epic 4 completes the EmoraTest backend API, transforming it from a data ingestion "
         "and analytics platform into a full production system with experiment management, "
         "intervention recommendations, real-time scoring, and security hardening."
     )
@@ -914,14 +914,14 @@ def build():
         "apiVersion: batch/v1\n"
         "kind: CronJob\n"
         "metadata:\n"
-        "  name: conversiono-cleanup\n"
+        "  name: emoratest-cleanup\n"
         "spec:\n"
         "  schedule: '0 */6 * * *'  # Every 6 hours\n"
         "  jobTemplate:\n"
         "    spec:\n"
         "      containers:\n"
         "        - name: cleanup\n"
-        "          image: conversiono-backend\n"
+        "          image: emoratest-backend\n"
         "          command: ['python', '-c',\n"
         "            'import asyncio; from app.services.cleanup_service "
         "import cleanup_expired_sessions; asyncio.run(cleanup_expired_sessions())']"
@@ -930,9 +930,9 @@ def build():
     pdf.section_title("11.5", "Environment Variables")
     pdf.body("Ensure these environment variables are set in production:")
     pdf.code_block(
-        "DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/conversiono\n"
+        "DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/emoratest\n"
         "REDIS_URL=redis://host:6379/0\n"
-        "CORS_ORIGINS=[\"https://dashboard.conversiono.com\"]"
+        "CORS_ORIGINS=[\"https://dashboard.emoratest.com\"]"
     )
 
     pdf.section_title("11.6", "SDK Key Distribution")

@@ -15,7 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-logger = logging.getLogger("conversiono.errors")
+logger = logging.getLogger("emoratest.errors")
 
 
 class ErrorResponse(BaseModel):

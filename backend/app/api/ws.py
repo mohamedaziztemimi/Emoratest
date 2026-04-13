@@ -33,7 +33,7 @@ from app.core.database import async_session
 from app.models.merchant import Merchant
 from app.models.session import Session
 
-logger = logging.getLogger("conversiono.ws")
+logger = logging.getLogger("emoratest.ws")
 
 router = APIRouter(tags=["websocket"])
 

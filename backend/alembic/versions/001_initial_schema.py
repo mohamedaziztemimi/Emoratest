@@ -126,11 +126,6 @@ def upgrade() -> None:
         sa.Column("conversion_delta", sa.Float),
     )
 
-    # ── pgvector extension + embedding column ──────────────────────
-    op.execute("CREATE SCHEMA IF NOT EXISTS extensions")
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector SCHEMA extensions")
-    op.execute("ALTER TABLE experiments ADD COLUMN embedding extensions.vector(384)")
-
     # ── Indexes (Section 4.2) ──────────────────────────────────────
     # Sessions: merchant dashboard queries
     op.create_index("idx_sessions_merchant_date", "sessions", ["merchant_id", sa.text("started_at DESC")])
@@ -144,11 +139,8 @@ def upgrade() -> None:
     op.create_index("idx_experiments_merchant", "experiments", ["merchant_id", sa.text("ran_at DESC")])
     op.create_index("idx_experiments_friction", "experiments", ["merchant_id", "friction_type"])
 
-    # ivfflat index for pgvector semantic search
-    op.execute(
-        "CREATE INDEX idx_experiments_embed ON experiments "
-        "USING ivfflat (embedding extensions.vector_cosine_ops) WITH (lists = 100)"
-    )
+    # Note: pgvector extension moved to V2 (Epic 9 - Semantic Search)
+    # This migration now supports V1 MVP without external dependencies
 
 
 def downgrade() -> None:
@@ -166,6 +158,3 @@ def downgrade() -> None:
     op.drop_table("events")
     op.drop_table("sessions")
     op.drop_table("merchants")
-
-    op.execute("DROP EXTENSION IF EXISTS vector CASCADE")
-    op.execute("DROP SCHEMA IF EXISTS extensions")

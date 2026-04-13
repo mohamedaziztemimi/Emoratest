@@ -14,14 +14,14 @@ const profileFetcher = () => fetchMerchantProfile();
 export default function SettingsPage() {
   const profile = useQuery(profileFetcher, [], "merchant-profile");
   const [sdkKey, setSdkKey] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("conversiono_sdk_key") || "" : ""
+    typeof window !== "undefined" ? localStorage.getItem("emoratest_sdk_key") || "" : ""
   );
   const [saved, setSaved] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [rotateResult, setRotateResult] = useState<string | null>(null);
 
   const handleSaveKey = useCallback(() => {
-    localStorage.setItem("conversiono_sdk_key", sdkKey);
+    localStorage.setItem("emoratest_sdk_key", sdkKey);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }, [sdkKey]);
@@ -32,7 +32,7 @@ export default function SettingsPage() {
     try {
       const res = await rotateKey();
       setSdkKey(res.new_sdk_key);
-      localStorage.setItem("conversiono_sdk_key", res.new_sdk_key);
+      localStorage.setItem("emoratest_sdk_key", res.new_sdk_key);
       setRotateResult(`Key rotated at ${res.rotated_at}. New key saved.`);
     } catch (err) {
       setRotateResult(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);

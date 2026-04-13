@@ -1,7 +1,7 @@
 """Dashboard API endpoints — session retrieval and analytics (CONV-37 to CONV-40).
 
 All endpoints are merchant-scoped: a merchant can only see their own data.
-Authentication uses the same SDK key mechanism as the ingestion endpoints.
+Authentication uses JWT bearer tokens (merchant login), not SDK keys.
 
 Endpoints:
     GET  /api/v1/dashboard/sessions              — paginated session list
@@ -17,9 +17,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_merchant
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.event import Event
+from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 from app.schemas.dashboard import (
@@ -33,7 +35,6 @@ from app.schemas.dashboard import (
     SessionListItem,
     SessionListResponse,
 )
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -54,10 +55,9 @@ async def list_sessions(
     date_to: datetime | None = Query(None),
     device_type: str | None = Query(None, pattern=r"^(desktop|mobile|tablet)$"),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     """List sessions for the authenticated merchant with filtering."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     query = select(Session).where(Session.merchant_id == merchant.id)
 
@@ -117,10 +117,9 @@ async def get_session_detail(
     request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     """Get full session detail including events, features, and scores."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         sid = uuid.UUID(session_id)
@@ -200,14 +199,13 @@ async def get_friction_map(
     date_to: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     """Aggregate friction data by element_id for heatmap visualization.
 
     Returns elements ranked by event count, with average hesitation time,
     click count, and rage-click rate.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Build base query: events from merchant's sessions with a non-null element_id
     session_ids = (
@@ -287,7 +285,7 @@ async def get_funnel(
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     """Conversion funnel with drop-off rates and friction scores per step.
 
@@ -298,7 +296,6 @@ async def get_funnel(
     4. checkout — sessions with checkout-related element interactions
     5. converted — sessions with outcome='purchase'
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Base: merchant sessions
     base = select(Session).where(Session.merchant_id == merchant.id)

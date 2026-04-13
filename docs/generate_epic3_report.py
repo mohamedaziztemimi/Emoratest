@@ -31,7 +31,7 @@ class CoursePDF(FPDF):
             return
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 8, "Conversiono - Epic 3: JavaScript SDK", align="L")
+        self.cell(0, 8, "EmoraTest - Epic 3: JavaScript SDK", align="L")
         self.cell(0, 8, f"Page {self.page_no()}", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*self.PRIMARY)
         self.set_line_width(0.3)
@@ -42,7 +42,7 @@ class CoursePDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*self.GRAY)
-        self.cell(0, 10, "Conversiono AI Platform - Course Documentation", align="C")
+        self.cell(0, 10, "EmoraTest AI Platform - Course Documentation", align="C")
 
     def chapter_title(self, num: str, title: str):
         self.add_page()
@@ -159,7 +159,7 @@ def build_pdf():
     pdf.ln(40)
     pdf.set_font("Helvetica", "B", 32)
     pdf.set_text_color(*CoursePDF.PRIMARY)
-    pdf.cell(0, 14, "Conversiono", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 14, "EmoraTest", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 16)
     pdf.set_text_color(*CoursePDF.DARK)
     pdf.cell(0, 10, "Epic 3: JavaScript SDK", align="C", new_x="LMARGIN", new_y="NEXT")
@@ -199,7 +199,7 @@ def build_pdf():
     pdf.section_title("1.1", "Why a Custom SDK?")
     pdf.body(
         "Third-party analytics tools (Google Analytics, Hotjar) send data to their own servers. "
-        "Conversiono needs raw behavioral events flowing directly into our ML pipeline, with "
+        "EmoraTest needs raw behavioral events flowing directly into our ML pipeline, with "
         "sub-second granularity on mouse velocity, scroll retreat patterns, and exit intent signals. "
         "A custom SDK gives us full control over what data is captured, how it is batched, and "
         "where it is sent."
@@ -228,12 +228,12 @@ def build_pdf():
         "Rollup is a module bundler optimized for libraries (vs Webpack which targets apps). "
         "We produce three outputs from a single entry point:"
     )
-    pdf.numbered(1, "UMD (conversiono.umd.js) - works with <script> tags, AMD, and CommonJS")
-    pdf.numbered(2, "ESM (conversiono.esm.js) - for modern bundlers (Vite, Webpack 5, esbuild)")
+    pdf.numbered(1, "UMD (emoratest.umd.js) - works with <script> tags, AMD, and CommonJS")
+    pdf.numbered(2, "ESM (emoratest.esm.js) - for modern bundlers (Vite, Webpack 5, esbuild)")
     pdf.numbered(3, "TypeScript declarations (index.d.ts) - enables type-safe integration")
 
     pdf.body(
-        "The UMD build uses Terser for minification and exposes a global 'Conversiono' object "
+        "The UMD build uses Terser for minification and exposes a global 'EmoraTest' object "
         "so merchants can use it with a simple <script> tag without any build tooling."
     )
 
@@ -243,9 +243,9 @@ def build_pdf():
         "  {\n"
         '    input: "src/index.ts",\n'
         "    output: {\n"
-        '      file: "dist/conversiono.umd.js",\n'
+        '      file: "dist/emoratest.umd.js",\n'
         '      format: "umd",\n'
-        '      name: "Conversiono",  // window.Conversiono\n'
+        '      name: "EmoraTest",  // window.EmoraTest\n'
         "    },\n"
         "    plugins: [typescript(), resolve(), terser()],\n"
         "  },\n"
@@ -292,7 +292,7 @@ def build_pdf():
 
     pdf.section_title("2.2", "Configuration with Sensible Defaults")
     pdf.body(
-        "The SDK exposes a ConversionoConfig interface with only one required field (sdkKey). "
+        "The SDK exposes a EmoraTestConfig interface with only one required field (sdkKey). "
         "Everything else has production-ready defaults. Internally we 'resolve' the config "
         "into a ResolvedConfig where all fields are required."
     )
@@ -512,14 +512,14 @@ def build_pdf():
     )
     pdf.code_block(
         "// On init: check for existing session\n"
-        "const stored = sessionStorage.getItem('__conversiono_session');\n"
+        "const stored = sessionStorage.getItem('__emoratest_session');\n"
         "if (stored && stored.merchantId === merchantId) {\n"
         "  // Resume existing session (no API call needed)\n"
         "  return JSON.parse(stored);\n"
         "}\n"
         "// Otherwise: create new session via API\n"
         "const session = await transport.createSession({...});\n"
-        "sessionStorage.setItem('__conversiono_session', JSON.stringify(session));"
+        "sessionStorage.setItem('__emoratest_session', JSON.stringify(session));"
     )
 
     pdf.tip_box(

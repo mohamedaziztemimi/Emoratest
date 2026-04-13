@@ -56,7 +56,7 @@ export class EventQueue {
     this.queue.push(event);
 
     if (this.debug) {
-      console.debug("[Conversiono] Event queued:", event.type, event);
+      console.debug("[EmoraTest] Event queued:", event.type, event);
     }
 
     if (this.queue.length >= this.maxBatchSize) {
@@ -71,7 +71,7 @@ export class EventQueue {
     const events = this.queue.splice(0, this.maxBatchSize);
 
     if (this.debug) {
-      console.debug(`[Conversiono] Flushing ${events.length} events`);
+      console.debug(`[EmoraTest] Flushing ${events.length} events`);
     }
 
     try {
@@ -94,7 +94,7 @@ export class EventQueue {
 
     if (this.debug) {
       console.debug(
-        `[Conversiono] Beacon flush: ${events.length} events`,
+        `[EmoraTest] Beacon flush: ${events.length} events`,
       );
     }
 
@@ -111,7 +111,7 @@ export class EventQueue {
 
   private logError = (err: unknown): void => {
     if (this.debug) {
-      console.error("[Conversiono] Flush error:", err);
+      console.error("[EmoraTest] Flush error:", err);
     }
   };
 }

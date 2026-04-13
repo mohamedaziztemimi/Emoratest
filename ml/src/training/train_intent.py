@@ -43,7 +43,7 @@ def train(database_url: str | None = None) -> dict:
     Returns a dict with metrics (accuracy, confusion_matrix, classification_report).
     """
     db_url = database_url or os.environ.get(
-        "DATABASE_URL", "postgresql://localhost:5432/conversiono"
+        "DATABASE_URL", "postgresql://localhost:5432/emoratest"
     )
 
     # 1. Load data

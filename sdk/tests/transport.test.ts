@@ -7,7 +7,7 @@ import { Transport } from "../src/transport";
 
 describe("Transport", () => {
   let transport: Transport;
-  const API_URL = "https://api.conversiono.com";
+  const API_URL = "https://api.emoratest.com";
   const SDK_KEY_HASH = "abc123hash";
 
   beforeEach(() => {

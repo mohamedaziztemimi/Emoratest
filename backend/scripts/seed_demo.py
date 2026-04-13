@@ -751,7 +751,7 @@ async def seed() -> None:
                 "conversion_delta": exp["conversion_delta"],
                 "sample_size": exp["sample_size"],
                 "ran_at": exp["ran_at"],
-                "source": "conversiono_ml",
+                "source": "emoratest_ml",
                 "created_at": datetime.now(UTC) - timedelta(days=random.randint(1, 30)),
             }
             await insert_batch(db, "experiments", [row])

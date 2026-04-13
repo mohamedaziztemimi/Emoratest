@@ -1,12 +1,16 @@
 /**
- * Conversiono API Client (CONV-51).
+ * EmoraTest API Client
  *
  * Centralized HTTP client for all backend API calls.
- * All requests include the SDK key hash in X-SDK-Key header.
+ * Uses httpOnly cookies for authentication - no localStorage tokens.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 const REQUEST_TIMEOUT = 15_000; // 15s timeout
+
+if (!API_BASE) {
+  console.warn("NEXT_PUBLIC_API_URL not set");
+}
 
 class ApiError extends Error {
   status: number;
@@ -19,16 +23,9 @@ class ApiError extends Error {
   }
 }
 
-function getSdkKey(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("conversiono_sdk_key") || "";
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const sdkKey = getSdkKey();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(sdkKey ? { "X-SDK-Key": sdkKey } : {}),
     ...(options.headers as Record<string, string> || {}),
   };
 
@@ -36,9 +33,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const url = `${API_BASE}${path}`;
+    const res = await fetch(url, {
       ...options,
       headers,
+      credentials: "include", // Send httpOnly cookies
       signal: options.signal ?? controller.signal,
     });
 
@@ -346,6 +345,64 @@ export function fetchUsage(): Promise<UsageSummary> {
 
 export function rotateKey(): Promise<{ new_sdk_key: string; rotated_at: string }> {
   return request("/merchants/rotate-key", { method: "POST" });
+}
+
+// ── Auth ────────────────────────────────────────────────────
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  merchant_id: string;
+  email: string;
+  shop_domain: string;
+  plan: string;
+  sdk_key?: string;
+  onboarding_completed: boolean;
+}
+
+export interface AuthMeResponse {
+  id: string;
+  email: string;
+  shop_domain: string;
+  plan: string;
+  is_active: boolean;
+  gdpr_consent: boolean;
+  onboarding_completed: boolean;
+  created_at: string;
+}
+
+export function authRegister(data: {
+  email: string;
+  password: string;
+  shop_domain: string;
+  plan?: string;
+  gdpr_consent?: boolean;
+}): Promise<AuthResponse> {
+  return request("/auth/register", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function authLogin(data: { email: string; password: string }): Promise<AuthResponse> {
+  return request("/auth/login", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function authMe(): Promise<AuthMeResponse> {
+  return request("/auth/me");
+}
+
+export function authCompleteOnboarding(): Promise<{ status: string }> {
+  return request("/auth/onboarding-complete", { method: "POST" });
+}
+
+export function gdprConsent(): Promise<{ status: string; consented_at: string }> {
+  return request("/auth/gdpr/consent", { method: "POST" });
+}
+
+export function gdprExport(): Promise<unknown> {
+  return request("/auth/gdpr/export");
+}
+
+export function gdprDelete(): Promise<{ status: string; message: string }> {
+  return request("/auth/gdpr/delete", { method: "DELETE" });
 }
 
 export { ApiError };

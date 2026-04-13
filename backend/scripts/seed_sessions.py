@@ -284,7 +284,7 @@ async def seed() -> None:
             await engine.dispose()
             return
 
-        print("Seeding Conversiono database...")
+        print("Seeding EmoraTest database...")
 
         # 1. Seed merchants
         merchants = generate_merchants()

@@ -1,7 +1,7 @@
 [project]
-name = "conversiono-backend"
+name = "emoratest-backend"
 version = "0.1.0"
-description = "Conversiono API — AI behavioral intelligence for e-commerce"
+description = "EmoraTest API — Emotion ML + A/B Testing Platform"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
@@ -16,6 +16,9 @@ dependencies = [
     "numpy>=1.26.0",
     "slowapi>=0.1.9",
     "websockets>=12.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.0,<5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +50,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "app/api/*.py" = ["B008"]  # Depends() in function defaults is standard FastAPI
+"app/core/auth.py" = ["B008"]  # FastAPI dependency injection pattern
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

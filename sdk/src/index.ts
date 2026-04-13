@@ -1,14 +1,14 @@
 /**
- * Conversiono SDK — main entry point.
+ * EmoraTest SDK — main entry point.
  *
  * Usage (script tag):
- *   <script src="https://cdn.conversiono.com/sdk/conversiono.min.js"></script>
+ *   <script src="https://cdn.emoratest.com/sdk/emoratest.min.js"></script>
  *   <script>
- *     Conversiono.init({ sdkKey: 'your-key-here' });
+ *     EmoraTest.init({ sdkKey: 'your-key-here' });
  *   </script>
  *
  * Usage (npm):
- *   import { init } from '@conversiono/sdk';
+ *   import { init } from '@emoratest/sdk';
  *   init({ sdkKey: 'your-key-here' });
  */
 
@@ -22,12 +22,12 @@ import {
 import { EventQueue } from "./event-queue";
 import { SessionManager } from "./session";
 import { Transport } from "./transport";
-import type { ConversionoConfig, ResolvedConfig } from "./types";
+import type { EmoraTestConfig } from "./types";
 import { sha256 } from "./utils";
 
 // Re-export types for consumers
 export type {
-  ConversionoConfig,
+  EmoraTestConfig,
   RawEvent,
   BatchPayload,
   SessionCreatePayload,
@@ -36,7 +36,7 @@ export type {
 
 // ── Module state ──────────────────────────────────────────────
 
-let config: ResolvedConfig | null = null;
+let config: EmoraTestConfig | null = null;
 let transport: Transport | null = null;
 let queue: EventQueue | null = null;
 let sessionManager: SessionManager | null = null;
@@ -46,58 +46,61 @@ let initialized = false;
 // ── Public API ────────────────────────────────────────────────
 
 /**
- * Initialize the Conversiono SDK.
+ * Initialize the EmoraTest SDK.
  * Call this once per page load. Starts session tracking and event capture.
  */
-export async function init(userConfig: ConversionoConfig): Promise<void> {
+export async function init(userConfig: EmoraTestConfig): Promise<void> {
   if (initialized) {
-    console.warn("[Conversiono] Already initialized. Call destroy() first.");
+    console.warn("[EmoraTest] Already initialized. Call destroy() first.");
     return;
   }
 
   if (userConfig.disabled) {
-    if (userConfig.debug) console.debug("[Conversiono] Disabled by config");
+    if (userConfig.debug) console.debug("[EmoraTest] Disabled by config");
     return;
   }
 
   // Validate
   if (!userConfig.sdkKey) {
-    throw new Error("[Conversiono] sdkKey is required");
+    throw new Error("[EmoraTest] sdkKey is required");
   }
 
-  // Resolve config with defaults
-  const sdkKeyHash = await sha256(userConfig.sdkKey);
-
+  // Store config with resolved defaults
   config = {
     sdkKey: userConfig.sdkKey,
-    sdkKeyHash,
     apiUrl: userConfig.apiUrl ?? window.location.origin,
     flushIntervalMs: userConfig.flushIntervalMs ?? 2000,
     maxBatchSize: userConfig.maxBatchSize ?? 50,
     mouseMoveThrottleMs: userConfig.mouseMoveThrottleMs ?? 100,
     debug: userConfig.debug ?? false,
     disabled: false,
+  } as EmoraTestConfig & {
+    apiUrl: string;
+    flushIntervalMs: number;
+    maxBatchSize: number;
+    mouseMoveThrottleMs: number;
+    debug: boolean;
+    disabled: false;
   };
 
-  // Set up components
-  transport = new Transport(config.apiUrl, config.sdkKeyHash);
+  // Set up components - send RAW SDK key, backend will hash it server-side
+  transport = new Transport(config.apiUrl!, config.sdkKey);
   queue = new EventQueue(
     transport,
-    config.flushIntervalMs,
-    config.maxBatchSize,
-    config.debug,
+    config.flushIntervalMs!,
+    config.maxBatchSize!,
+    config.debug!,
   );
-  sessionManager = new SessionManager(transport, config.debug);
+  sessionManager = new SessionManager(transport, config.debug!);
 
-  // Create session — use sdkKeyHash as merchantId placeholder
-  // (backend resolves actual merchant_id from the SDK key)
-  const session = await sessionManager.start(config.sdkKeyHash);
+  // Create session — backend uses X-SDK-Key header to find merchant
+  const session = await sessionManager.start();
   queue.setSessionId(session.sessionId);
   queue.start();
 
   // Attach event collectors
   cleanups = [
-    collectMouseMove(queue, config.mouseMoveThrottleMs),
+    collectMouseMove(queue, config.mouseMoveThrottleMs!),
     collectClicks(queue),
     collectScroll(queue),
     collectExitIntent(queue),
@@ -129,7 +132,7 @@ export async function init(userConfig: ConversionoConfig): Promise<void> {
   initialized = true;
 
   if (config.debug) {
-    console.debug("[Conversiono] Initialized", {
+    console.debug("[EmoraTest] Initialized", {
       sessionId: session.sessionId,
       apiUrl: config.apiUrl,
     });
@@ -176,26 +179,26 @@ export function isInitialized(): boolean {
 export async function reportOutcome(
   outcome: "purchase" | "abandon",
 ): Promise<void> {
-  if (!initialized || !transport || !sessionManager) return;
+  if (!initialized || !config || !sessionManager) return;
 
   const sessionId = sessionManager.getSessionId();
   if (!sessionId) return;
 
   try {
     await fetch(
-      `${config!.apiUrl}/api/v1/sessions/${sessionId}/outcome`,
+      `${config.apiUrl}/api/v1/sessions/${sessionId}/outcome`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-SDK-Key": config!.sdkKeyHash,
+          "X-SDK-Key": config.sdkKey,
         },
         body: JSON.stringify({ outcome }),
       },
     );
   } catch (err) {
-    if (config?.debug) {
-      console.error("[Conversiono] Failed to report outcome:", err);
+    if (config.debug) {
+      console.error("[EmoraTest] Failed to report outcome:", err);
     }
   }
 }

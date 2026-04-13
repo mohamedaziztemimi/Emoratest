@@ -1,5 +1,5 @@
 /**
- * Utility functions for the Conversiono SDK.
+ * Utility functions for the EmoraTest SDK.
  */
 
 /**

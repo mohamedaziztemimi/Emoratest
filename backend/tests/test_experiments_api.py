@@ -50,6 +50,14 @@ def _make_experiment_mock(
     exp.ran_at = None
     exp.source = "manual"
     exp.created_at = datetime.now(UTC)
+    # New fields for experiment type coverage
+    exp.experiment_type = "ab"
+    exp.n_variants = 2
+    exp.flicker_free = True
+    exp.page_urls = None
+    exp.split_url_config = None
+    exp.server_side_key = None
+    exp.updated_at = datetime.now(UTC)
     return exp
 
 
@@ -103,6 +111,14 @@ class TestCreateExperiment:
             obj.ran_at = None
             obj.source = "manual"
             obj.created_at = datetime.now(UTC)
+            # New fields
+            obj.experiment_type = "ab"
+            obj.n_variants = 2
+            obj.flicker_free = True
+            obj.page_urls = None
+            obj.split_url_config = None
+            obj.server_side_key = None
+            obj.updated_at = datetime.now(UTC)
 
         db.refresh = fake_refresh
 

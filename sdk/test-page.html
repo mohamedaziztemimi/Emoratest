@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Store — EmoraTest SDK Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f8fafc; }
+    h1 { color: #1e293b; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .price { font-size: 24px; font-weight: bold; color: #ef4444; }
+    button { background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; transition: background 0.2s; }
+    button:hover { background: #059669; }
+    button.blue { background: #3b82f6; }
+    button.blue:hover { background: #2563eb; }
+    #status { margin-top: 20px; padding: 16px; background: #f1f5f9; border-radius: 8px; font-size: 14px; font-family: monospace; }
+    .success { color: #16a34a; font-weight: bold; }
+    .error { color: #dc2626; font-weight: bold; }
+    .instructions { background: #dbeafe; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+    .instructions code { background: #1e293b; color: #e2e8f0; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>🛒 Fake Store — SDK Test Page</h1>
+
+  <div class="instructions">
+    <strong>Instructions:</strong>
+    <ol>
+      <li>Register at <a href="http://localhost:3000/register" target="_blank">http://localhost:3000/register</a></li>
+      <li>Copy your SDK key from the Settings page</li>
+      <li>Paste it below where it says <code>YOUR_SDK_KEY_HERE</code></li>
+      <li>Open browser DevTools (F12 > Network tab) to see requests</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>🎧 Premium Headphones</h2>
+    <p>High-fidelity wireless headphones with active noise cancellation.</p>
+    <p class="price">$199.99</p>
+    <p>Move your mouse around, scroll up and down, click buttons — the SDK tracks all of it!</p>
+    <button id="add-to-cart">Add to Cart</button>
+    <button id="buy-now" class="blue">Buy Now</button>
+  </div>
+
+  <div class="card">
+    <h2>🎵 Wireless Earbuds</h2>
+    <p>Compact earbuds with 24-hour battery life.</p>
+    <p class="price">$79.99</p>
+    <button id="add-to-cart-2">Add to Cart</button>
+  </div>
+
+  <div class="card">
+    <h2>⌚ Smart Watch</h2>
+    <p>Fitness tracking, heart rate monitor, notifications.</p>
+    <p class="price">$299.99</p>
+    <button id="add-to-cart-3">Add to Cart</button>
+  </div>
+
+  <div id="status">⏳ SDK status: loading...</div>
+
+  <!-- Load the SDK (UMD build) -->
+  <!-- For local testing, you need to serve this file via HTTP -->
+  <script src="http://localhost:8000/static/sdk/emoratest.umd.js"></script>
+  <script>
+    // ⚠️ REPLACE THIS with your actual SDK key from the dashboard Settings page
+    const SDK_KEY = 'YOUR_SDK_KEY_HERE';
+
+    // Check if SDK loaded
+    if (typeof EmoraTest === 'undefined') {
+      document.getElementById('status').innerHTML =
+        '<span class="error">❌ SDK failed to load. Make sure backend is running and the SDK file is accessible.</span>';
+      console.error('EmoraTest SDK not loaded!');
+    } else {
+      // Initialize the SDK
+      EmoraTest.init({
+        sdkKey: SDK_KEY,
+        apiUrl: 'http://localhost:8000',
+        debug: true,  // logs events to console
+        flushIntervalMs: 3000,  // send events every 3 seconds
+        maxBatchSize: 10,
+      }).then(() => {
+        document.getElementById('status').innerHTML =
+          '<span class="success">✅ SDK ACTIVE</span><br>' +
+          'Session ID: <code>' + EmoraTest.getSessionId() + '</code>';
+      }).catch(err => {
+        document.getElementById('status').innerHTML =
+          '<span class="error">❌ SDK Init Failed: ' + err.message + '</span>';
+      });
+
+      // Simulate add to cart
+      document.querySelectorAll('[id^="add-to-cart"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          console.log('🛒 Add to cart clicked!');
+        });
+      });
+
+      // Simulate a purchase
+      document.getElementById('buy-now').addEventListener('click', async function() {
+        try {
+          await EmoraTest.reportOutcome('purchase');
+          alert('✅ Purchase reported! Check your dashboard at http://localhost:3000/dashboard');
+        } catch (err) {
+          alert('Error reporting purchase: ' + err.message);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
