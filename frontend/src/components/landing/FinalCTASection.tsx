@@ -44,11 +44,31 @@ export function FinalCTASection() {
           </div>
 
           {/* Checkmarks */}
-          <p className="text-sm text-white">
-            <span className="mr-4">✓ Free forever plan</span>
-            <span className="mr-4">✓ 2-min setup</span>
-            <span className="mr-4">✓ No credit card</span>
-            <span>✓ Cancel anytime</span>
+          <p className="text-sm text-white flex items-center justify-center gap-4 flex-wrap">
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 001.414 1.414z" clipRule="evenodd" />
+              </svg>
+              Free forever plan
+            </span>
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 001.414 1.414z" clipRule="evenodd" />
+              </svg>
+              2-min setup
+            </span>
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 001.414 1.414z" clipRule="evenodd" />
+              </svg>
+              No credit card
+            </span>
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 001.414 1.414z" clipRule="evenodd" />
+              </svg>
+              Cancel anytime
+            </span>
           </p>
         </FadeInOnScroll>
       </div>

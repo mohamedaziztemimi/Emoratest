@@ -29,8 +29,14 @@ export function HeroSection({ id }: HeroSectionProps) {
         <div className="grid lg:grid-cols-[55%_45%] gap-12 items-start mb-16">
           {/* Left Column */}
           <div className="space-y-6">
+            {/* Badge pill */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#007BFF] bg-white">
+              <span className="w-2 h-2 rounded-full bg-[#007BFF] animate-pulse"></span>
+              <span className="text-sm font-semibold text-[#007BFF]">Now with Emotion ML</span>
+            </div>
+
             {/* H1 */}
-            <h1 className="text-[clamp(36px,4.5vw,56px)] font-bold leading-[1.1] tracking-tight font-sans">
+            <h1 className="text-[clamp(32px,4vw,48px)] font-bold leading-[1.1] tracking-tight font-sans">
               <span className="text-[#111318]">See Why Users Quit:</span>
               <br />
               <span className="bg-gradient-to-r from-[#007BFF] to-[#7C3AED] bg-clip-text text-transparent">
