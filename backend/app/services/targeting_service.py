@@ -495,7 +495,7 @@ class TargetingService:
             "hesitation": 0.0,
         }
 
-        for emotion, count, avg in emotion_data:
+        for emotion, _count, avg in emotion_data:
             if emotion in emotion_avgs:
                 emotion_avgs[emotion] = avg or 0.0
 

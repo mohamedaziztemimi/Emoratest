@@ -257,7 +257,6 @@ class StatsService:
 
             # P-value (two-tailed)
             # Use standard normal CDF approximation
-            import math
             p_value = 2 * (1 - self._normal_cdf(abs(z)))
 
             variant.p_value = p_value
