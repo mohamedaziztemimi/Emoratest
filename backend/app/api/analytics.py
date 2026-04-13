@@ -7,7 +7,6 @@ funnel analysis with emotion profiling, and anomaly detection.
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -16,10 +15,6 @@ from pydantic import BaseModel, Field
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.services.stats_service import (
-    StatsService,
-    ExperimentResults,
-    FunnelResult,
-    CUPEDResult,
     SRMResult,
     Anomaly,
     get_stats_service,
