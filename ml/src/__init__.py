@@ -7,17 +7,16 @@ Exports:
 - generate_synthetic_training_data: Bootstrap training data
 """
 
-from ml.src.feature_extractor import (
-    BehavioralFeatureExtractor,
-    Event,
-)
-
 from ml.src.emotion_classifier import (
+    VALENCE_AROUSAL,
     Emotion,
     EmotionClassifier,
     EmotionResult,
-    VALENCE_AROUSAL,
     generate_synthetic_training_data,
+)
+from ml.src.feature_extractor import (
+    BehavioralFeatureExtractor,
+    Event,
 )
 
 __all__ = [

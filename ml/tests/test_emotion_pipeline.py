@@ -7,20 +7,16 @@ and synthetic data generation.
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import numpy as np
 import pytest
-
-from ml.src.feature_extractor import BehavioralFeatureExtractor, Event
 from ml.src.emotion_classifier import (
+    VALENCE_AROUSAL,
     Emotion,
     EmotionClassifier,
     EmotionResult,
     generate_synthetic_training_data,
-    VALENCE_AROUSAL,
 )
-
+from ml.src.feature_extractor import BehavioralFeatureExtractor, Event
 
 # ── Sample Event Generators ────────────────────────────────────────────────
 
@@ -402,8 +398,8 @@ class TestEmotionClassifier:
 
     def test_save_load_model(self):
         """Save and load model preserves state."""
-        import tempfile
         import os
+        import tempfile
 
         classifier = EmotionClassifier()
 
@@ -432,8 +428,8 @@ class TestEmotionClassifier:
 
     def test_save_unfitted_raises(self):
         """Saving unfitted model raises error."""
-        import tempfile
         import os
+        import tempfile
 
         classifier = EmotionClassifier()
 

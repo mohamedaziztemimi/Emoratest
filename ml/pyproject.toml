@@ -39,6 +39,15 @@ select = [
     "UP",  # pyupgrade
     "SIM", # flake8-simplify
 ]
+ignore = [
+    "UP042", # Use StrEnum instead of str, Enum
+    "SIM102", # Nested if statements
+    "E501",  # Line too long
+    "E712",  # Comparison to True
+    "B905",  # zip() without strict=
+    "B007",  # Unused loop control variable
+    "F841",  # Unused local variables
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

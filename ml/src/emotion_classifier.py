@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from pathlib import Path
 
 # Try to import XGBoost, fallback to sklearn
 try:
@@ -268,10 +268,10 @@ class EmotionClassifier:
         # Calculate training metrics
         from sklearn.metrics import (
             accuracy_score,
+            confusion_matrix,
+            f1_score,
             precision_score,
             recall_score,
-            f1_score,
-            confusion_matrix,
         )
 
         y_pred = self.model.predict(X)
@@ -397,7 +397,7 @@ class EmotionClassifier:
         # Load metadata
         metadata_path = path.with_suffix(".metadata.json")
         if metadata_path.exists():
-            with open(metadata_path, "r") as f:
+            with open(metadata_path) as f:
                 metadata = json.load(f)
             self.feature_names = metadata.get("feature_names", [])
             self.emotions = metadata.get("emotions", Emotion.all_emotions())

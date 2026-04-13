@@ -10,7 +10,6 @@ import math
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -33,7 +32,7 @@ class Event:
     metadata: dict | None = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Event":
+    def from_dict(cls, data: dict) -> Event:
         """Create Event from dictionary."""
         return cls(
             type=data.get("type", ""),
