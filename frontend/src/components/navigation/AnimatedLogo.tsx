@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────
-   AnimatedLogo - EmoraTest "E" logo with animations
+   AnimatedLogo - Simple "E" logo with subtle animation
    ──────────────────────────────────────────────── */
 
 interface AnimatedLogoProps {
@@ -15,15 +15,8 @@ export function AnimatedLogo({ className = "", size = "md" }: AnimatedLogoProps)
   };
 
   return (
-    <div className={`relative ${sizes[size]} ${className}`}>
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 animate-gradient-shift" />
-
-      {/* Rotating border ring */}
-      <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 opacity-60 animate-spin-slow blur-[2px]" />
-
-      {/* Letter E */}
-      <div className="relative w-full h-full rounded-lg flex items-center justify-center text-white font-bold">
+    <div className={`${sizes[size]} ${className}`}>
+      <div className="w-full h-full rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold animate-bounce-slight">
         E
       </div>
     </div>

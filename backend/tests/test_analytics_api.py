@@ -17,7 +17,7 @@ from app.models.merchant import Merchant
 
 MERCHANT_ID = uuid.uuid4()
 SDK_KEY_HASH = "analytics-test-hash"
-AUTH_PATCH = "app.api.analytics.authenticate_sdk_key"
+AUTH_PATCH = "app.services.sdk_auth.authenticate_sdk_key"
 
 
 def make_merchant() -> MagicMock:
