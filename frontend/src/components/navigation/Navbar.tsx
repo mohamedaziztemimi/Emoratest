@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────
-   Navbar - Smooth scroll to sections
+   Navbar - Smooth scroll to sections + progress indicator
    ──────────────────────────────────────────────── */
 
 "use client";
@@ -23,14 +23,21 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("hero");
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   // Handle scroll state and active section
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 50);
+
+      // Calculate scroll progress (0 to 100)
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = Math.min((scrollY / docHeight) * 100, 100);
+      setScrollProgress(progress);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -73,13 +80,9 @@ export function Navbar() {
     <>
       {/* Fixed navbar */}
       <nav
-        className={`
-          fixed top-0 left-0 right-0 z-50 transition-all duration-300
-          ${isScrolled
-            ? "bg-white/95 backdrop-blur-md shadow-sm"
-            : "bg-transparent"
-          }
-        `}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-transparent"
+        }`}
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
@@ -107,13 +110,11 @@ export function Navbar() {
                   key={link.label}
                   href={link.targetId}
                   onClick={(e) => handleNavClick(e, link.targetId)}
-                  className={`
-                    relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                    ${activeSection === link.targetId.slice(1)
+                  className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === link.targetId.slice(1)
                       ? "text-blue-600 bg-blue-50"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }
-                  `}
+                  }`}
                 >
                   {link.label}
                   {activeSection === link.targetId.slice(1) && (
@@ -126,7 +127,7 @@ export function Navbar() {
             {/* Right side CTAs */}
             <div className="hidden md:flex items-center gap-3">
               <a
-                href="/signin"
+                href="/login"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
               >
                 Sign In
@@ -148,17 +149,21 @@ export function Navbar() {
             </button>
           </div>
         </div>
+
+        {/* Scroll Progress Indicator - Blue line at bottom */}
+        <div className="h-0.5 bg-gray-200">
+          <div
+            className="h-full bg-gradient-to-r from-[#007BFF] to-[#7C3AED] transition-all duration-150 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
       </nav>
 
       {/* Mobile menu overlay */}
       <div
-        className={`
-          fixed inset-0 z-50 transition-all duration-300 md:hidden
-          ${isMobileMenuOpen
-            ? "opacity-100 visible"
-            : "opacity-0 invisible pointer-events-none"
-          }
-        `}
+        className={`fixed inset-0 z-50 transition-all duration-300 md:hidden ${
+          isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
+        }`}
       >
         {/* Backdrop */}
         <div
@@ -168,10 +173,9 @@ export function Navbar() {
 
         {/* Mobile menu panel */}
         <div
-          className={`
-            absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col
-            ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}
-          `}
+          className={`absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col ${
+            isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          } transition-transform duration-300`}
         >
           {/* Mobile menu header */}
           <div className="flex items-center justify-between p-4 border-b">
@@ -204,20 +208,13 @@ export function Navbar() {
           {/* Mobile menu footer */}
           <div className="p-4 border-t space-y-3">
             <a
-              href="/signin"
+              href="/login"
               className="block w-full px-4 py-3 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Sign In
             </a>
-            <GradientButton
-              variant="primary"
-              size="md"
-              glow
-              href="/signup"
-              className="w-full"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
+            <GradientButton variant="primary" size="md" glow href="/signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
               Start Free
             </GradientButton>
           </div>

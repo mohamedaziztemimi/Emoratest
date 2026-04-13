@@ -1,10 +1,11 @@
 /* ────────────────────────────────────────────────
-   FeaturesSection - Feature cards grid
+   FeaturesSection - Feature cards grid with animations
    ──────────────────────────────────────────────── */
 
 "use client";
 
 import { GlassCard } from "../ui";
+import { FadeInOnScroll } from "./FadeInOnScroll";
 
 const FEATURES = [
   {
@@ -46,41 +47,44 @@ interface FeaturesSectionProps {
 export function FeaturesSection({ id }: FeaturesSectionProps) {
   return (
     <section id={id} className="py-[100px] bg-white">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-[1200px] mx-auto px-6">
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-semibold text-blue-600 tracking-widest uppercase mb-3">
-            Features
-          </p>
-          <h2 className="text-[clamp(32px,4vw,40px)] font-bold text-gray-900 mb-4">
-            Everything You Need to Win
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
-            From emotion detection to A/B testing — one platform, zero guesswork.
-          </p>
-        </div>
+        <FadeInOnScroll>
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-sm font-semibold text-[#007BFF] tracking-widest uppercase mb-3">
+              Features
+            </p>
+            <h2 className="text-[clamp(32px,4vw,40px)] font-bold text-[#111318] mb-4">
+              Everything You Need to Win
+            </h2>
+            <p className="text-lg text-[#4B5563]">
+              From emotion detection to A/B testing — one platform, zero guesswork.
+            </p>
+          </div>
+        </FadeInOnScroll>
 
-        {/* Features grid */}
+        {/* Features grid with staggered animations */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map((feature, index) => (
-            <GlassCard
-              key={index}
-              padding="lg"
-              className="bg-white border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-            >
-              {/* Icon */}
-              <div className="text-4xl mb-4">{feature.icon}</div>
+            <FadeInOnScroll key={index} delay={index * 100}>
+              <GlassCard
+                padding="lg"
+                className="bg-white border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                {/* Icon */}
+                <div className="text-4xl mb-4">{feature.icon}</div>
 
-              {/* Title */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {feature.title}
-              </h3>
+                {/* Title */}
+                <h3 className="text-xl font-bold text-[#111318] mb-3">
+                  {feature.title}
+                </h3>
 
-              {/* Description */}
-              <p className="text-base text-gray-600 leading-relaxed">
-                {feature.description}
-              </p>
-            </GlassCard>
+                {/* Description */}
+                <p className="text-base text-[#4B5563] leading-relaxed">
+                  {feature.description}
+                </p>
+              </GlassCard>
+            </FadeInOnScroll>
           ))}
         </div>
       </div>
