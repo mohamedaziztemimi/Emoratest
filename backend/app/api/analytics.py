@@ -14,11 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.services.stats_service import (
-    SRMResult,
-    Anomaly,
-    get_stats_service,
-)
+from app.services.stats_service import get_stats_service
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 service = get_stats_service()
@@ -195,7 +191,6 @@ async def detect_srm(
 
     # Calculate expected splits (50/50 for two variants)
     expected_splits = {}
-    total_visitors = results.total_visitors
     n_variants = len(results.variants)
 
     for variant in results.variants:
@@ -233,8 +228,12 @@ async def detect_srm(
 async def calculate_funnel(
     request: Request,
     experiment_id: str = Query(..., description="Experiment ID"),
-    steps: list[str] = Query(default=["view", "add_to_cart", "checkout"], description="Funnel steps"),
-    variant_id: str | None = Query(None, description="Optional variant ID for variant-level analysis"),
+    steps: list[str] = Query(
+        default=["view", "add_to_cart", "checkout"], description="Funnel steps"
+    ),
+    variant_id: str | None = Query(
+        None, description="Optional variant ID for variant-level analysis"
+    ),
     db: Any = Depends(get_db),
 ):
     """Calculate funnel analysis with emotion profiling.
@@ -277,7 +276,9 @@ async def detect_anomalies(
     request: Request,
     experiment_id: str = Query(..., description="Experiment ID"),
     metric: str = Query(default="conversion_rate", description="Metric to analyze"),
-    window_hours: int = Query(default=24, ge=1, le=168, description="Window size in hours"),
+    window_hours: int = Query(
+        default=24, ge=1, le=168, description="Window size in hours"
+    ),
     db: Any = Depends(get_db),
 ):
     """Detect anomalies in metric time series using Z-score.
