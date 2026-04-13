@@ -142,11 +142,24 @@ body {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
 }
+@keyframes ping-slow {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
 .animate-float_6s_ease-in-out_infinite {
   animation: float 6s ease-in-out infinite;
 }
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
+}
+.animate-ping-slow {
+  animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 .animate-bounce-slight {
   animation: bounce-slight 3s ease-in-out infinite;

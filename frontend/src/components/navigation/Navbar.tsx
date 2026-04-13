@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { GradientButton } from "../ui";
+import { AnimatedLogo } from "./AnimatedLogo";
 
 interface NavLink {
   label: string;
@@ -95,9 +96,7 @@ export function Navbar() {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
-                E
-              </div>
+              <AnimatedLogo size="md" />
               <span className="text-xl font-bold text-gray-900">
                 EmoraTest
               </span>
