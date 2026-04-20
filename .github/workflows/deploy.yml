@@ -36,11 +36,7 @@ jobs:
             git reset --hard origin/main
 
             # Check if docker-compose.prod.yml changed (needs full rebuild)
-            set +e
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-            HAS_COMPOSE_CHANGE=$(echo "$CHANGED_FILES" | grep -c "docker-compose.prod.yml" || true)
-            set -e
-            if [ "$HAS_COMPOSE_CHANGE" -gt 0 ]; then
+            if (git diff --name-only HEAD~1 HEAD 2>/dev/null || true) | grep -q "docker-compose.prod.yml"; then
               echo "🐳 Compose file changed - rebuilding all containers..."
               docker compose -f docker-compose.prod.yml --env-file .env build
             else
