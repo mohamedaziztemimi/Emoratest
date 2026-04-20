@@ -171,9 +171,9 @@ function EmotionSparkline() {
           {/* Data points on hover */}
           {hoveredData && (
             <>
-              <circle cx={hoverX} cy={yScale(hoveredData.confusion)} r="4" fill={colors.confusion} />
-              <circle cx={hoverX} cy={yScale(hoveredData.delight)} r="4" fill={colors.delight} />
-              <circle cx={hoverX} cy={yScale(hoveredData.frustration)} r="4" fill={colors.frustration} />
+              <circle cx={hoverX} cy={yScale(hoveredData.confusion ?? 0)} r="4" fill={colors.confusion} />
+              <circle cx={hoverX} cy={yScale(hoveredData.delight ?? 0)} r="4" fill={colors.delight} />
+              <circle cx={hoverX} cy={yScale(hoveredData.frustration ?? 0)} r="4" fill={colors.frustration} />
             </>
           )}
         </svg>

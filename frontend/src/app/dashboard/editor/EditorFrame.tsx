@@ -100,11 +100,7 @@ const INJECTED_SCRIPT = `
 
 // ── EditorFrame Component ────────────────────────────────────────────
 
-interface EditorFrameInternal {
-  sendMessage: (message: any) => void;
-}
-
-const EditorFrameInternal = forwardRef<HTMLIFrameElement, EditorFrameInternal & EditorFrameProps>(
+const EditorFrameInternal = forwardRef<HTMLIFrameElement, EditorFrameProps>(
   ({ url, mode, onElementSelect, modifications, onApplyModifications }, ref) => {
     const [iframeLoaded, setIframeLoaded] = useState(false);
     const [error, setError] = useState<string | null>(null);

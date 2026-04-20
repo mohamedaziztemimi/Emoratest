@@ -79,6 +79,7 @@ export default function ElementInspector({
 
   // Handle style change
   const handleStyleChange = useCallback((property: string, value: string) => {
+    if (!element) return;
     onModify({
       selector: element.selector,
       type: "style",
@@ -123,6 +124,7 @@ export default function ElementInspector({
 
   // Handle visibility toggle
   const handleVisibilityToggle = useCallback(() => {
+    if (!element) return;
     setVisible(!visible);
     onModify({
       selector: element.selector,
@@ -135,6 +137,7 @@ export default function ElementInspector({
 
   // Handle opacity slider
   const handleOpacityChange = useCallback((value: number) => {
+    if (!element) return;
     setOpacity(value);
     onModify({
       selector: element.selector,
@@ -143,17 +146,19 @@ export default function ElementInspector({
       originalValue: `${opacity / 100}`,
       timestamp: Date.now(),
     });
-  }, [element, onModify]);
+  }, [element, opacity, onModify]);
 
   // Handle undo (last change for this element)
   const handleUndo = useCallback(() => {
-    const elementMods = modifications.filter((m) => m.selector === element?.selector);
+    if (!element) return;
+    const elementMods = modifications.filter((m) => m.selector === element.selector);
     if (elementMods.length > 0) {
       const lastMod = elementMods[elementMods.length - 1];
       onModify({
         selector: element.selector,
         type: lastMod.type,
         value: lastMod.originalValue,
+        originalValue: lastMod.originalValue,
         timestamp: Date.now(),
       });
     }
@@ -214,7 +219,7 @@ export default function ElementInspector({
             </label>
             <textarea
               value={contentValue}
-              onChange={handleContentChange}
+              onChange={(e) => handleContentChange(e.target.value)}
               className="w-full h-40 px-3 py-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] text-[hsl(var(--foreground))] resize-none"
               placeholder="Enter text content..."
             />
@@ -406,7 +411,7 @@ export default function ElementInspector({
               min="0"
               max="100"
               value={opacity}
-              onChange={(e) => handleOpacityChange(e.target.value)}
+              onChange={(e) => handleOpacityChange(Number(e.target.value))}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))]">

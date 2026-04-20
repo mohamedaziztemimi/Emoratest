@@ -137,6 +137,7 @@ export interface EventOut {
 export interface SessionDetail extends SessionListItem {
   events: EventOut[];
   features: SessionFeatures | null;
+  emotion_scores?: Record<string, number>;
 }
 
 export interface SessionFilters {
