@@ -35,14 +35,9 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            # Check if docker-compose.prod.yml changed (needs full rebuild)
-            if (git diff --name-only HEAD~1 HEAD 2>/dev/null || true) | grep -q "docker-compose.prod.yml"; then
-              echo "🐳 Compose file changed - rebuilding all containers..."
-              docker compose -f docker-compose.prod.yml --env-file .env build
-            else
-              echo "🐳 Rebuilding backend and frontend only..."
-              docker compose -f docker-compose.prod.yml --env-file .env build backend frontend
-            fi
+            # Rebuild backend and frontend
+            echo "🐳 Rebuilding containers..."
+            docker compose -f docker-compose.prod.yml --env-file .env build backend frontend
 
             # Run database migrations
             echo "🗄️ Running database migrations..."
