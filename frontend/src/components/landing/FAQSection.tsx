@@ -29,7 +29,11 @@ const FAQ_ITEMS = [
   },
 ];
 
-export function FAQSection() {
+export interface FAQSectionProps {
+  id?: string;
+}
+
+export function FAQSection({ id = "faq" }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {
@@ -37,7 +41,7 @@ export function FAQSection() {
   };
 
   return (
-    <section id="faq" style={{ background: "#FFFFFF", padding: "100px 24px" }}>
+    <section id={id} style={{ background: "#FFFFFF", padding: "100px 24px" }}>
       <div style={{ maxWidth: "700px", margin: "0 auto" }}>
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
