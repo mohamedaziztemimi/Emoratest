@@ -36,14 +36,11 @@ jobs:
             git reset --hard origin/main
 
             # Check if docker-compose.prod.yml changed (needs full rebuild)
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-            if echo "$CHANGED_FILES" | grep -q "docker-compose.prod.yml"; then
-              echo "🐳 Compose file changed - rebuilding all containers..."
-              docker compose -f docker-compose.prod.yml --env-file .env build
-            else
-              echo "🐳 Rebuilding backend and frontend only..."
-              docker compose -f docker-compose.prod.yml --env-file .env build backend frontend
-            fi
+            set +e
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+            HAS_COMPOSE_CHANGE=$(echo "$CHANGED_FILES" | grep -c "docker-compose.prod.yml" || true)
+            set -e
+            if [ "$HAS_COMPOSE_CHANGE" -gt 0 ]; then
 
             # Run database migrations
             echo "🗄️ Running database migrations..."
