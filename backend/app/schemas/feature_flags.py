@@ -175,3 +175,25 @@ class ExposureStatsResponse(BaseModel):
     exposed_users: int
     exposure_percentage: float
     variant_breakdown: dict[str, float]
+
+
+class VariantResult(BaseModel):
+    """Conversion stats for a single variant."""
+
+    variant: str
+    exposures: int
+    conversions: int
+    conversion_rate: float
+
+
+class FlagResultsResponse(BaseModel):
+    """Response for flag experiment results."""
+
+    flag_key: str
+    flag_id: str
+    days: int
+    variants: list[VariantResult]
+    winning_variant: str | None = None
+    total_exposures: int
+    total_conversions: int
+    overall_conversion_rate: float

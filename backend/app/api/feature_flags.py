@@ -6,14 +6,22 @@ with progressive rollouts, kill switches, and targeting rules.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import case
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.sdk import get_merchant_from_sdk_key
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.feature_flag import FeatureFlag, FeatureFlagStatus
+from app.models.flag_exposure import FlagExposure
+from app.models.merchant import Merchant
+from app.models.session import Session as SessionModel
 from app.schemas.feature_flags import (
     BulkEvaluationRequest,
     BulkEvaluationResponse,
@@ -24,13 +32,14 @@ from app.schemas.feature_flags import (
     FeatureFlagUpdateRequest,
     FlagEvaluationRequest,
     FlagEvaluationResponse,
+    FlagResultsResponse,
     KillSwitchRequest,
     RolloutUpdateRequest,
+    VariantResult,
 )
 from app.services.feature_flag_service import FeatureFlagService
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
-router = APIRouter(prefix="/api/v1/flags", tags=["feature_flags"])
+router = APIRouter(prefix="/flags", tags=["feature_flags"])
 service = FeatureFlagService()
 
 
@@ -45,17 +54,15 @@ async def list_flags(
     page_size: int = Query(50, ge=1, le=200),
     status_filter: str | None = Query(None, description="Filter by status"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """List all feature flags with pagination.
 
     Optionally filter by status (active, inactive, archived).
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Build query
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     query = select(FeatureFlag).where(FeatureFlag.merchant_id == merchant.id)
@@ -102,18 +109,16 @@ async def create_flag(
     request: Request,
     body: FeatureFlagCreateRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Create a new feature flag.
 
     Supports progressive rollouts, targeting rules, multivariate variants,
     and environment-specific configurations.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Check for duplicate key
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     existing = await async_db.execute(
@@ -130,6 +135,10 @@ async def create_flag(
         )
 
     # Create flag
+    # Convert Pydantic models to dicts for JSON storage
+    variants_dict = [v.model_dump() for v in body.variants] if body.variants else None
+    targeting_rules_dict = [r.model_dump() for r in body.targeting_rules] if body.targeting_rules else None
+
     flag = FeatureFlag(
         merchant_id=merchant.id,
         key=body.key,
@@ -137,8 +146,8 @@ async def create_flag(
         description=body.description,
         status=body.status or ("active" if body.rollout_percentage > 0 else "inactive"),
         rollout_percentage=body.rollout_percentage,
-        targeting_rules=body.targeting_rules,
-        variants=body.variants,
+        targeting_rules=targeting_rules_dict,
+        variants=variants_dict,
         kill_switch=body.kill_switch,
         environments=body.environments,
         created_by=body.created_by,
@@ -160,13 +169,11 @@ async def get_flag(
     request: Request,
     key: str,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get detailed information about a specific feature flag."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -196,16 +203,14 @@ async def update_flag(
     key: str,
     body: FeatureFlagUpdateRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Update a feature flag.
 
     Partial update - only provided fields are modified.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -246,17 +251,15 @@ async def evaluate_flag(
     key: str,
     body: FlagEvaluationRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Evaluate a feature flag for a specific user context.
 
     Returns whether the flag is enabled, which variant (if any),
     and the reason for the decision.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -282,6 +285,111 @@ async def evaluate_flag(
     )
 
 
+# ── SDK EVALUATE (SDK key auth) ──────────────────────────────────────
+
+
+@router.post(
+    "/sdk/{key}/evaluate",
+    response_model=FlagEvaluationResponse,
+    summary="Evaluate feature flag via SDK (uses X-SDK-Key auth)",
+)
+@limiter.limit("2000/minute")
+async def evaluate_flag_sdk(
+    request: Request,
+    key: str,
+    body: FlagEvaluationRequest,
+    db: Any = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_from_sdk_key),
+):
+    """Evaluate a feature flag for SDK use cases.
+
+    Authenticated via X-SDK-Key header (NOT JWT cookies).
+    Returns deterministic variant assignment based on user_id.
+
+    Request body should include:
+    - user_context: dict with user_id for deterministic bucketing
+    - environment: optional environment name (default "production")
+    - session_id: optional session ID for linking exposures to sessions
+
+    Returns:
+        enabled: true if flag is enabled for this user
+        variant: selected variant key (for multivariate flags)
+        reason: explanation of the decision
+    """
+    from sqlalchemy import and_, select
+
+    async_db: AsyncSession = db
+    result = await async_db.execute(
+        select(FeatureFlag).where(
+            and_(FeatureFlag.merchant_id == merchant.id, FeatureFlag.key == key)
+        )
+    )
+    flag = result.scalar_one_or_none()
+
+    if not flag:
+        raise HTTPException(status_code=404, detail=f"Feature flag '{key}' not found")
+
+    visitor_id = body.user_context.get("visitor_id") or body.user_context.get("user_id", "")
+    if not visitor_id:
+        raise HTTPException(status_code=400, detail="visitor_id or user_id is required in user_context")
+
+    # Check for existing exposure (return same variant for consistency)
+    existing_exposure = await async_db.execute(
+        select(FlagExposure).where(
+            and_(
+                FlagExposure.flag_id == flag.id,
+                FlagExposure.visitor_id == visitor_id,
+            )
+        ).order_by(FlagExposure.created_at.desc()).limit(1)
+    )
+    existing = existing_exposure.scalar_one_or_none()
+
+    if existing:
+        # Return cached variant from DB
+        return FlagEvaluationResponse(
+            flag_key=key,
+            enabled=existing.enabled,
+            variant=existing.variant,
+            reason=existing.reason or "cached_assignment",
+        )
+
+    # Build user context for service (service expects user_id, not visitor_id)
+    evaluation_context = {**body.user_context, "user_id": visitor_id}
+
+    # Evaluate flag
+    flag_result = service.evaluate(
+        flag, evaluation_context, body.environment or "production"
+    )
+
+    # Record exposure for new assignments
+    session_id = body.user_context.get("session_id")
+    if session_id:
+        try:
+            session_id_uuid = session_id if isinstance(session_id, uuid.UUID) else uuid.UUID(session_id)
+        except (ValueError, AttributeError):
+            session_id_uuid = None
+    else:
+        session_id_uuid = None
+
+    exposure = FlagExposure(
+        flag_id=flag.id,
+        visitor_id=visitor_id,
+        variant=flag_result.variant,
+        session_id=session_id_uuid,
+        enabled=flag_result.enabled,
+        reason=flag_result.reason,
+    )
+    async_db.add(exposure)
+    await async_db.commit()
+
+    return FlagEvaluationResponse(
+        flag_key=key,
+        enabled=flag_result.enabled,
+        variant=flag_result.variant,
+        reason=flag_result.reason,
+    )
+
+
 # ── BULK EVALUATE ────────────────────────────────────────────────────
 
 
@@ -295,16 +403,14 @@ async def evaluate_bulk(
     request: Request,
     body: BulkEvaluationRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Evaluate all feature flags for a user context.
 
     Returns a dictionary of flag_key to evaluation results.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -344,17 +450,15 @@ async def toggle_kill_switch(
     key: str,
     body: KillSwitchRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Toggle the kill switch for a feature flag.
 
     When enabled, the flag always returns False regardless of
     rollout percentage or targeting rules.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -390,16 +494,14 @@ async def update_rollout(
     key: str,
     body: RolloutUpdateRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Update the rollout percentage for a feature flag.
 
     Percentage is clamped to 0-100 range.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -435,17 +537,15 @@ async def get_exposure_stats(
     key: str,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get exposure statistics for a feature flag.
 
     Returns percentage of users exposed, variant breakdown,
     and total unique users.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
-    from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy import and_, func, select
 
     async_db: AsyncSession = db
     result = await async_db.execute(
@@ -458,15 +558,173 @@ async def get_exposure_stats(
     if not flag:
         raise HTTPException(status_code=404, detail=f"Feature flag '{key}' not found")
 
-    # TODO: Implement exposure tracking in separate table
-    # For now, return mock data structure
+    # Get cutoff date
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+
+    # Get total unique visitors
+    total_result = await async_db.execute(
+        select(func.count(func.distinct(FlagExposure.visitor_id))).where(
+            and_(
+                FlagExposure.flag_id == flag.id,
+                FlagExposure.created_at >= cutoff,
+            )
+        )
+    )
+    total_users = total_result.scalar() or 0
+
+    # Get exposed users (enabled=true)
+    exposed_result = await async_db.execute(
+        select(func.count(func.distinct(FlagExposure.visitor_id))).where(
+            and_(
+                FlagExposure.flag_id == flag.id,
+                FlagExposure.created_at >= cutoff,
+                FlagExposure.enabled.is_(True),
+            )
+        )
+    )
+    exposed_users = exposed_result.scalar() or 0
+
+    # Get variant breakdown
+    variant_result = await async_db.execute(
+        select(
+            FlagExposure.variant,
+            func.count(func.distinct(FlagExposure.visitor_id)).label("count"),
+        )
+        .where(
+            and_(
+                FlagExposure.flag_id == flag.id,
+                FlagExposure.created_at >= cutoff,
+                FlagExposure.enabled.is_(True),
+            )
+        )
+        .group_by(FlagExposure.variant)
+    )
+    variant_rows = variant_result.all()
+
+    variant_breakdown = {
+        variant or "default": count for variant, count in variant_rows
+    }
+
+    exposure_percentage = (exposed_users / total_users * 100) if total_users > 0 else 0.0
+
     return ExposureStatsResponse(
         flag_key=key,
         days=days,
-        total_users=0,
-        exposed_users=0,
-        exposure_percentage=0.0,
-        variant_breakdown={},
+        total_users=total_users,
+        exposed_users=exposed_users,
+        exposure_percentage=round(exposure_percentage, 2),
+        variant_breakdown=variant_breakdown,
+    )
+
+
+# ── RESULTS / CONVERSION TRACKING ─────────────────────────────────────
+
+
+@router.get(
+    "/{key}/results",
+    response_model=FlagResultsResponse,
+    summary="Get conversion results by variant",
+)
+@limiter.limit("200/minute")
+async def get_flag_results(
+    request: Request,
+    key: str,
+    days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+    db: Any = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_flexible),
+):
+    """Get conversion statistics for a feature flag by variant.
+
+    Joins exposure data with session outcomes to calculate
+    conversion rates per variant.
+    """
+
+    from sqlalchemy import and_, func, select
+
+    async_db: AsyncSession = db
+    result = await async_db.execute(
+        select(FeatureFlag).where(
+            and_(FeatureFlag.merchant_id == merchant.id, FeatureFlag.key == key)
+        )
+    )
+    flag = result.scalar_one_or_none()
+
+    if not flag:
+        raise HTTPException(status_code=404, detail=f"Feature flag '{key}' not found")
+
+    # Get cutoff date
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+
+    # Get exposures with conversions by variant
+    # Left join with sessions to get outcomes
+    query = (
+        select(
+            FlagExposure.variant,
+            func.count(func.distinct(FlagExposure.visitor_id)).label("exposures"),
+            func.count(
+                func.distinct(
+                    case(
+                        (SessionModel.outcome == "purchase", SessionModel.id),
+                        else_=None,
+                    )
+                )
+            ).label("conversions"),
+        )
+        .outerjoin(
+            SessionModel,
+            and_(
+                SessionModel.id == FlagExposure.session_id,
+                SessionModel.outcome == "purchase",
+            ),
+        )
+        .where(
+            and_(
+                FlagExposure.flag_id == flag.id,
+                FlagExposure.enabled.is_(True),
+                FlagExposure.created_at >= cutoff,
+            )
+        )
+        .group_by(FlagExposure.variant)
+    )
+
+    variant_results = await async_db.execute(query)
+    rows = variant_results.all()
+
+    variants = []
+    total_exposures = 0
+    total_conversions = 0
+    winning_variant = None
+    best_rate = -1.0
+
+    for variant, exposures, conversions in rows:
+        variant_key = variant or "default"
+        rate = (conversions / exposures * 100) if exposures > 0 else 0.0
+        variants.append(
+            VariantResult(
+                variant=variant_key,
+                exposures=exposures,
+                conversions=conversions,
+                conversion_rate=round(rate, 2),
+            )
+        )
+        total_exposures += exposures
+        total_conversions += conversions
+
+        if rate > best_rate and exposures >= 5:  # Minimum 5 exposures to be winner
+            best_rate = rate
+            winning_variant = variant_key
+
+    overall_rate = (total_conversions / total_exposures * 100) if total_exposures > 0 else 0.0
+
+    return FlagResultsResponse(
+        flag_key=key,
+        flag_id=str(flag.id),
+        days=days,
+        variants=variants,
+        winning_variant=winning_variant,
+        total_exposures=total_exposures,
+        total_conversions=total_conversions,
+        overall_conversion_rate=round(overall_rate, 2),
     )
 
 
@@ -479,16 +737,14 @@ async def archive_flag(
     request: Request,
     key: str,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Archive a feature flag.
 
     Archived flags are read-only and no longer evaluated.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     from sqlalchemy import and_, select
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     async_db: AsyncSession = db
     result = await async_db.execute(

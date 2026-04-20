@@ -1,4 +1,9 @@
-version: "3.9"
+# ────────────────────────────────────────────────────────────────
+# docker-compose.yml - Base configuration (production + dev)
+#
+# Development: bind mounts and hot-reload are in docker-compose.override.yml
+# Production: use `docker compose -f docker-compose.yml up` to skip overrides
+# ────────────────────────────────────────────────────────────────
 
 services:
   # ── PostgreSQL ─────────────────────────────────────────────
@@ -45,8 +50,9 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./ml:/ml:ro  # Mount ML directory for feature extraction
+      - ./ml/artifacts:/app/ml_artifacts:ro
+    # Additional volumes defined in docker-compose.override.yml for development
+    # Production uses the image's built-in code (no bind mounts)
 
   # ── Frontend (Next.js) ─────────────────────────────────────
   frontend:
@@ -54,11 +60,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
-    volumes:
-      - ./frontend/src:/app/src
+    # Volumes defined in docker-compose.override.yml for development
+    # Production uses the image's built-in code (no bind mounts)
 
 volumes:
   pgdata:

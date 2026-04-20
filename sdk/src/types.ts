@@ -66,3 +66,26 @@ export interface EmoraTestConfig {
   /** Disable all tracking (opt-out). Default: false */
   disabled?: boolean;
 }
+
+// ── Feature Flags ─────────────────────────────────────────────────
+
+export interface FlagEvaluationRequest {
+  user_context: {
+    visitor_id: string;
+    session_id?: string;
+    [key: string]: unknown;
+  };
+  environment?: string;
+}
+
+export interface FlagEvaluationResponse {
+  flag_key: string;
+  enabled: boolean;
+  variant: string | null;
+  reason: string;
+}
+
+export interface FlagEvaluationResult {
+  assigned: boolean;
+  variant: string | null;
+}

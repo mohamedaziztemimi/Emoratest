@@ -13,7 +13,8 @@ import hashlib
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 # ── Schemas ─────────────────────────────────────────────────────
+
+
+class SignupRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    workspace_name: str = Field(min_length=3, max_length=255)
 
 
 class RegisterRequest(BaseModel):
@@ -89,6 +97,7 @@ class GdprExportResponse(BaseModel):
 @limiter.limit("10/minute")
 async def register(
     request: Request,
+    response: Response,
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -130,7 +139,8 @@ async def register(
 
     token = create_access_token(str(merchant.id), merchant.email)
 
-    return AuthResponse(
+    # Set httpOnly cookie with JWT
+    auth_response = AuthResponse(
         access_token=token,
         merchant_id=str(merchant.id),
         email=merchant.email,
@@ -140,6 +150,92 @@ async def register(
         onboarding_completed=False,
     )
 
+    response = JSONResponse(content=auth_response.model_dump(mode="json"))
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        path="/",  # Available on all paths
+        domain=None,  # None means current host (localhost for dev)
+    )
+    return response
+
+
+# ── POST /auth/signup ────────────────────────────────────────────
+
+
+@router.post("/signup", response_model=AuthResponse, status_code=201)
+@limiter.limit("10/minute")
+async def signup(
+    request: Request,
+    response: Response,
+    body: SignupRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Signup a new merchant. Alias for /auth/register with frontend-compatible field names."""
+    # Check existing email
+    existing = await db.execute(select(Merchant).where(Merchant.email == body.email))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    # Check existing domain
+    existing_domain = await db.execute(
+        select(Merchant).where(Merchant.shop_domain == body.workspace_name)
+    )
+    if existing_domain.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Workspace name already registered")
+
+    # Generate SDK key
+    raw_sdk_key = secrets.token_hex(32)
+    key_hash = hashlib.sha256(raw_sdk_key.encode()).hexdigest()
+    now = datetime.now(UTC)
+
+    merchant = Merchant(
+        email=body.email,
+        password_hash=hash_password(body.password),
+        shop_domain=body.workspace_name,
+        sdk_key_hash=key_hash,
+        plan="trial",
+        is_active=True,
+        gdpr_consent=False,
+        onboarding_completed=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+    db.add(merchant)
+    await db.commit()
+    await db.refresh(merchant)
+
+    token = create_access_token(str(merchant.id), merchant.email)
+
+    # Set httpOnly cookie with JWT
+    auth_response = AuthResponse(
+        access_token=token,
+        merchant_id=str(merchant.id),
+        email=merchant.email,
+        shop_domain=merchant.shop_domain,
+        plan="trial",
+        sdk_key=raw_sdk_key,
+        onboarding_completed=False,
+    )
+
+    response = JSONResponse(content=auth_response.model_dump(mode="json"))
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        path="/",  # Available on all paths
+        domain=None,  # None means current host (localhost for dev)
+    )
+    return response
+
 
 # ── POST /auth/login ────────────────────────────────────────────
 
@@ -148,6 +244,7 @@ async def register(
 @limiter.limit("20/minute")
 async def login(
     request: Request,
+    response: Response,
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -166,7 +263,8 @@ async def login(
 
     token = create_access_token(str(merchant.id), merchant.email)
 
-    return AuthResponse(
+    # Set httpOnly cookie with JWT
+    auth_response = AuthResponse(
         access_token=token,
         merchant_id=str(merchant.id),
         email=merchant.email,
@@ -174,6 +272,19 @@ async def login(
         plan=merchant.plan,
         onboarding_completed=merchant.onboarding_completed,
     )
+
+    response = JSONResponse(content=auth_response.model_dump(mode="json"))
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        path="/",  # Available on all paths
+        domain=None,  # None means current host (localhost for dev)
+    )
+    return response
 
 
 # ── GET /auth/me ─────────────────────────────────────────────────
@@ -208,11 +319,24 @@ async def complete_onboarding(
     merchant: Merchant = Depends(get_current_merchant),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark onboarding as completed."""
+    """Mark onboarding as completed and return SDK key."""
     merchant.onboarding_completed = True
     merchant.updated_at = datetime.now(UTC)
     await db.commit()
-    return {"status": "ok"}
+    await db.refresh(merchant)
+
+    # Generate a new SDK key (one-time show after signup)
+    raw_sdk_key = secrets.token_hex(32)
+    key_hash = hashlib.sha256(raw_sdk_key.encode()).hexdigest()
+    merchant.sdk_key_hash = key_hash
+    await db.commit()
+
+    return {
+        "status": "ok",
+        "sdk_key": raw_sdk_key,
+        "shop_domain": merchant.shop_domain,
+        "email": merchant.email,
+    }
 
 
 # ── GDPR endpoints (CONV-58, CONV-59, CONV-60) ──────────────────

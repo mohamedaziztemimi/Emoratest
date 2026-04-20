@@ -18,32 +18,14 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "005_experiment_type_coverage"
-down_revision: Union[str, None] = "004_epic6_auth_gdpr"
+down_revision: Union[str, None] = "004"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     """Add new columns to experiments table."""
-    # Add experiment_type enum constraint
-    op.execute(
-        """
-        ALTER TABLE experiments
-        ADD CONSTRAINT ck_experiments_type
-        CHECK (experiment_type IN ('ab','mvt','split_url','multipage','server_side'))
-        """
-    )
-
-    # Add n_variants constraint
-    op.execute(
-        """
-        ALTER TABLE experiments
-        ADD CONSTRAINT ck_experiments_n_variants
-        CHECK (n_variants >= 2 AND n_variants <= 10)
-        """
-    )
-
-    # Add new columns
+    # Add new columns first
     op.add_column(
         "experiments",
         sa.Column(
@@ -91,6 +73,23 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("now()"),
         ),
+    )
+
+    # Add constraints after columns exist
+    op.execute(
+        """
+        ALTER TABLE experiments
+        ADD CONSTRAINT ck_experiments_type
+        CHECK (experiment_type IN ('ab','mvt','split_url','multipage','server_side'))
+        """
+    )
+
+    op.execute(
+        """
+        ALTER TABLE experiments
+        ADD CONSTRAINT ck_experiments_n_variants
+        CHECK (n_variants >= 2 AND n_variants <= 10)
+        """
     )
 
 

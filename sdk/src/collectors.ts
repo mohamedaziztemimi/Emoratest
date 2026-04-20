@@ -13,12 +13,17 @@ import type { RawEvent } from "./types";
 import { getElementId, isoNow, throttle } from "./utils";
 
 type Cleanup = () => void;
+type MetadataProvider = () => Record<string, unknown> | null;
+
+// Default metadata provider (returns null)
+const defaultMetadataProvider: MetadataProvider = () => null;
 
 // ── Mouse Move Collector ──────────────────────────────────────
 
 export function collectMouseMove(
   queue: EventQueue,
   throttleMs: number,
+  getMetadata: MetadataProvider = defaultMetadataProvider,
 ): Cleanup {
   let lastX = 0;
   let lastY = 0;
@@ -33,6 +38,11 @@ export function collectMouseMove(
     const dist = Math.sqrt(dx * dx + dy * dy);
     const velocity = dt > 0 ? dist / dt : 0;
 
+    const providerMetadata = getMetadata();
+    const metadata = providerMetadata
+      ? { ...providerMetadata }
+      : null;
+
     const event: RawEvent = {
       type: "mouse_move",
       ts: isoNow(),
@@ -40,6 +50,7 @@ export function collectMouseMove(
       y: ev.clientY,
       velocity: Math.round(velocity * 100) / 100,
       element_id: getElementId(ev.target as Element),
+      metadata,
     };
 
     queue.push(event);
@@ -55,7 +66,10 @@ export function collectMouseMove(
 
 // ── Click Collector ───────────────────────────────────────────
 
-export function collectClicks(queue: EventQueue): Cleanup {
+export function collectClicks(
+  queue: EventQueue,
+  getMetadata: MetadataProvider = defaultMetadataProvider,
+): Cleanup {
   const recentClicks: { x: number; y: number; time: number }[] = [];
 
   const handler = (e: MouseEvent) => {
@@ -77,15 +91,21 @@ export function collectClicks(queue: EventQueue): Cleanup {
     });
     const isRageClick = nearby.length >= 3;
 
+    const providerMetadata = getMetadata();
+    const baseMetadata = isRageClick
+      ? { rage_click: true, click_count: nearby.length }
+      : null;
+    const metadata = providerMetadata || baseMetadata
+      ? { ...(baseMetadata || {}), ...(providerMetadata || {}) }
+      : null;
+
     const event: RawEvent = {
       type: "click",
       ts: isoNow(),
       x: e.clientX,
       y: e.clientY,
       element_id: getElementId(e.target as Element),
-      metadata: isRageClick
-        ? { rage_click: true, click_count: nearby.length }
-        : null,
+      metadata,
     };
 
     queue.push(event);
@@ -97,7 +117,10 @@ export function collectClicks(queue: EventQueue): Cleanup {
 
 // ── Scroll Collector ──────────────────────────────────────────
 
-export function collectScroll(queue: EventQueue): Cleanup {
+export function collectScroll(
+  queue: EventQueue,
+  getMetadata: MetadataProvider = defaultMetadataProvider,
+): Cleanup {
   let lastScrollY = window.scrollY;
   let lastDirection: "up" | "down" | null = null;
 
@@ -111,15 +134,19 @@ export function collectScroll(queue: EventQueue): Cleanup {
     const viewportPct =
       docHeight > 0 ? Math.round((currentY / docHeight) * 10000) / 100 : 0;
 
+    const providerMetadata = getMetadata();
+    const metadata: Record<string, unknown> = {
+      direction,
+      delta: Math.round(Math.abs(delta)),
+      viewport_pct: viewportPct,
+      is_retreat: direction === "up" && lastDirection === "down",
+      ...(providerMetadata || {}),
+    };
+
     const event: RawEvent = {
       type: "scroll",
       ts: isoNow(),
-      metadata: {
-        direction,
-        delta: Math.round(Math.abs(delta)),
-        viewport_pct: viewportPct,
-        is_retreat: direction === "up" && lastDirection === "down",
-      },
+      metadata,
     };
 
     queue.push(event);
@@ -133,18 +160,22 @@ export function collectScroll(queue: EventQueue): Cleanup {
 
 // ── Exit Intent Collector (CONV-32) ───────────────────────────
 
-export function collectExitIntent(queue: EventQueue): Cleanup {
+export function collectExitIntent(
+  queue: EventQueue,
+  getMetadata: MetadataProvider = defaultMetadataProvider,
+): Cleanup {
   const cleanups: Cleanup[] = [];
 
   // 1. Mouse leaving viewport top (desktop)
   const mouseLeaveHandler = (e: MouseEvent) => {
     if (e.clientY <= 0) {
+      const providerMetadata = getMetadata();
       queue.push({
         type: "exit_intent",
         ts: isoNow(),
         x: e.clientX,
         y: e.clientY,
-        metadata: { trigger: "mouse_leave" },
+        metadata: { trigger: "mouse_leave", ...(providerMetadata || {}) },
       });
     }
   };
@@ -155,10 +186,11 @@ export function collectExitIntent(queue: EventQueue): Cleanup {
 
   // 2. Back button / history navigation
   const popstateHandler = () => {
+    const providerMetadata = getMetadata();
     queue.push({
       type: "exit_intent",
       ts: isoNow(),
-      metadata: { trigger: "back_button" },
+      metadata: { trigger: "back_button", ...(providerMetadata || {}) },
     });
   };
   window.addEventListener("popstate", popstateHandler);
@@ -169,14 +201,18 @@ export function collectExitIntent(queue: EventQueue): Cleanup {
 
 // ── Visibility Collector (CONV-32) ────────────────────────────
 
-export function collectVisibility(queue: EventQueue): Cleanup {
+export function collectVisibility(
+  queue: EventQueue,
+  getMetadata: MetadataProvider = defaultMetadataProvider,
+): Cleanup {
   const handler = () => {
     const state = document.visibilityState as "visible" | "hidden";
+    const providerMetadata = getMetadata();
 
     queue.push({
       type: "visibility",
       ts: isoNow(),
-      metadata: { state },
+      metadata: { state, ...(providerMetadata || {}) },
     });
 
     // Tab switch counts as exit intent
@@ -184,7 +220,7 @@ export function collectVisibility(queue: EventQueue): Cleanup {
       queue.push({
         type: "exit_intent",
         ts: isoNow(),
-        metadata: { trigger: "tab_switch" },
+        metadata: { trigger: "tab_switch", ...(providerMetadata || {}) },
       });
     }
   };

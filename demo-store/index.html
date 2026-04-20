@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Store — Premium Electronics</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #007BFF;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #666;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: #007BFF;
+    }
+    .cart-badge {
+      position: relative;
+    }
+    .cart-count {
+      position: absolute;
+      top: -8px;
+      right: -12px;
+      background: #007BFF;
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .hero h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #1a1a1a;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.875rem 2rem;
+      background: #007BFF;
+      color: white;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    }
+    .btn-secondary {
+      background: #6c757d;
+    }
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+
+    /* Products Grid */
+    .products {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+    .products h2 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+    .product-card {
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .product-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+    }
+    .product-image {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+    }
+    .product-info {
+      padding: 1.5rem;
+    }
+    .product-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .product-price {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #007BFF;
+      margin-bottom: 1rem;
+    }
+    .product-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .product-actions .btn {
+      flex: 1;
+      padding: 0.625rem;
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      background: #1a1a1a;
+      color: #999;
+      text-align: center;
+      padding: 2rem;
+      margin-top: 4rem;
+    }
+    footer a {
+      color: #007BFF;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .nav-links { gap: 1rem; }
+      .product-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">Demo Store</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#products">Products</a>
+      <a href="about.html">About</a>
+      <a href="cart.html" class="cart-badge">
+        Cart
+        <span class="cart-count" id="cart-count">0</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Welcome to Demo Store</h1>
+    <p>Premium electronics at unbeatable prices. Experience quality.</p>
+    <a href="#products" class="btn">Shop Now</a>
+  </section>
+
+  <!-- Products -->
+  <section class="products" id="products">
+    <h2>Featured Products</h2>
+    <div class="product-grid">
+      <div class="product-card" onclick="window.location.href='product.html?product=headphones'">
+        <div class="product-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          🎧
+        </div>
+        <div class="product-info">
+          <div class="product-name">Wireless Headphones</div>
+          <div class="product-price">$79.00</div>
+          <div class="product-actions">
+            <button class="btn" onclick="event.stopPropagation(); quickAdd('headphones', 79)">Add to Cart</button>
+            <button class="btn btn-secondary" onclick="event.stopPropagation(); window.location.href='product.html?product=headphones'">View Details</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="product-card" onclick="window.location.href='product.html?product=watch'">
+        <div class="product-image" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+          ⌚
+        </div>
+        <div class="product-info">
+          <div class="product-name">Smart Watch</div>
+          <div class="product-price">$199.00</div>
+          <div class="product-actions">
+            <button class="btn" onclick="event.stopPropagation(); quickAdd('watch', 199)">Add to Cart</button>
+            <button class="btn btn-secondary" onclick="event.stopPropagation(); window.location.href='product.html?product=watch'">View Details</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="product-card" onclick="window.location.href='product.html?product=shoes'">
+        <div class="product-image" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+          👟
+        </div>
+        <div class="product-info">
+          <div class="product-name">Running Shoes</div>
+          <div class="product-price">$89.00</div>
+          <div class="product-actions">
+            <button class="btn" onclick="event.stopPropagation(); quickAdd('shoes', 89)">Add to Cart</button>
+            <button class="btn btn-secondary" onclick="event.stopPropagation(); window.location.href='product.html?product=shoes'">View Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Powered by <a href="https://emoratest.com" target="_blank">EmoraTest</a> — Emotion ML + A/B Testing Platform</p>
+  </footer>
+
+  <!-- EmoraTest SDK -->
+  <script src="http://localhost:8000/static/sdk/emoratest.umd.js"></script>
+  <script>
+    const SDK_KEY = "a38cb6049282faaccf19b73c0201496055d9ade56c89c34f00990fe7986c6022";
+    const API_URL = "http://localhost:8000";
+
+    // Cart management
+    let cart = JSON.parse(localStorage.getItem('demo_cart') || '[]');
+
+    function updateCartCount() {
+      const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById('cart-count').textContent = count;
+    }
+
+    function quickAdd(productId, price) {
+      const existing = cart.find(item => item.id === productId);
+      if (existing) {
+        existing.quantity++;
+      } else {
+        cart.push({ id: productId, price: price, quantity: 1 });
+      }
+      localStorage.setItem('demo_cart', JSON.stringify(cart));
+      updateCartCount();
+
+      // Show quick feedback
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Added!';
+      btn.style.background = '#10b981';
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+      }, 1000);
+    }
+
+    // Initialize SDK
+    (async function initSDK() {
+      if (typeof EmoraTest !== 'undefined') {
+        try {
+          await EmoraTest.init({
+            sdkKey: SDK_KEY,
+            apiUrl: API_URL,
+            debug: true
+          });
+          console.log('[Demo Store] SDK initialized, session:', EmoraTest.getSessionId());
+        } catch (err) {
+          console.error('[Demo Store] SDK init failed:', err);
+        }
+      }
+    })();
+
+    // Initial cart count
+    updateCartCount();
+  </script>
+</body>
+</html>

@@ -17,13 +17,13 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.experiment import Experiment
 from app.models.merchant import Merchant
 from app.models.session import Session
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 router = APIRouter(prefix="/merchants", tags=["merchants"])
 
@@ -142,10 +142,9 @@ async def create_merchant(
 async def get_merchant_profile(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get the authenticated merchant's profile."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     return MerchantProfile(
         id=str(merchant.id),
@@ -165,7 +164,7 @@ async def get_merchant_profile(
 async def rotate_sdk_key(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Rotate the merchant's SDK key.
 
@@ -174,7 +173,6 @@ async def rotate_sdk_key(
 
     The raw key is returned ONCE in the response — it cannot be retrieved again.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Generate new key
     new_raw_key = secrets.token_hex(32)
@@ -207,10 +205,9 @@ async def rotate_sdk_key(
 async def get_usage_summary(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get API usage summary for the authenticated merchant."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Total sessions
     sess_result = await db.execute(

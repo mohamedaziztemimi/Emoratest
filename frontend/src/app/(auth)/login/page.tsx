@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import { authLogin } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,58 +19,113 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await authLogin({ email, password });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Login failed");
+      // Redirect based on onboarding status
+      if (!data.onboarding_completed) {
+        window.location.href = "/dashboard/welcome";
+      } else {
+        window.location.href = "/dashboard";
       }
-
-      window.location.href = "/dashboard";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      if (err && typeof err === "object" && "detail" in err) {
+        setError((err as any).detail);
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-[440px]">
-      {/* Logo */}
-      <div className="flex items-center justify-center gap-2.5 mb-8">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#007BFF] to-[#7C3AED] flex items-center justify-center text-white font-bold text-lg">
-          E
-        </div>
-        <span className="text-xl font-bold bg-gradient-to-r from-[#007BFF] to-[#7C3AED] bg-clip-text text-transparent">
+    <div style={{ width: "100%", maxWidth: "400px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      {/* Logo Block */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "4px",
+          marginBottom: "32px",
+        }}
+      >
+        <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+          <img src="/logo2.png" alt="EmoraTest" style={{ height: "64px", width: "auto" }} />
+        </a>
+        <span
+          style={{
+            fontSize: "20px",
+            fontWeight: "700",
+            color: "#111318",
+            letterSpacing: "-0.3px",
+          }}
+        >
           EmoraTest
         </span>
       </div>
 
-      {/* Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+      {/* Form Card */}
+      <div
+        style={{
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "20px",
+          padding: "36px 40px",
+          width: "100%",
+        }}
+      >
         {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-[#111318] mb-1">Welcome back</h2>
-          <p className="text-sm text-[#6B7280]">Sign in to your EmoraTest workspace</p>
-        </div>
+        <h1
+          style={{
+            fontSize: "24px",
+            fontWeight: "700",
+            color: "#111318",
+            margin: "0 0 6px 0",
+            letterSpacing: "-0.3px",
+          }}
+        >
+          Welcome back
+        </h1>
+        <p
+          style={{
+            fontSize: "14px",
+            color: "#6B7280",
+            margin: "0 0 28px 0",
+          }}
+        >
+          Sign in to your EmoraTest workspace
+        </p>
 
         {/* Error banner */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{error}</p>
+          <div
+            style={{
+              background: "#FEF2F2",
+              border: "1px solid #FECACA",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              fontSize: "14px",
+              color: "#DC2626",
+              marginBottom: "16px",
+            }}
+          >
+            {error}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#111318] mb-1.5">
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label
+              htmlFor="email"
+              style={{
+                fontSize: "13px",
+                fontWeight: "500",
+                color: "#374151",
+              }}
+            >
               Email
             </label>
             <input
@@ -79,18 +135,58 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-[#111318] placeholder:text-gray-400 focus:outline-none focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 transition-colors"
               disabled={loading}
+              autoComplete="email"
+              style={{
+                background: "#F9FAFB",
+                border: "1.5px solid #E5E7EB",
+                borderRadius: "10px",
+                padding: "11px 14px",
+                fontSize: "15px",
+                color: "#111318",
+                width: "100%",
+                outline: "none",
+                transition: "all 150ms ease",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "#7C3AED";
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.08)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "#E5E7EB";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
 
           {/* Password */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="password" className="block text-sm font-medium text-[#111318]">
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <label
+                htmlFor="password"
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  color: "#374151",
+                }}
+              >
                 Password
               </label>
-              <a href="/forgot-password" className="text-sm text-[#007BFF] hover:underline">
+              <a
+                href="/forgot-password"
+                style={{
+                  fontSize: "13px",
+                  color: "#007BFF",
+                  textDecoration: "none",
+                }}
+              >
                 Forgot password?
               </a>
             </div>
@@ -101,8 +197,28 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-[#111318] placeholder:text-gray-400 focus:outline-none focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 transition-colors"
               disabled={loading}
+              autoComplete="current-password"
+              style={{
+                background: "#F9FAFB",
+                border: "1.5px solid #E5E7EB",
+                borderRadius: "10px",
+                padding: "11px 14px",
+                fontSize: "15px",
+                color: "#111318",
+                width: "100%",
+                outline: "none",
+                transition: "all 150ms ease",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "#7C3AED";
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.08)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "#E5E7EB";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
 
@@ -110,20 +226,58 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-[#007BFF] to-[#7C3AED] text-white font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            style={{
+              background: "linear-gradient(135deg, #007BFF, #7C3AED)",
+              color: "white",
+              border: "none",
+              borderRadius: "10px",
+              padding: "13px",
+              fontSize: "15px",
+              fontWeight: "600",
+              width: "100%",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              marginTop: "8px",
+              transition: "opacity 150ms ease, transform 150ms ease",
+              boxSizing: "border-box",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.opacity = "0.88";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = loading ? "0.6" : "1";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
-        {/* Sign up link */}
-        <p className="mt-6 text-center text-sm text-[#6B7280]">
-          Don't have an account?{" "}
-          <a href="/signup" className="text-[#007BFF] font-semibold hover:underline">
-            Start free →
-          </a>
-        </p>
       </div>
+
+      {/* Below card */}
+      <p
+        style={{
+          marginTop: "20px",
+          fontSize: "14px",
+          color: "#6B7280",
+          textAlign: "center",
+        }}
+      >
+        Don't have an account?{" "}
+        <a
+          href="/signup"
+          style={{
+            color: "#007BFF",
+            fontWeight: "600",
+            textDecoration: "none",
+          }}
+        >
+          Start free →
+        </a>
+      </p>
     </div>
   );
 }

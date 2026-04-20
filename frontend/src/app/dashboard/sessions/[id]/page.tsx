@@ -15,20 +15,31 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 
+const EMOTION_COLORS: Record<string, string> = {
+  confusion: "#F59E0B",
+  frustration: "#EF4444",
+  delight: "#10B981",
+  focus: "#3B82F6",
+  anxiety: "#F97316",
+  boredom: "#6B7280",
+  hesitation: "#8B5CF6",
+  satisfaction: "#059669",
+};
+
 const OUTCOME_LABELS = {
-  purchase: "Bought",
-  abandon: "Left Without Buying",
-  browse: "Browsing Only",
+  purchase: "Converted",
+  abandon: "Abandoned",
+  browse: "Active",
   unknown: "Unknown",
 } as const;
 
 const INTENT_LABELS = {
-  browsing: "Just Browsing",
-  comparing: "Comparing Options",
-  deciding: "Ready to Decide",
-  buying: "Ready to Buy",
-  exiting: "About to Leave",
-  returning: "Returning Visitor",
+  browsing: "Low Intent",
+  comparing: "Comparing",
+  deciding: "Medium Intent",
+  buying: "High Intent",
+  exiting: "Leaving",
+  returning: "Returning",
 } as const;
 
 const DEVICE_LABELS = {
@@ -38,15 +49,22 @@ const DEVICE_LABELS = {
 } as const;
 
 const FEATURE_LABELS: Record<string, { label: string; tip: string }> = {
-  hesitation_score: { label: "Decision Hesitation", tip: "How much this visitor paused before acting" },
-  price_dwell_time_s: { label: "Time Studying Price", tip: "How long they looked at pricing" },
-  rage_click_score: { label: "Frustration Level", tip: "Repeated clicks suggesting confusion or frustration" },
-  scroll_retreat_count: { label: "Back-and-Forth Scrolling", tip: "Scrolled down then back up, indicating uncertainty" },
-  exit_intent_count: { label: "Times Almost Left", tip: "Moved cursor toward closing the page" },
-  checkout_hesitation_s: { label: "Checkout Hesitation", tip: "Time spent pausing during checkout" },
-  velocity_variance: { label: "Browsing Erraticness", tip: "How erratic their navigation pattern was" },
-  session_duration_s: { label: "Time on Site", tip: "Total time spent shopping" },
+  hesitation_score: { label: "Hesitation Score", tip: "How much this visitor paused before acting" },
+  price_dwell_time_s: { label: "Dwell Time", tip: "How long they looked at pricing information" },
+  rage_click_score: { label: "Friction Level", tip: "Repeated clicks suggesting confusion or frustration" },
+  scroll_retreat_count: { label: "Scroll Retreats", tip: "Scrolled down then back up, indicating uncertainty" },
+  exit_intent_count: { label: "Exit Intents", tip: "Moved cursor toward closing the page" },
+  checkout_hesitation_s: { label: "Hesitation Score", tip: "Time spent pausing during checkout" },
+  velocity_variance: { label: "Velocity Variance", tip: "How erratic their navigation pattern was" },
+  session_duration_s: { label: "Session Duration", tip: "Total time spent on site" },
 };
+
+function formatVelocityVariance(value: number | null | undefined): string {
+  if (value == null) return "--";
+  if (value < 500000) return "Low";
+  if (value <= 2000000) return "Medium";
+  return "High";
+}
 
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +97,7 @@ export default function SessionDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">
-            Visitor Session
+            Session
           </h1>
           <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{s.page_url}</p>
         </div>
@@ -88,21 +106,86 @@ export default function SessionDetailPage() {
 
       {/* Metric boxes */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricBox label="Likelihood to Leave" value={formatRisk(s.abandonment_risk)} variant={riskVariant(s.abandonment_risk)} />
-        <MetricBox label="Shopping Friction" value={formatPercent(s.friction_score)} />
-        <MetricBox label="Shopping Mode" value={INTENT_LABELS[s.intent_label as keyof typeof INTENT_LABELS] || s.intent_label || "--"} />
+        <MetricBox label="Abandonment Risk" value={formatRisk(s.abandonment_risk)} variant={riskVariant(s.abandonment_risk)} />
+        <MetricBox label="Friction Score" value={formatPercent(s.friction_score)} />
+        <MetricBox label="User Intent" value={INTENT_LABELS[s.intent_label as keyof typeof INTENT_LABELS] || s.intent_label || "--"} />
         <MetricBox label="Device" value={DEVICE_LABELS[s.device_type as keyof typeof DEVICE_LABELS] || s.device_type || "--"} />
       </div>
+
+      {s.primary_emotion && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
+              Emotion Analysis
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[hsl(var(--muted-foreground))]">
+              Emotional state detected from behavior patterns
+            </p>
+          </CardHeader>
+          <CardBody>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Primary emotion */}
+              <div className="flex flex-col items-center justify-center rounded-xl border border-[hsl(var(--border))] p-5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Primary Emotion</span>
+                <span
+                  className="mt-2 text-[28px] font-bold capitalize"
+                  style={{ color: EMOTION_COLORS[s.primary_emotion] || 'hsl(var(--foreground))' }}
+                >
+                  {s.primary_emotion}
+                </span>
+                <span className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">
+                  {((s.emotion_confidence ?? 0) * 100).toFixed(1)}% confidence
+                </span>
+                <div className="mt-4 flex gap-6">
+                  <div className="text-center">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Valence</span>
+                    <span className="text-[15px] font-bold text-[hsl(var(--foreground))]">{s.valence?.toFixed(1) ?? "--"}</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Arousal</span>
+                    <span className="text-[15px] font-bold text-[hsl(var(--foreground))]">{s.arousal?.toFixed(1) ?? "--"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Emotion scores bar chart */}
+              <div className="lg:col-span-2">
+                <div className="space-y-3">
+                  {s.emotion_scores && Object.entries(s.emotion_scores)
+                    .sort(([,a], [,b]) => (b as number) - (a as number))
+                    .map(([emotion, score]) => (
+                      <div key={emotion} className="flex items-center gap-3">
+                        <span className="w-24 text-[12px] font-medium capitalize text-[hsl(var(--foreground))]">{emotion}</span>
+                        <div className="flex-1 h-6 rounded-full bg-[hsl(var(--secondary))] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${((score as number) * 100).toFixed(1)}%`,
+                              backgroundColor: EMOTION_COLORS[emotion] || '#6B7280',
+                            }}
+                          />
+                        </div>
+                        <span className="w-14 text-right text-[12px] font-semibold text-[hsl(var(--muted-foreground))]">
+                          {((score as number) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Features */}
         <Card>
           <CardHeader>
             <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
-              Visitor Behavior Signals
+              Behavior Signals
             </h2>
             <p className="mt-0.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-              What this visitor&apos;s actions reveal about their shopping experience
+              Behavioral signals detected during this session
             </p>
           </CardHeader>
           <CardBody>
@@ -114,7 +197,7 @@ export default function SessionDetailPage() {
                 <Feature label={FEATURE_LABELS.scroll_retreat_count.label} value={String(f.scroll_retreat_count ?? "--")} tip={FEATURE_LABELS.scroll_retreat_count.tip} />
                 <Feature label={FEATURE_LABELS.exit_intent_count.label} value={String(f.exit_intent_count ?? "--")} tip={FEATURE_LABELS.exit_intent_count.tip} />
                 <Feature label={FEATURE_LABELS.checkout_hesitation_s.label} value={formatDuration(f.checkout_hesitation_s)} tip={FEATURE_LABELS.checkout_hesitation_s.tip} />
-                <Feature label={FEATURE_LABELS.velocity_variance.label} value={f.velocity_variance?.toFixed(2) ?? "--"} tip={FEATURE_LABELS.velocity_variance.tip} />
+                <Feature label={FEATURE_LABELS.velocity_variance.label} value={formatVelocityVariance(f.velocity_variance)} tip={FEATURE_LABELS.velocity_variance.tip} />
                 <Feature label={FEATURE_LABELS.session_duration_s.label} value={formatDuration(f.session_duration_s)} tip={FEATURE_LABELS.session_duration_s.tip} />
               </dl>
             ) : (

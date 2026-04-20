@@ -7,6 +7,7 @@ import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { IntegrationsSection } from "@/components/landing/IntegrationsSection";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { FAQSection } from "@/components/landing/FAQSection";
 import { FinalCTASection } from "@/components/landing/FinalCTASection";
 import { Footer } from "@/components/landing/Footer";
 import { StickyAuditBar } from "@/components/navigation/StickyAuditBar";
@@ -28,6 +29,9 @@ export default function LandingPage() {
 
       {/* Pricing Section */}
       <PricingSection id="pricing" />
+
+      {/* FAQ Section */}
+      <FAQSection id="faq" />
 
       {/* Final CTA Section */}
       <FinalCTASection />

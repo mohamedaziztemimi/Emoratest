@@ -19,3 +19,5 @@ export type { PulsingDotProps } from "./PulsingDot";
 
 export { StarRating } from "./StarRating";
 export type { StarRatingProps } from "./StarRating";
+
+export { DeleteModal } from "./DeleteModal";

@@ -19,10 +19,13 @@ const figtree = Figtree({
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://emoratest.com";
 
 export const metadata: Metadata = {
+
   title: {
-    default: "EmoraTest — Emotion ML A/B Testing",
+    default: "EmoraTest",
     template: "%s | EmoraTest",
+    
   },
+
   description: "See why users quit with emotion-powered heatmaps and AI insights. Real-time emotion ML, auto-variant generation, and statistically sound A/B testing.",
   keywords: [
     "emotion detection",
@@ -76,11 +79,12 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo2.png",
+    shortcut: "/logo2.png",
+    apple: "/logo2.png",
+  },
   // JSON-LD structured data
   other: {
     "application/ld+json": JSON.stringify({
@@ -124,7 +128,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark-mode" suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className={`${inter.variable} ${figtree.variable} font-sans antialiased`}>

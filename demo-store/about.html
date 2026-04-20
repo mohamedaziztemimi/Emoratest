@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us — Demo Store</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #ffffff;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    /* Navbar */
+    nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e5e5;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 64px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #007BFF;
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      color: #666;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #007BFF; }
+
+    /* About */
+    .about { padding: 80px 20px; }
+    .about h1 {
+      text-align: center;
+      font-size: 42px;
+      margin-bottom: 24px;
+    }
+    .about-subtitle {
+      text-align: center;
+      font-size: 20px;
+      color: #666;
+      margin-bottom: 60px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .about-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .about-section {
+      margin-bottom: 48px;
+    }
+    .about-section h2 {
+      font-size: 28px;
+      margin-bottom: 16px;
+      color: #007BFF;
+    }
+    .about-section p {
+      color: #666;
+      margin-bottom: 16px;
+    }
+    .values {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 32px;
+      margin-top: 60px;
+    }
+    .value-card {
+      background: #f8f9fa;
+      padding: 32px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .value-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .value-card h3 {
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+    .value-card p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Footer */
+    footer {
+      background: #f8f9fa;
+      padding: 40px 20px;
+      text-align: center;
+      border-top: 1px solid #e5e5e5;
+      margin-top: 80px;
+    }
+    footer p { color: #666; }
+
+    @media (max-width: 768px) {
+      .about h1 { font-size: 32px; }
+      .values { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav>
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">Demo Store</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#products">Products</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="cart.html">Cart</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- About -->
+  <section class="about">
+    <div class="about-content">
+      <h1>About Demo Store</h1>
+      <p class="about-subtitle">Your trusted destination for premium products at competitive prices.</p>
+
+      <div class="about-section">
+        <h2>Our Story</h2>
+        <p>Founded in 2024, Demo Store started with a simple mission: to make quality products accessible to everyone. We believe that shopping should be easy, enjoyable, and affordable.</p>
+        <p>Today, we serve thousands of happy customers worldwide, offering carefully curated products that meet our high standards for quality and value.</p>
+      </div>
+
+      <div class="about-section">
+        <h2>What We Offer</h2>
+        <p>From cutting-edge electronics to everyday essentials, we handpick each product to ensure it meets our customers' needs. Our team works around the clock to source the best deals and pass the savings on to you.</p>
+      </div>
+
+      <div class="about-section">
+        <h2>Customer Commitment</h2>
+        <p>We stand behind every product we sell. Our dedicated support team is always ready to help, and our hassle-free return policy ensures you can shop with confidence.</p>
+      </div>
+    </div>
+
+    <div class="values">
+      <div class="value-card">
+        <div class="value-icon">🎯</div>
+        <h3>Quality First</h3>
+        <p>We only sell products we'd use ourselves.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">💰</div>
+        <h3>Best Prices</h3>
+        <p>Competitive pricing every day.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🚚</div>
+        <h3>Fast Shipping</h3>
+        <p>Quick delivery to your doorstep.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🤝</div>
+        <h3>24/7 Support</h3>
+        <p>Always here when you need us.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>Powered by <a href="https://emoratest.com" target="_blank" style="color: #007BFF;">EmoraTest</a> — Unlock Emotions, Win Tests</p>
+    </div>
+  </footer>
+
+  <!-- EmoraTest SDK -->
+  <script src="http://localhost:8000/static/sdk/emoratest.umd.js"></script>
+  <script>
+    (async function() {
+      if (typeof EmoraTest !== 'undefined') {
+        try {
+          await EmoraTest.init({
+            sdkKey: 'a38cb6049282faaccf19b73c0201496055d9ade56c89c34f00990fe7986c6022',
+            apiUrl: 'http://localhost:8000',
+            debug: true
+          });
+          console.log('[DemoStore] SDK initialized');
+        } catch (err) {
+          console.error('[DemoStore] SDK init failed:', err);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

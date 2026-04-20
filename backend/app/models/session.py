@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import CHAR, CheckConstraint, DateTime, Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -46,4 +46,21 @@ class Session(Base):
     device_type: Mapped[str | None] = mapped_column(String(16))
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
+    )
+
+    # Emotion model fields
+    primary_emotion: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )
+    emotion_confidence: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    emotion_scores: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    valence: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    arousal: Mapped[float | None] = mapped_column(
+        Float, nullable=True
     )

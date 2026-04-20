@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
 import { fetchSessions, type SessionFilters } from "@/lib/api";
@@ -14,10 +14,32 @@ import EmptyState from "@/components/ui/EmptyState";
 const PAGE_SIZE = 20;
 
 const OUTCOME_DISPLAY: Record<string, string> = {
-  purchase: "Bought",
-  abandon: "Left",
-  browse: "Browsing",
+  purchase: "Converted",
+  abandon: "Abandoned",
+  browse: "Active",
   unknown: "Unknown",
+};
+
+const EMOTION_COLORS: Record<string, string> = {
+  confusion: "#F59E0B",
+  frustration: "#EF4444",
+  delight: "#10B981",
+  anxiety: "#F97316",
+  hesitation: "#8B5CF6",
+  focus: "#3B82F6",
+  boredom: "#6B7280",
+  satisfaction: "#059669",
+};
+
+const EMOTION_DISPLAY: Record<string, string> = {
+  confusion: "Confusion",
+  frustration: "Frustration",
+  delight: "Delight",
+  anxiety: "Anxiety",
+  hesitation: "Hesitation",
+  focus: "Focus",
+  boredom: "Boredom",
+  satisfaction: "Satisfaction",
 };
 
 export default function SessionsPage() {
@@ -39,9 +61,9 @@ export default function SessionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Visitor Sessions</h1>
+        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Sessions</h1>
         <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">
-          Every shopping visit to your store, and what happened
+          Every visit to your site, and what happened
         </p>
       </div>
 
@@ -95,7 +117,7 @@ export default function SessionsPage() {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)]">
                 <tr>
-                  {["Visitor", "Page Visited", "Started", "Result", "Leave Risk", "Device"].map((h) => (
+                  {["Visitor", "Page Visited", "Started", "Result", "Leave Risk", "Emotion", "Device"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -132,6 +154,46 @@ export default function SessionsPage() {
                       <Badge variant={riskVariant(s.abandonment_risk)}>
                         {formatRisk(s.abandonment_risk)}
                       </Badge>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {(() => {
+                        const sessionAge = s.ended_at
+                          ? (Date.now() - new Date(s.ended_at).getTime()) / 1000
+                          : null;
+
+                        if (s.primary_emotion) {
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: EMOTION_COLORS[s.primary_emotion] || "#9CA3AF" }}
+                              />
+                              <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">
+                                {EMOTION_DISPLAY[s.primary_emotion] || s.primary_emotion}
+                              </span>
+                              {s.emotion_confidence && (
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                                  {s.emotion_confidence}%
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // No emotion data yet
+                        const isAnalyzing = sessionAge === null || sessionAge < 30;
+
+                        return (
+                          <div className="flex items-center gap-2">
+                            {isAnalyzing && (
+                              <span className="h-2 w-2 rounded-full bg-[hsl(var(--muted-foreground))] animate-pulse" />
+                            )}
+                            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                              {isAnalyzing ? "Analyzing..." : "No data"}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
                       {s.device_type || "--"}
@@ -172,9 +234,9 @@ export default function SessionsPage() {
 /* ── Constants (stable references) ─────────────────────── */
 const OUTCOME_OPTIONS = [
   { value: "", label: "All Results" },
-  { value: "purchase", label: "Bought" },
-  { value: "abandon", label: "Left Without Buying" },
-  { value: "browse", label: "Browsing Only" },
+  { value: "purchase", label: "Converted" },
+  { value: "abandon", label: "Abandoned" },
+  { value: "browse", label: "Active" },
 ];
 
 const DEVICE_OPTIONS = [

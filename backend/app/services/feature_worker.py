@@ -27,6 +27,7 @@ from app.models.event import Event
 from app.models.segment import Segment, SegmentType
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
+from app.services.emotion_model import EmotionModel
 from app.services.targeting_service import TargetingService
 
 logger = logging.getLogger("emoratest.feature_worker")
@@ -202,20 +203,104 @@ def _extract_features_sync(
     return _extract_features_bundled(events, started_at, ended_at)
 
 
-def _score_session_sync(features: dict[str, float | int]) -> dict | None:
-    """Compute simple heuristic scores from features (no ML models required)."""
+def _adjust_emotion_scores(scores: dict, features: dict) -> dict:
+    """Adjust ML emotion scores based on behavioral signals.
+
+    When behavior signals clearly indicate an emotional state that
+    the ML model missed, we boost/reduce scores accordingly.
+    """
+    adjusted = dict(scores)  # copy
+
+    rage_clicks = features.get("rage_click_score", 0)
+    exit_intents = features.get("exit_intent_count", 0)
+    scroll_retreats = features.get("scroll_retreat_count", 0)
+    hesitation = features.get("hesitation_score", 0)
+    checkout_hesitation = features.get("checkout_hesitation_s", 0)
+    velocity_variance = features.get("velocity_variance", 0)
+
+    # Rule 1: High rage clicks → boost frustration
+    if rage_clicks > 0.3:
+        boost = min(rage_clicks * 0.3, 0.25)
+        adjusted["frustration"] = min(1.0, adjusted.get("frustration", 0) + boost)
+        adjusted["delight"] = max(0.0, adjusted.get("delight", 0) - boost * 0.5)
+
+    # Rule 2: Many exit intents → boost anxiety
+    if exit_intents >= 3:
+        boost = min(exit_intents / 15.0, 0.2)
+        adjusted["anxiety"] = min(1.0, adjusted.get("anxiety", 0) + boost)
+        adjusted["delight"] = max(0.0, adjusted.get("delight", 0) - boost * 0.5)
+
+    # Rule 3: Scroll retreats → boost confusion
+    if scroll_retreats >= 3:
+        boost = min(scroll_retreats / 10.0, 0.2)
+        adjusted["confusion"] = min(1.0, adjusted.get("confusion", 0) + boost)
+
+    # Rule 4: High hesitation score → boost hesitation emotion
+    if hesitation > 0.3:
+        boost = min(hesitation * 0.25, 0.2)
+        adjusted["hesitation"] = min(1.0, adjusted.get("hesitation", 0) + boost)
+
+    # Rule 5: Checkout hesitation > 10s → boost anxiety + hesitation
+    if checkout_hesitation > 10:
+        boost = min(checkout_hesitation / 60.0, 0.15)
+        adjusted["anxiety"] = min(1.0, adjusted.get("anxiety", 0) + boost)
+        adjusted["hesitation"] = min(1.0, adjusted.get("hesitation", 0) + boost)
+
+    # Rule 6: Very erratic movement (high velocity variance) → boost frustration
+    if velocity_variance > 50000:
+        boost = min(0.15, velocity_variance / 500000.0)
+        adjusted["frustration"] = min(1.0, adjusted.get("frustration", 0) + boost)
+
+    # Renormalize so scores sum to ~1.0
+    total = sum(adjusted.values())
+    if total > 0:
+        adjusted = {k: round(v / total, 4) for k, v in adjusted.items()}
+
+    return adjusted
+
+
+def _score_session_sync(
+    features: dict[str, float | int],
+    emotion_scores: dict[str, float] | None = None,
+) -> dict | None:
+    """Compute simple heuristic scores from features (no ML models required).
+
+    Args:
+        features: Behavioral features extracted from session events
+        emotion_scores: Optional dict of emotion probabilities from ML model
+                        e.g., {"frustration": 0.86, "delight": 0.10, ...}
+    """
     try:
         # Simple heuristic scoring based on behavioral features
         # This works even without loaded ML models
         f = features
 
-        # Abandonment risk: higher with rage clicks, exit intents, scroll retreats
-        risk = (
-            (f.get("rage_click_score", 0) * 0.3) +
-            (min(f.get("exit_intent_count", 0) / 5.0, 1.0) * 0.3) +
-            (min(f.get("scroll_retreat_count", 0) / 5.0, 1.0) * 0.2) +
-            (f.get("hesitation_score", 0) * 0.2)
+        # Base behavioral risk (existing formula, reduced to 0.7 weight)
+        base_risk = (
+            (f.get("rage_click_score", 0) * 0.2) +
+            (min(f.get("exit_intent_count", 0) / 5.0, 1.0) * 0.2) +
+            (min(f.get("scroll_retreat_count", 0) / 5.0, 1.0) * 0.15) +
+            (f.get("hesitation_score", 0) * 0.15)
         )
+
+        # Emotion-based risk adjustment (0.3 weight)
+        emotion_risk = 0.0
+        if emotion_scores:
+            frustration = emotion_scores.get("frustration", 0)
+            confusion = emotion_scores.get("confusion", 0)
+            anxiety = emotion_scores.get("anxiety", 0)
+            delight = emotion_scores.get("delight", 0)
+            satisfaction = emotion_scores.get("satisfaction", 0)
+
+            # Negative emotions increase risk
+            negative = max(frustration, confusion, anxiety)
+            # Positive emotions decrease risk
+            positive = max(delight, satisfaction)
+
+            emotion_risk = (negative * 0.3) - (positive * 0.15)
+            emotion_risk = max(0.0, emotion_risk)
+
+        risk = base_risk + emotion_risk
         risk = max(0.0, min(1.0, round(risk, 4)))
 
         # Friction score: based on hesitation, checkout hesitation, rage
@@ -322,10 +407,62 @@ async def process_session(session_id: str) -> dict:
             sf = SessionFeatures(session_id=sid, computed_at=now, **features)
             db.add(sf)
 
-        # 5. Run heuristic scoring (works without ML models)
+        # 5. Run emotion model prediction FIRST (before risk scoring)
+        feature_dict = {
+            'hesitation_score': features.get('hesitation_score', 0),
+            'price_dwell_time_s': features.get('price_dwell_time_s', 0),
+            'rage_click_score': features.get('rage_click_score', 0),
+            'scroll_retreat_count': features.get('scroll_retreat_count', 0),
+            'exit_intent_count': features.get('exit_intent_count', 0),
+            'checkout_hesitation_s': features.get('checkout_hesitation_s', 0),
+            'velocity_variance': features.get('velocity_variance', 0),
+            'session_duration_s': features.get('session_duration_s', 0),
+        }
+
+        emotion_result = EmotionModel.predict(feature_dict)
+        emotion_scores = emotion_result.get('all_scores') if emotion_result else None
+
+        # Post-processing: adjust emotion scores based on behavioral signals
+        if emotion_scores:
+            emotion_scores = _adjust_emotion_scores(emotion_scores, feature_dict)
+            # Update emotion_result with adjusted scores
+            if emotion_result:
+                # Recalculate primary emotion and confidence from adjusted scores
+                primary_emotion = max(emotion_scores, key=emotion_scores.get)
+                confidence = emotion_scores[primary_emotion]
+
+                # Recalculate valence/arousal based on adjusted emotions
+                valence = emotion_result.get('valence', 0.5)
+                arousal = emotion_result.get('arousal', 0.5)
+
+                # Simple valence adjustment based on emotion
+                negative_emotions = {'frustration', 'confusion', 'anxiety', 'boredom'}
+                positive_emotions = {'delight', 'satisfaction', 'focus'}
+
+                negative_weight = sum(emotion_scores.get(e, 0) for e in negative_emotions)
+                positive_weight = sum(emotion_scores.get(e, 0) for e in positive_emotions)
+
+                # Adjust valence: negative → lower, positive → higher
+                valence = max(0.0, min(1.0, 0.5 + (positive_weight - negative_weight) * 0.5))
+
+                # Adjust arousal: higher for strong emotions
+                max_score = max(emotion_scores.values())
+                arousal = max(0.0, min(1.0, max_score))
+
+                emotion_result['primary_emotion'] = primary_emotion
+                emotion_result['confidence'] = confidence
+                emotion_result['all_scores'] = emotion_scores
+                emotion_result['valence'] = round(valence, 4)
+                emotion_result['arousal'] = round(arousal, 4)
+
+        # 6. Run heuristic scoring WITH emotion data
         features_with_count = features.copy()
         features_with_count["_event_count"] = len(events)
-        scoring_result = await asyncio.to_thread(_score_session_sync, features_with_count)
+        scoring_result = await asyncio.to_thread(
+            _score_session_sync,
+            features_with_count,
+            emotion_scores,
+        )
 
         if scoring_result:
             await db.execute(
@@ -338,9 +475,30 @@ async def process_session(session_id: str) -> dict:
                 )
             )
 
+        # 7. Save emotion results to session (using the emotion_result from step 5)
+        if emotion_result:
+            await db.execute(
+                update(Session)
+                .where(Session.id == sid)
+                .values(
+                    primary_emotion=emotion_result['primary_emotion'],
+                    emotion_confidence=emotion_result['confidence'],
+                    emotion_scores=emotion_result['all_scores'],
+                    valence=emotion_result['valence'],
+                    arousal=emotion_result['arousal'],
+                )
+            )
+            logger.info(
+                f"Session {session_id} emotion: "
+                f"{emotion_result['primary_emotion']} "
+                f"({emotion_result['confidence']:.2f})"
+            )
+        else:
+            logger.debug(f"Emotion model unavailable for {session_id}")
+
         await db.commit()
 
-        # 6. Broadcast scoring update via WebSocket (CONV-42)
+        # 8. Broadcast scoring update via WebSocket (CONV-42)
         if scoring_result:
             try:
                 from app.api.ws import broadcast_scoring_update

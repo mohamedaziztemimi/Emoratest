@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Demo Store</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #f8f9fa;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #007BFF;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #666;
+      font-weight: 500;
+    }
+    .nav-links a:hover {
+      color: #007BFF;
+    }
+
+    /* Checkout Container */
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 2rem;
+    }
+
+    /* Checkout Form */
+    .checkout-form {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+    }
+    .form-section {
+      margin-bottom: 2rem;
+    }
+    .form-section h3 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #007BFF;
+      box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* Order Summary */
+    .order-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      height: fit-content;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    .summary-row.total {
+      font-size: 1.2rem;
+      font-weight: 700;
+      padding-top: 1rem;
+      margin-top: 0.5rem;
+      border-top: 2px solid #e5e5e5;
+    }
+    .order-items {
+      padding: 1rem 0;
+      border-bottom: 1px solid #e5e5e5;
+      margin-bottom: 1rem;
+    }
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #059669;
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Success Message */
+    .success-message {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+    }
+    .success-message.show {
+      display: block;
+    }
+    .success-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    .success-message h2 {
+      color: #10b981;
+      margin-bottom: 1rem;
+    }
+    .success-message p {
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Footer */
+    footer {
+      background: #1a1a1a;
+      color: #999;
+      text-align: center;
+      padding: 2rem;
+      margin-top: 4rem;
+    }
+    footer a {
+      color: #007BFF;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">Demo Store</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#products">Products</a>
+      <a href="about.html">About</a>
+      <a href="cart.html">Cart</a>
+    </div>
+  </nav>
+
+  <!-- Checkout Content -->
+  <div class="container">
+    <h1>Checkout</h1>
+
+    <!-- Checkout Form -->
+    <div class="checkout-layout" id="checkout-form">
+      <div class="checkout-form">
+        <form id="order-form" onsubmit="placeOrder(event)">
+          <div class="form-section">
+            <h3>Contact Information</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input type="text" id="firstName" required>
+              </div>
+              <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input type="text" id="lastName" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input type="email" id="email" required placeholder="you@example.com">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Shipping Address</h3>
+            <div class="form-group">
+              <label for="address">Street Address *</label>
+              <input type="text" id="address" required placeholder="123 Main Street">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="city">City *</label>
+                <input type="text" id="city" required>
+              </div>
+              <div class="form-group">
+                <label for="zip">ZIP Code *</label>
+                <input type="text" id="zip" required pattern="[0-9]{5}" placeholder="12345">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Payment Information</h3>
+            <div class="form-group">
+              <label for="cardNumber">Card Number *</label>
+              <input type="text" id="cardNumber" required placeholder="1234 5678 9012 3456" maxlength="19">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="expiry">Expiry *</label>
+                <input type="text" id="expiry" required placeholder="MM/YY" maxlength="5">
+              </div>
+              <div class="form-group">
+                <label for="cvv">CVV *</label>
+                <input type="text" id="cvv" required placeholder="123" maxlength="4">
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn" id="place-order-btn">Place Order</button>
+          <p style="text-align: center; margin-top: 1rem; color: #999; font-size: 0.85rem;">
+            This is a demo. No actual payment will be processed.
+          </p>
+        </form>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="order-summary">
+        <h3>Order Summary</h3>
+        <div class="order-items" id="order-items"></div>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="subtotal">$0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>Shipping</span>
+          <span id="shipping">$0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>Tax</span>
+          <span id="tax">$0.00</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total</span>
+          <span id="total">$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="success-message">
+      <div class="success-icon">✅</div>
+      <h2>Order Placed Successfully!</h2>
+      <p>Thank you for your purchase. Your order has been confirmed.</p>
+      <p>Order Number: <strong id="order-number">#DEMO-12345</strong></p>
+      <p>A confirmation email has been sent to your email address.</p>
+      <button class="btn" onclick="window.location.href='index.html'" style="max-width: 200px; margin: 1rem auto;">Continue Shopping</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Powered by <a href="https://emoratest.com" target="_blank">EmoraTest</a> — Emotion ML + A/B Testing Platform</p>
+  </footer>
+
+  <!-- EmoraTest SDK -->
+  <script src="http://localhost:8000/static/sdk/emoratest.umd.js"></script>
+  <script>
+    const SDK_KEY = "a38cb6049282faaccf19b73c0201496055d9ade56c89c34f00990fe7986c6022";
+    const API_URL = "http://localhost:8000";
+
+    let cart = JSON.parse(localStorage.getItem('demo_cart') || '[]');
+
+    function updateOrderSummary() {
+      const container = document.getElementById('order-items');
+      let html = '';
+      let subtotal = 0;
+
+      cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        html += `
+          <div class="order-item">
+            <span>${item.name || item.id} × ${item.quantity}</span>
+            <span>$${itemTotal.toFixed(2)}</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      const shipping = subtotal > 50 ? 0 : 5.99;
+      const tax = subtotal * 0.08;
+      const total = subtotal + shipping + tax;
+
+      document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+      document.getElementById('shipping').textContent = shipping === 0 ? 'FREE' : '$' + shipping.toFixed(2);
+      document.getElementById('tax').textContent = '$' + tax.toFixed(2);
+      document.getElementById('total').textContent = '$' + total.toFixed(2);
+
+      return { subtotal, shipping, tax, total };
+    }
+
+    async function placeOrder(event) {
+      event.preventDefault();
+
+      const btn = document.getElementById('place-order-btn');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+
+      // Simulate processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Get order total for tracking
+      const totals = updateOrderSummary();
+
+      // Track conversion with EmoraTest
+      if (typeof EmoraTest !== 'undefined' && EmoraTest.isInitialized()) {
+        try {
+          await EmoraTest.reportOutcome('purchase');
+          console.log('[Demo Store] Purchase tracked:', totals.total);
+        } catch (err) {
+          console.error('[Demo Store] Failed to track purchase:', err);
+        }
+      }
+
+      // Show success message
+      document.getElementById('checkout-form').style.display = 'none';
+      document.getElementById('success-message').classList.add('show');
+      document.getElementById('order-number').textContent = '#DEMO-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+      // Clear cart
+      localStorage.removeItem('demo_cart');
+      cart = [];
+    }
+
+    // Initialize SDK
+    (async function initSDK() {
+      updateOrderSummary();
+
+      if (cart.length === 0) {
+        document.getElementById('checkout-form').innerHTML = `
+          <div style="text-align: center; padding: 3rem; color: #666;">
+            <p style="font-size: 3rem;">🛒</p>
+            <h3>Your cart is empty</h3>
+            <button class="btn" onclick="window.location.href='index.html'" style="max-width: 200px; margin: 2rem auto;">Continue Shopping</button>
+          </div>
+        `;
+      }
+
+      if (typeof EmoraTest !== 'undefined') {
+        try {
+          await EmoraTest.init({
+            sdkKey: SDK_KEY,
+            apiUrl: API_URL,
+            debug: true
+          });
+          console.log('[Demo Store] SDK initialized, session:', EmoraTest.getSessionId());
+        } catch (err) {
+          console.error('[Demo Store] SDK init failed:', err);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

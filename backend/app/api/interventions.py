@@ -15,9 +15,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.intervention_result import InterventionResult
+from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 from app.schemas.interventions import (
@@ -28,7 +30,6 @@ from app.schemas.interventions import (
     SessionInterventionsResponse,
 )
 from app.services.intervention_service import recommend_interventions
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 router = APIRouter(prefix="/interventions", tags=["interventions"])
 
@@ -43,14 +44,13 @@ async def get_recommendations(
     session_id: str,
     max_results: int = Query(3, ge=1, le=8),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get intervention recommendations for a specific session.
 
     Uses the session's ML scores and features to rank interventions
     by relevance and estimated conversion lift.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         sid = uuid.UUID(session_id)
@@ -111,10 +111,9 @@ async def record_intervention_result(
     request: Request,
     body: InterventionResultRecordRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Record the outcome of a triggered intervention."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     # Validate session_id belongs to merchant
     try:
@@ -171,13 +170,12 @@ async def get_intervention_stats(
     request: Request,
     intervention_id: str | None = Query(None, max_length=16),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get aggregated performance statistics per intervention type.
 
     Optionally filter to a single intervention_id.
     """
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     query = (
         select(

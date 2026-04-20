@@ -23,65 +23,56 @@ export function HeroSection({ id }: HeroSectionProps) {
   };
 
   return (
-    <section id={id} className="relative min-h-screen" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)" }}>
-      <div className="max-w-[1200px] mx-auto px-6 pt-[120px] pb-20">
+    <section id={id} className="relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)", paddingTop: "180px", paddingBottom: "180px" }}>
+      <div className="max-w-[1200px] mx-auto px-6">
         {/* Two column layout */}
-        <div className="grid lg:grid-cols-[55%_45%] gap-12 items-start mb-16">
+        <div style={{ display: "grid", gridTemplateColumns: "55% 45%", gap: "60px", alignItems: "center", width: "100%" }}>
           {/* Left Column */}
-          <div className="space-y-6">
-            {/* Badge pill */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#007BFF] bg-white">
-              <span className="w-2 h-2 rounded-full bg-[#007BFF] animate-pulse"></span>
-              <span className="text-sm font-semibold text-[#007BFF]">Now with Emotion ML</span>
-            </div>
-
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* H1 */}
-            <h1 className="text-[clamp(32px,4vw,48px)] font-bold leading-[1.1] tracking-tight font-sans">
-              <span className="text-[#111318]">See Why Users Quit:</span>
-              <br />
-              <span className="bg-gradient-to-r from-[#007BFF] to-[#7C3AED] bg-clip-text text-transparent">
-                AI Detects Confusion
-              </span>
-              <br />
-              <span className="text-[#111318]">in Real-Time</span>
+            <h1 style={{ fontSize: "clamp(32px, 3.5vw, 52px)", fontWeight: 700, lineHeight: 1.05, margin: 0 }}>
+              <span style={{ color: "#111318" }}>Know Exactly Why </span>
+              <span style={{
+                background: "linear-gradient(135deg, #007BFF, #7C3AED)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}>Users Leave.</span>
             </h1>
 
             {/* Subtext */}
-            <p className="text-lg text-[#4B5563] leading-relaxed max-w-xl font-medium">
-              Emotion ML + A/B Testing. No Setup. Instant Insights. Find the confusion killing your
-              conversions in minutes, not months.
+            <p style={{ fontSize: "18px", color: "#4B5563", maxWidth: "480px", lineHeight: 1.7, margin: 0, marginBottom: 0 }}>
+              EmoraTest detects confusion and frustration in real-time. Most teams find their conversion killer within 2 hours.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-wrap gap-4 pt-2">
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
               <GradientButton variant="primary" size="lg" glow href="/signup">
-                Start Free Heatmap →
+                See Your Emotion Heatmap →
               </GradientButton>
               <GradientButton variant="outline" size="lg" onClick={handleWatchDemo}>
-                Watch 60s Demo
+                Watch 2-min Demo
               </GradientButton>
             </div>
 
             {/* Social proof */}
-            <div className="flex items-center gap-3 pt-2">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-[#007BFF] border-2 border-white flex items-center justify-center text-white text-xs font-bold">A</div>
-                <div className="w-8 h-8 rounded-full bg-[#7C3AED] border-2 border-white flex items-center justify-center text-white text-xs font-bold">B</div>
-                <div className="w-8 h-8 rounded-full bg-[#10B981] border-2 border-white flex items-center justify-center text-white text-xs font-bold">C</div>
-              </div>
-              <span className="text-sm text-[#4B5563]">
-                <span className="font-semibold text-[#111318]">2,400+ teams</span> run emotion-powered tests
-              </span>
+            <div style={{ marginTop: "4px" }}>
+              <p className="text-[14px] text-[#4B5563] font-medium" style={{ marginBottom: "4px" }}>
+                2,400+ growth teams trust EmoraTest
+              </p>
+              <p className="text-[12px] text-[#9CA3AF]">
+                847 teams joined this month
+              </p>
             </div>
           </div>
 
           {/* Right Column - Heatmap with floating card */}
-          <div className="relative mt-8">
+          <div className="relative">
             {/* Hero Heatmap */}
             <HeroHeatmap />
 
             {/* Floating +32% card */}
-            <div className="absolute bottom-4 left-4 bg-white rounded-2xl p-4 shadow-lg max-w-[180px] z-10">
+            <div className="absolute -top-3 -left-3 bg-white rounded-2xl p-4 shadow-lg max-w-[180px] z-10 border border-gray-100">
               <div className="text-[#10B981] text-[32px] font-bold leading-none">+32%</div>
               <div className="text-xs text-[#6B7280] mt-1 leading-tight">
                 Conversions after fixing CTA confusion
@@ -91,14 +82,14 @@ export function HeroSection({ id }: HeroSectionProps) {
         </div>
 
         {/* Stat Cards - below columns in normal flow */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-6" style={{ marginTop: "40px" }}>
           {STATS.map((stat, index) => (
             <div
               key={index}
-              className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-100"
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm text-center border border-gray-100 hover:shadow-md transition-shadow duration-300"
             >
-              <div className="text-4xl font-bold text-[#111318] mb-1">{stat.value}</div>
-              <div className="text-sm font-medium text-[#111318] mb-1">{stat.label}</div>
+              <div className="text-4xl font-bold bg-gradient-to-r from-[#007BFF] to-[#7C3AED] bg-clip-text text-transparent mb-1">{stat.value}</div>
+              <div className="text-sm font-semibold text-[#111318] mb-1">{stat.label}</div>
               <div className="text-xs text-[#6B7280]">{stat.delta}</div>
             </div>
           ))}

@@ -12,8 +12,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
+from app.models.merchant import Merchant
 from app.models.segment import Segment
 from app.schemas.segments import (
     CRMSyncRequest,
@@ -34,7 +36,7 @@ from app.services.targeting_service import (
     TargetingService,
 )
 
-router = APIRouter(prefix="/api/v1/segments", tags=["segments"])
+router = APIRouter(prefix="/segments", tags=["segments"])
 service = TargetingService()
 
 
@@ -49,7 +51,7 @@ async def list_segments(
     page_size: int = Query(50, ge=1, le=200),
     type_filter: str | None = Query(None, description="Filter by segment type"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """List all segments with pagination.
 
@@ -65,7 +67,7 @@ async def list_segments(
 
     # Build query
     # Get all segments (or filter by merchant when auth is added)
-    query = select(Segment)
+    query = select(Segment).where(Segment.merchant_id == merchant.id)
 
     if type_filter:
         if type_filter not in ("static", "dynamic", "emotional"):
@@ -108,14 +110,13 @@ async def create_segment(
     request: Request,
     body: SegmentCreateRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Create a new segment with condition-based targeting.
 
     Supports nested AND/OR conditions up to 5 levels deep.
     Attributes can be from user, session, event, or custom namespaces.
     """
-    from uuid import uuid4
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -123,7 +124,7 @@ async def create_segment(
 
     # Get merchant (when auth is added)
     # merchant = await authenticate_sdk_key(db, sdk_key_hash)
-    merchant_id = uuid4()  # Placeholder
+    merchant_id = merchant.id
 
     # Convert conditions to dict format
     conditions_dict = body.conditions.model_dump()
@@ -520,7 +521,7 @@ async def create_emotional_cohort(
     request: Request,
     body: EmotionalCohortRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Auto-create a dynamic segment based on emotion scores.
 

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product — Demo Store</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #007BFF;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #666;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: #007BFF;
+    }
+    .cart-badge {
+      position: relative;
+    }
+    .cart-count {
+      position: absolute;
+      top: -8px;
+      right: -12px;
+      background: #007BFF;
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    /* Product Page */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .breadcrumb {
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    .breadcrumb a:hover {
+      color: #007BFF;
+    }
+
+    .product-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin-top: 2rem;
+    }
+
+    .product-image {
+      height: 400px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 6rem;
+    }
+
+    .product-details h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .product-price {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #007BFF;
+      margin-bottom: 1rem;
+    }
+
+    .product-description {
+      color: #666;
+      margin-bottom: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .quantity-selector {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .quantity-selector button {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #e5e5e5;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .quantity-selector input {
+      width: 60px;
+      text-align: center;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .add-to-cart-section {
+      margin-bottom: 2rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn-green {
+      background: #10b981;
+      color: white;
+    }
+    .btn-green:hover {
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+    }
+    .btn-orange {
+      background: #f97316;
+      color: white;
+    }
+    .btn-orange:hover {
+      background: #ea580c;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+    }
+
+    /* Tabs */
+    .tabs {
+      margin-top: 3rem;
+    }
+    .tab-headers {
+      display: flex;
+      gap: 1rem;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .tab-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      color: #666;
+    }
+    .tab-header:hover {
+      color: #007BFF;
+    }
+    .tab-header.active {
+      color: #007BFF;
+      border-bottom-color: #007BFF;
+    }
+    .tab-content {
+      padding: 1.5rem 0;
+      color: #666;
+    }
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Footer */
+    footer {
+      background: #1a1a1a;
+      color: #999;
+      text-align: center;
+      padding: 2rem;
+      margin-top: 4rem;
+    }
+    footer a {
+      color: #007BFF;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .product-layout {
+        grid-template-columns: 1fr;
+      }
+      .product-image {
+        height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">Demo Store</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#products">Products</a>
+      <a href="about.html">About</a>
+      <a href="cart.html" class="cart-badge">
+        Cart
+        <span class="cart-count" id="cart-count">0</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Product Content -->
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="index.html">Home</a> / <span id="breadcrumb-name">Product</span>
+    </div>
+
+    <div class="product-layout">
+      <div class="product-image" id="product-image"></div>
+      <div class="product-details">
+        <h1 id="product-name">Loading...</h1>
+        <div class="product-price" id="product-price">$0.00</div>
+        <p class="product-description" id="product-description"></p>
+
+        <div class="quantity-selector">
+          <button onclick="updateQuantity(-1)">−</button>
+          <input type="number" id="quantity" value="1" min="1" max="10" readonly>
+          <button onclick="updateQuantity(1)">+</button>
+        </div>
+
+        <div class="add-to-cart-section">
+          <button id="add-to-cart-btn" class="btn btn-green">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab-headers">
+        <div class="tab-header active" onclick="showTab('description')">Description</div>
+        <div class="tab-header" onclick="showTab('reviews')">Reviews</div>
+        <div class="tab-header" onclick="showTab('shipping')">Shipping</div>
+      </div>
+      <div class="tab-content">
+        <div class="tab-panel active" id="tab-description">
+          <p>Premium quality product designed for everyday use. Built with the finest materials and latest technology to ensure durability and performance.</p>
+        </div>
+        <div class="tab-panel" id="tab-reviews">
+          <p><strong>⭐⭐⭐⭐⭐</strong> "Amazing quality! Exceeded my expectations." — Verified Buyer</p>
+          <p><strong>⭐⭐⭐⭐⭐</strong> "Fast shipping and great customer service." — Sarah M.</p>
+          <p><strong>⭐⭐⭐⭐</strong> "Good value for money." — John D.</p>
+        </div>
+        <div class="tab-panel" id="tab-shipping">
+          <p><strong>Free Shipping</strong> on orders over $50</p>
+          <p><strong>Express Delivery</strong> — 2-3 business days</p>
+          <p><strong>Standard Delivery</strong> — 5-7 business days</p>
+          <p><strong>Returns</strong> — 30-day hassle-free returns</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Powered by <a href="https://emoratest.com" target="_blank">EmoraTest</a> — Emotion ML + A/B Testing Platform</p>
+  </footer>
+
+  <!-- EmoraTest SDK -->
+  <script src="http://localhost:8000/static/sdk/emoratest.umd.js"></script>
+  <script>
+    const SDK_KEY = "a38cb6049282faaccf19b73c0201496055d9ade56c89c34f00990fe7986c6022";
+    const API_URL = "http://localhost:8000";
+
+    // Product data
+    const products = {
+      headphones: {
+        name: "Wireless Headphones",
+        price: 79,
+        emoji: "🎧",
+        gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        description: "Premium wireless headphones with active noise cancellation, 30-hour battery life, and crystal-clear audio quality. Perfect for music lovers and professionals alike."
+      },
+      watch: {
+        name: "Smart Watch",
+        price: 199,
+        emoji: "⌚",
+        gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        description: "Advanced smartwatch with health monitoring, GPS tracking, and seamless smartphone integration. Track your fitness, sleep, and daily activities with precision."
+      },
+      shoes: {
+        name: "Running Shoes",
+        price: 89,
+        emoji: "👟",
+        gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+        description: "Lightweight running shoes designed for comfort and performance. Features responsive cushioning, breathable mesh, and a durable sole for any terrain."
+      }
+    };
+
+    let currentProduct = null;
+    let cart = JSON.parse(localStorage.getItem('demo_cart') || '[]');
+    let quantity = 1;
+
+    // Get product from URL
+    function getProductFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const productId = params.get('product');
+      return products[productId] || products['headphones'];
+    }
+
+    // Update product display
+    function renderProduct() {
+      currentProduct = getProductFromURL();
+      document.getElementById('product-name').textContent = currentProduct.name;
+      document.getElementById('product-price').textContent = '$' + currentProduct.price.toFixed(2);
+      document.getElementById('product-description').textContent = currentProduct.description;
+      document.getElementById('breadcrumb-name').textContent = currentProduct.name;
+
+      const imageEl = document.getElementById('product-image');
+      imageEl.style.background = currentProduct.gradient;
+      imageEl.textContent = currentProduct.emoji;
+    }
+
+    // Quantity controls
+    function updateQuantity(delta) {
+      quantity = Math.max(1, Math.min(10, quantity + delta));
+      document.getElementById('quantity').value = quantity;
+    }
+
+    // Cart management
+    function updateCartCount() {
+      const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById('cart-count').textContent = count;
+    }
+
+    function addToCart() {
+      const existing = cart.find(item => item.id === currentProduct.name.toLowerCase().replace(' ', '_'));
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        cart.push({ id: currentProduct.name.toLowerCase().replace(' ', '_'), name: currentProduct.name, price: currentProduct.price, quantity: quantity });
+      }
+      localStorage.setItem('demo_cart', JSON.stringify(cart));
+      updateCartCount();
+
+      const btn = document.getElementById('add-to-cart-btn');
+      btn.textContent = '✓ Added to Cart!';
+      setTimeout(() => {
+        btn.textContent = btn.dataset.originalText || 'Add to Cart';
+      }, 2000);
+    }
+
+    // Tab switching
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-header').forEach(h => h.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    // A/B Test: Buy button style
+    async function applyBuyButtonTest() {
+      const btn = document.getElementById('add-to-cart-btn');
+      btn.dataset.originalText = 'Add to Cart';
+
+      if (typeof EmoraTest !== 'undefined' && EmoraTest.isInitialized()) {
+        try {
+          const result = await EmoraTest.evaluateFlag('buy-button-style');
+          console.log('[Demo Store] Button variant:', result.variant);
+
+          if (result.variant === 'variant_b') {
+            btn.className = 'btn btn-orange';
+            btn.textContent = 'Buy Now — Free Shipping!';
+          }
+        } catch (err) {
+          console.log('[Demo Store] Flag evaluation failed, using default:', err);
+        }
+      }
+    }
+
+    // Initialize
+    (async function init() {
+      renderProduct();
+      updateCartCount();
+
+      if (typeof EmoraTest !== 'undefined') {
+        try {
+          await EmoraTest.init({
+            sdkKey: SDK_KEY,
+            apiUrl: API_URL,
+            debug: true
+          });
+          console.log('[Demo Store] SDK initialized, session:', EmoraTest.getSessionId());
+
+          // Apply A/B test after SDK is ready
+          await applyBuyButtonTest();
+        } catch (err) {
+          console.error('[Demo Store] SDK init failed:', err);
+        }
+      }
+
+      document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
+    })();
+  </script>
+</body>
+</html>

@@ -22,8 +22,13 @@ import {
 import { EventQueue } from "./event-queue";
 import { SessionManager } from "./session";
 import { Transport } from "./transport";
-import type { EmoraTestConfig } from "./types";
-import { sha256 } from "./utils";
+import type {
+  EmoraTestConfig,
+  FlagEvaluationRequest,
+  FlagEvaluationResponse,
+  FlagEvaluationResult,
+} from "./types";
+import { sha256, uuid4 } from "./utils";
 
 // Re-export types for consumers
 export type {
@@ -32,6 +37,9 @@ export type {
   BatchPayload,
   SessionCreatePayload,
   SessionCreateResponse,
+  FlagEvaluationRequest,
+  FlagEvaluationResponse,
+  FlagEvaluationResult,
 } from "./types";
 
 // ── Module state ──────────────────────────────────────────────
@@ -42,6 +50,13 @@ let queue: EventQueue | null = null;
 let sessionManager: SessionManager | null = null;
 let cleanups: (() => void)[] = [];
 let initialized = false;
+
+// ── Feature Flag state ────────────────────────────────────────
+
+const VISITOR_ID_KEY = "emoratest_visitor_id";
+let visitorId: string | null = null;
+let activeVariants: Record<string, string | null> = {};
+const flagCache: Record<string, FlagEvaluationResult> = {};
 
 // ── Public API ────────────────────────────────────────────────
 
@@ -100,17 +115,21 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
 
   // Attach event collectors
   cleanups = [
-    collectMouseMove(queue, config.mouseMoveThrottleMs!),
-    collectClicks(queue),
-    collectScroll(queue),
-    collectExitIntent(queue),
-    collectVisibility(queue),
+    collectMouseMove(queue, config.mouseMoveThrottleMs!, getActiveVariants),
+    collectClicks(queue, getActiveVariants),
+    collectScroll(queue, getActiveVariants),
+    collectExitIntent(queue, getActiveVariants),
+    collectVisibility(queue, getActiveVariants),
   ];
 
-  // Handle page unload
+  // Handle page unload — only flush events, do NOT end session
+  // Session persists in sessionStorage for multi-page navigation
   const unloadHandler = () => {
-    if (queue) queue.flushBeacon();
-    if (sessionManager) sessionManager.endBeacon();
+    // Only flush events — do NOT end the session
+    // Session persists in sessionStorage for multi-page navigation
+    if (queue) {
+      queue.flushBeacon();
+    }
   };
 
   window.addEventListener("beforeunload", unloadHandler);
@@ -175,6 +194,132 @@ export function isInitialized(): boolean {
   return initialized;
 }
 
+// ── Feature Flag Methods ─────────────────────────────────────────
+
+/** Get or create persistent visitor ID (stored in localStorage). */
+function getOrCreateVisitorId(): string {
+  if (visitorId) return visitorId;
+
+  try {
+    const stored = localStorage.getItem(VISITOR_ID_KEY);
+    if (stored) {
+      visitorId = stored;
+      return visitorId;
+    }
+  } catch {
+    // localStorage might be disabled
+  }
+
+  const newId = uuid4();
+  visitorId = newId;
+
+  try {
+    localStorage.setItem(VISITOR_ID_KEY, newId);
+  } catch {
+    // localStorage might be disabled
+  }
+
+  return visitorId;
+}
+
+/**
+ * Evaluate a feature flag for the current visitor.
+ *
+ * Uses deterministic hashing so the same visitor always gets the same variant.
+ * Results are cached in memory for the session.
+ *
+ * @param flagKey - The feature flag key to evaluate
+ * @returns Promise resolving to { assigned: boolean, variant: string | null }
+ */
+export async function evaluateFlag(
+  flagKey: string,
+): Promise<FlagEvaluationResult> {
+  if (!initialized || !config) {
+    throw new Error("[EmoraTest] SDK not initialized. Call init() first.");
+  }
+
+  // Check cache first
+  if (flagCache[flagKey]) {
+    return flagCache[flagKey];
+  }
+
+  const visitorIdValue = getOrCreateVisitorId();
+  const sessionId = getSessionId();
+
+  const payload: FlagEvaluationRequest = {
+    user_context: {
+      visitor_id: visitorIdValue,
+      ...(sessionId && { session_id: sessionId }),
+    },
+    environment: "production",
+  };
+
+  try {
+    const response = await fetch(`${config.apiUrl}/api/v1/flags/sdk/${flagKey}/evaluate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-SDK-Key": config.sdkKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+      throw new Error(`[EmoraTest] Flag evaluation failed: ${error.detail || response.statusText}`);
+    }
+
+    const data: FlagEvaluationResponse = await response.json();
+
+    // Store in active variants for event metadata
+    if (data.enabled && data.variant) {
+      activeVariants[flagKey] = data.variant;
+    }
+
+    const result: FlagEvaluationResult = {
+      assigned: data.enabled,
+      variant: data.variant,
+    };
+
+    // Cache the result
+    flagCache[flagKey] = result;
+
+    if (config.debug) {
+      console.debug("[EmoraTest] Flag evaluated", { flagKey, result });
+    }
+
+    return result;
+  } catch (err) {
+    if (config.debug) {
+      console.error("[EmoraTest] Flag evaluation error:", err);
+    }
+    // Return default (not assigned) on error
+    return { assigned: false, variant: null };
+  }
+}
+
+/**
+ * Get just the variant for a flag (convenience method).
+ * Returns the variant string or null if not assigned.
+ *
+ * @param flagKey - The feature flag key
+ * @returns Variant string or null
+ */
+export async function getVariant(flagKey: string): Promise<string | null> {
+  const result = await evaluateFlag(flagKey);
+  return result.variant;
+}
+
+/**
+ * Get all active variant assignments for this session.
+ * Returns format suitable for event metadata.
+ */
+function getActiveVariants(): Record<string, unknown> | null {
+  const variants = Object.entries(activeVariants).filter(([_, v]) => v !== null);
+  if (variants.length === 0) return null;
+  return { variants: Object.fromEntries(variants) };
+}
+
 /** Manually report a conversion outcome. */
 export async function reportOutcome(
   outcome: "purchase" | "abandon",
@@ -185,7 +330,7 @@ export async function reportOutcome(
   if (!sessionId) return;
 
   try {
-    await fetch(
+    const response = await fetch(
       `${config.apiUrl}/api/v1/sessions/${sessionId}/outcome`,
       {
         method: "PUT",
@@ -196,6 +341,10 @@ export async function reportOutcome(
         body: JSON.stringify({ outcome }),
       },
     );
+    if (response.ok) {
+      // Mark outcome as reported to prevent double-reporting on page unload
+      sessionManager.markOutcomeReported();
+    }
   } catch (err) {
     if (config.debug) {
       console.error("[EmoraTest] Failed to report outcome:", err);

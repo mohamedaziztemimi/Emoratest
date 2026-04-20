@@ -199,8 +199,9 @@ export default function ElementInspector({
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h6a3 3 0 003 3 0v-6a3 3 0 002 3 3 0 002-3 3 0 002.5l2 2 2a4 4 0 003 3 3 0 012M6 11a4 4 0 000 3 3 3 0 0-002.5 2 2 2z" />
-              <span className="text-sm">Undo last change</span>
-            </button>
+            </svg>
+            <span className="text-sm">Undo last change</span>
+          </button>
         </div>
       )}
 

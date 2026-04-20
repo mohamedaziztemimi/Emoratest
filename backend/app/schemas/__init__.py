@@ -1,6 +1,7 @@
 """Pydantic schemas for API requests/responses."""
 
 from app.schemas.analytics import *
+from app.schemas.bandit import *
 from app.schemas.dashboard import *
 from app.schemas.experiments import *
 from app.schemas.feature_flags import *

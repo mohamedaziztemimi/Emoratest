@@ -16,6 +16,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
+from app.api.bandits import router as bandits_router
 from app.api.dashboard import router as dashboard_router
 from app.api.emotion import router as emotion_router
 from app.api.experiments import router as experiments_router
@@ -69,13 +70,21 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# CORS
+# CORS - allow credentials for localhost (required for cookies)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],  # Specific origins when using credentials
+    allow_credentials=True,  # Required for httpOnly cookies
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ── Routers ───────────────────────────────────────────────────────
@@ -94,6 +103,9 @@ app.include_router(experiments_router, prefix=settings.API_V1_PREFIX)
 
 # Feature flags - progressive rollouts, kill switches (Epic X2)
 app.include_router(feature_flags_router, prefix=settings.API_V1_PREFIX)
+
+# Multi-armed bandits - adaptive variant optimization (Epic X6)
+app.include_router(bandits_router, prefix=settings.API_V1_PREFIX)
 
 # Emotion classification and real-time tracking (Epic X3)
 app.include_router(emotion_router, prefix=settings.API_V1_PREFIX)

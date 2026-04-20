@@ -1,0 +1,42 @@
+# ────────────────────────────────────────────────────────────────
+# docker-compose.override.yml
+# Development-only overrides (auto-merged with docker-compose.yml)
+# Enables hot-reload with bind mounts and preserves dependencies
+# ────────────────────────────────────────────────────────────────
+
+services:
+  # ── Backend (FastAPI) ──────────────────────────────────────────
+  backend:
+    # Mount entire backend directory for hot-reload
+    volumes:
+      - ./backend:/app
+      # Preserve Python site-packages (prevents overwriting with bind mount)
+      - backend-site-packages:/usr/local/lib/python3.11/site-packages
+      - backend-egg-info:/app/emoratest_backend.egg-info
+      # ML module access (read-only for safety)
+      - ./ml:/ml:ro
+    # Ensure uvicorn --reload is used
+    environment:
+      - PYTHONUNBUFFERED=1
+      - UVICORN_RELOAD=true
+
+  # ── Frontend (Next.js) ─────────────────────────────────────────
+  frontend:
+    # Mount entire frontend directory for hot-reload
+    volumes:
+      - ./frontend:/app
+      # Preserve node_modules (prevents overwriting with bind mount)
+      - frontend-node-modules:/app/node_modules
+      - frontend-next:/app/.next
+    environment:
+      - NEXT_TELEMETRY_DISABLED=1
+      # Windows file watching fixes
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+
+volumes:
+  backend-site-packages:
+  backend-egg-info:
+  frontend-node-modules:
+  frontend-next:

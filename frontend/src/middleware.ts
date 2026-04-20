@@ -8,13 +8,23 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if user has a valid session cookie
-  const sessionCookie = request.cookies.get("session")?.value;
+  // Skip middleware for static files, api routes, and public routes
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname === "/"
+  ) {
+    return NextResponse.next();
+  }
 
   // Protect dashboard routes
   if (pathname.startsWith("/dashboard")) {
-    if (!sessionCookie) {
-      // Redirect to login if no session
+    const authToken = request.cookies.get("auth_token")?.value;
+    if (!authToken) {
+      // Redirect to login if no auth token
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }

@@ -10,6 +10,7 @@ import type { BatchPayload, SessionCreatePayload, SessionCreateResponse } from "
 export class Transport {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
+  public disabled = false;
 
   constructor(apiUrl: string, sdkKeyHash: string) {
     this.baseUrl = apiUrl.replace(/\/+$/, "");
@@ -19,10 +20,24 @@ export class Transport {
     };
   }
 
+  /** Check if response is 401 and disable the SDK if so. */
+  private handleAuthError(res: Response): void {
+    if (res.status === 401 && !this.disabled) {
+      this.disabled = true;
+      console.error(
+        "[EmoraTest] Invalid SDK key. Check your API key at https://your-dashboard/settings",
+      );
+    }
+  }
+
   /** POST /api/v1/sessions — create a new session. */
   async createSession(
     payload: SessionCreatePayload,
   ): Promise<SessionCreateResponse> {
+    if (this.disabled) {
+      throw new Error("SDK disabled due to invalid API key");
+    }
+
     const res = await fetch(`${this.baseUrl}/api/v1/sessions`, {
       method: "POST",
       headers: this.headers,
@@ -30,6 +45,7 @@ export class Transport {
     });
 
     if (!res.ok) {
+      this.handleAuthError(res);
       throw new Error(`Session create failed: ${res.status} ${res.statusText}`);
     }
 
@@ -38,6 +54,10 @@ export class Transport {
 
   /** POST /api/v1/events/batch — send a batch of events. */
   async sendEvents(payload: BatchPayload): Promise<void> {
+    if (this.disabled) {
+      return; // Silent fail - don't spam logs
+    }
+
     const res = await fetch(`${this.baseUrl}/api/v1/events/batch`, {
       method: "POST",
       headers: this.headers,
@@ -45,12 +65,17 @@ export class Transport {
     });
 
     if (!res.ok) {
+      this.handleAuthError(res);
       throw new Error(`Event batch failed: ${res.status} ${res.statusText}`);
     }
   }
 
   /** PUT /api/v1/sessions/:id/end — end a session. */
   async endSession(sessionId: string): Promise<void> {
+    if (this.disabled) {
+      return; // Silent fail
+    }
+
     const res = await fetch(
       `${this.baseUrl}/api/v1/sessions/${sessionId}/end`,
       {
@@ -60,6 +85,7 @@ export class Transport {
     );
 
     if (!res.ok) {
+      this.handleAuthError(res);
       throw new Error(`Session end failed: ${res.status} ${res.statusText}`);
     }
   }
@@ -87,6 +113,32 @@ export class Transport {
     const blob = new Blob([JSON.stringify({})], { type: "application/json" });
     return navigator.sendBeacon(
       `${this.baseUrl}/api/v1/sessions/${sessionId}/end?sdk_key=${this.headers["X-SDK-Key"]}`,
+      blob,
+    );
+  }
+
+  /**
+   * Report outcome via sendBeacon (for page unload).
+   */
+  sendBeaconOutcome(sessionId: string, outcome: "purchase" | "abandon"): boolean {
+    if (typeof navigator === "undefined" || !navigator.sendBeacon) return false;
+    const data = JSON.stringify({ outcome });
+    const blob = new Blob([data], { type: "application/json" });
+    return navigator.sendBeacon(
+      `${this.baseUrl}/api/v1/sessions/${sessionId}/outcome?sdk_key=${this.headers["X-SDK-Key"]}`,
+      blob,
+    );
+  }
+
+  /**
+   * Combined close via sendBeacon — ends session AND sets outcome to 'abandon' in one call.
+   * More reliable than making two separate beacon calls during page unload.
+   */
+  sendBeaconClose(sessionId: string): boolean {
+    if (typeof navigator === "undefined" || !navigator.sendBeacon) return false;
+    const blob = new Blob([JSON.stringify({})], { type: "application/json" });
+    return navigator.sendBeacon(
+      `${this.baseUrl}/api/v1/sessions/${sessionId}/close?sdk_key=${this.headers["X-SDK-Key"]}`,
       blob,
     );
   }

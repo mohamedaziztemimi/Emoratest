@@ -6,10 +6,11 @@ and FastAPI dependency for protecting dashboard endpoints.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -53,17 +54,26 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_merchant(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> Merchant:
-    """FastAPI dependency: extract and validate JWT, return Merchant."""
-    if credentials is None:
+    """FastAPI dependency: extract and validate JWT from cookie or header, return Merchant."""
+    # First try to get token from httpOnly cookie
+    token = request.cookies.get("auth_token")
+
+    # Fall back to Authorization header
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]  # Remove "Bearer " prefix
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
         )
 
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
     merchant_id = payload.get("sub")
     if not merchant_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
@@ -79,3 +89,67 @@ async def get_current_merchant(
         raise HTTPException(status_code=401, detail="Merchant not found or inactive")
 
     return merchant
+
+
+async def get_merchant_flexible(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> Merchant:
+    """Accept either JWT cookie or SDK key auth for dashboard/SDK interoperability.
+
+    Tries JWT cookie first, then falls back to X-SDK-Key header.
+    Returns the authenticated Merchant or raises 401.
+    """
+    # Try JWT cookie first
+    token = request.cookies.get("auth_token")
+    if token:
+        try:
+            payload = decode_token(token)
+            merchant_id = payload.get("sub")
+            if merchant_id:
+                result = await db.execute(
+                    select(Merchant).where(
+                        Merchant.id == merchant_id,
+                        Merchant.is_active.is_(True),
+                    )
+                )
+                merchant = result.scalar_one_or_none()
+                if merchant:
+                    return merchant
+        except HTTPException:
+            pass  # Fall through to SDK key auth
+        except Exception:
+            pass  # Fall through to SDK key auth
+
+    # Try SDK key header (for SDK/server-side use)
+    sdk_key = request.headers.get("X-SDK-Key")
+    if sdk_key:
+        key_hash = hashlib.sha256(sdk_key.encode()).hexdigest()
+        result = await db.execute(
+            select(Merchant).where(
+                Merchant.sdk_key_hash == key_hash,
+                Merchant.is_active.is_(True),
+            )
+        )
+        merchant = result.scalar_one_or_none()
+        if merchant:
+            return merchant
+
+    # Also check query param fallback for sendBeacon
+    sdk_key_param = request.query_params.get("sdk_key")
+    if sdk_key_param:
+        key_hash = hashlib.sha256(sdk_key_param.encode()).hexdigest()
+        result = await db.execute(
+            select(Merchant).where(
+                Merchant.sdk_key_hash == key_hash,
+                Merchant.is_active.is_(True),
+            )
+        )
+        merchant = result.scalar_one_or_none()
+        if merchant:
+            return merchant
+
+    raise HTTPException(
+        status_code=401,
+        detail="Authentication required",
+    )

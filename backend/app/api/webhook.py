@@ -17,18 +17,20 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.integration import (
     Integration,
     WebhookLog,
 )
+from app.models.merchant import Merchant
 from app.services.integration_service import (
     IntegrationService,
     get_integration_service,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["integrations", "webhooks"])
+router = APIRouter(prefix="", tags=["integrations", "webhooks"])
 service = get_integration_service()
 
 
@@ -45,7 +47,7 @@ async def list_integrations(
     request: Request,
     type_filter: str | None = Query(None, description="Filter by integration type"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """List all integrations with pagination.
 
@@ -59,7 +61,7 @@ async def list_integrations(
     async_db: AsyncSession = db
 
     # Build query
-    query = select(Integration)
+    query = select(Integration).where(Integration.workspace_id == merchant.id)
 
     if type_filter:
         if type_filter not in [
@@ -122,14 +124,13 @@ async def create_integration(
     request: Request,
     body: IntegrationCreateRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Create a new integration.
 
     Config is encrypted before saving (in production).
     Validates required fields for integration type.
     """
-    from uuid import uuid4
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,11 +158,10 @@ async def create_integration(
 
     # Get merchant (when auth is added)
     # merchant = await authenticate_sdk_key(db, sdk_key_hash)
-    workspace_id = uuid4()  # Placeholder
 
     # Create integration
     integration = Integration(
-        workspace_id=workspace_id,
+        workspace_id=merchant.id,
         name=body.name,
         integration_type=body.integration_type,
         config=body.config,  # In production, encrypt before saving
@@ -509,7 +509,7 @@ async def dispatch_event(
     request: Request,
     body: EventDispatchRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(lambda: ""),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Manually dispatch an event to subscribed integrations.
 

@@ -9,7 +9,7 @@ Provides full lifecycle management for experiments:
     POST   /experiments/{id}/result  — record A/B test result
     GET    /experiments/{id}/stats   — statistical significance analysis
 
-All endpoints are merchant-scoped via SDK key authentication.
+All endpoints support both JWT cookie (dashboard) and SDK key (SDK) authentication.
 """
 
 import uuid
@@ -18,10 +18,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.security import sanitize_text
 from app.models.experiment import Experiment
+from app.models.merchant import Merchant
 from app.schemas.experiments import (
     ABResultRecordRequest,
     ABStatisticalSummary,
@@ -31,7 +33,6 @@ from app.schemas.experiments import (
     ExperimentUpdateRequest,
 )
 from app.services.experiment_service import compute_ab_significance
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
@@ -52,6 +53,14 @@ def _experiment_to_out(exp: Experiment) -> ExperimentOut:
         ran_at=exp.ran_at,
         source=exp.source,
         created_at=exp.created_at,
+        updated_at=exp.updated_at,
+        # New fields for full experiment type coverage
+        experiment_type=exp.experiment_type,
+        n_variants=exp.n_variants,
+        flicker_free=exp.flicker_free,
+        page_urls=exp.page_urls,
+        split_url_config=exp.split_url_config,
+        server_side_key=exp.server_side_key,
     )
 
 
@@ -64,10 +73,9 @@ async def create_experiment(
     request: Request,
     body: ExperimentCreateRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Create a new experiment for the authenticated merchant."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     exp = Experiment(
         merchant_id=merchant.id,
@@ -103,10 +111,9 @@ async def list_experiments(
         None, pattern=r"^(a_wins|b_wins|no_diff|inconclusive)$"
     ),
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """List experiments for the authenticated merchant with optional filters."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     query = select(Experiment).where(Experiment.merchant_id == merchant.id)
 
@@ -143,10 +150,9 @@ async def get_experiment(
     request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get a single experiment by ID."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         eid = uuid.UUID(experiment_id)
@@ -173,10 +179,9 @@ async def update_experiment(
     experiment_id: str,
     body: ExperimentUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Update an existing experiment. Only provided fields are changed."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         eid = uuid.UUID(experiment_id)
@@ -235,10 +240,9 @@ async def delete_experiment(
     request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Delete an experiment. Associated intervention results are also removed."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         eid = uuid.UUID(experiment_id)
@@ -266,10 +270,9 @@ async def record_ab_result(
     experiment_id: str,
     body: ABResultRecordRequest,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Record the outcome of an A/B experiment."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         eid = uuid.UUID(experiment_id)
@@ -306,10 +309,9 @@ async def get_experiment_stats(
     request: Request,
     experiment_id: str,
     db: AsyncSession = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Compute statistical significance for an experiment's results."""
-    merchant = await authenticate_sdk_key(db, sdk_key_hash)
 
     try:
         eid = uuid.UUID(experiment_id)

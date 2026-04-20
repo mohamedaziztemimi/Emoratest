@@ -20,6 +20,7 @@ export class SessionManager {
   private session: SessionInfo | null = null;
   private readonly transport: Transport;
   private readonly debug: boolean;
+  private outcomeReported = false;
 
   constructor(transport: Transport, debug: boolean) {
     this.transport = transport;
@@ -38,22 +39,27 @@ export class SessionManager {
       return stored;
     }
 
-    // Create new session
-    const sessionId = uuid4();
+    // Create new session via backend — backend generates the session_id
     const startedAt = isoNow();
+    let sessionId: string;
 
     try {
-      await this.transport.createSession({
+      const response = await this.transport.createSession({
         page_url: window.location.href,
         started_at: startedAt,
         country_code: detectCountryCode(),
         device_type: detectDeviceType(),
       });
+      // Use the session_id returned from backend
+      sessionId = response.session_id;
     } catch (err) {
       if (this.debug) {
         console.error("[EmoraTest] Session creation failed:", err);
       }
-      // Still track locally even if backend is down
+      // Clear any stored session data to prevent reuse of broken state
+      this.clearStorage();
+      // Fallback: generate client-side if backend is down
+      sessionId = uuid4();
     }
 
     this.session = { sessionId, startedAt };
@@ -87,6 +93,36 @@ export class SessionManager {
     this.transport.sendBeaconEnd(this.session.sessionId);
     this.clearStorage();
     this.session = null;
+  }
+
+  /** Report outcome via beacon (for page unload - sets outcome to 'abandon'). */
+  reportOutcomeBeacon(outcome: "purchase" | "abandon"): void {
+    if (!this.session) return;
+    this.transport.sendBeaconOutcome(this.session.sessionId, outcome);
+    if (outcome === "purchase") {
+      this.outcomeReported = true;
+    }
+  }
+
+  /**
+   * Combined close via beacon — ends session AND sets outcome to 'abandon' in one call.
+   * More reliable than calling both reportOutcomeBeacon and endBeacon separately.
+   */
+  closeBeacon(): void {
+    if (!this.session) return;
+    this.transport.sendBeaconClose(this.session.sessionId);
+    this.clearStorage();
+    this.session = null;
+  }
+
+  /** Mark outcome as reported (prevents double-reporting on page unload). */
+  markOutcomeReported(): void {
+    this.outcomeReported = true;
+  }
+
+  /** Check if outcome was already reported. */
+  isOutcomeReported(): boolean {
+    return this.outcomeReported;
   }
 
   /** Get the current session ID. */

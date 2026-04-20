@@ -22,16 +22,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.emotion_event import EmotionSession
+from app.models.merchant import Merchant
 from app.services.emotion_service import (
     EmotionResult,
     EmotionService,
     ExperimentROI,
     WhyAnalysis,
 )
-from app.services.sdk_auth import authenticate_sdk_key, get_sdk_key_header
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/emotion", tags=["emotion"])
@@ -159,14 +160,13 @@ async def ingest_emotion_events(
     request: Request,
     body: EmotionEventRequest,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Ingest raw behavioral events and classify emotions.
 
     Immediately returns classification result while persisting
     events asynchronously.
     """
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Validate session exists (would check Session table)
     # For now, proceed
@@ -205,10 +205,9 @@ async def get_session_emotion_summary(
     request: Request,
     session_id: str,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Get aggregated emotion summary for a session."""
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Query emotion session
     async_db: AsyncSession = db
@@ -248,10 +247,9 @@ async def get_why_analysis(
     variant_id: str | None = Query(None, description="Filter by variant"),
     days: int = Query(30, ge=1, le=365, description="Analysis period in days"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Generate why-analysis linking emotions to behaviors and revenue."""
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Run why-analysis
     analysis: WhyAnalysis = await service.get_why_analysis(
@@ -295,14 +293,13 @@ async def get_experiment_prioritization(
     request: Request,
     experiment_ids: str = Query(..., description="Comma-separated experiment IDs"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Rank experiments by emotional ROI for prioritization.
 
     Returns sorted list with ROI scores, primary emotion opportunities,
     and estimated conversion lift.
     """
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     # Parse experiment IDs
     exp_id_list = [e.strip() for e in experiment_ids.split(",")]
@@ -342,10 +339,9 @@ async def predict_churn_risk(
     request: Request,
     session_id: str,
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Predict churn risk for a session using emotion scores."""
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     churn_risk = await service.predict_churn_risk(
         session_id=session_id,
@@ -373,14 +369,13 @@ async def check_frustration_spike(
     experiment_id: str,
     window_minutes: int = Query(15, ge=5, le=60, description="Time window in minutes"),
     db: Any = Depends(get_db),
-    sdk_key_hash: str = Depends(get_sdk_key_header),
+    merchant: Merchant = Depends(get_merchant_flexible),
 ):
     """Check for frustration spike in recent events.
 
     Returns True if frustration events exceed 2 standard deviations
     above rolling mean in the specified window.
     """
-    await authenticate_sdk_key(db, sdk_key_hash)
 
     spike_detected = await service.check_frustration_spike(
         experiment_id=experiment_id,

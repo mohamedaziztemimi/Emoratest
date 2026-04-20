@@ -65,7 +65,7 @@ const PRICING_TIERS = [
 
 export function PricingSection({ id }: PricingSectionProps) {
   return (
-    <section id={id} className="py-[100px]" style={{ background: "#F8F9FF" }}>
+    <section id={id} className="py-[100px] pb-[120px]" style={{ background: "#F8F9FF" }}>
       <div className="max-w-[1200px] mx-auto px-6">
         {/* Header */}
         <FadeInOnScroll>

@@ -4,9 +4,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GradientButton } from "../ui";
-import { AnimatedLogo } from "./AnimatedLogo";
 
 interface NavLink {
   label: string;
@@ -18,6 +17,7 @@ const NAV_LINKS: NavLink[] = [
   { label: "How It Works", targetId: "#how-it-works" },
   { label: "Integrations", targetId: "#integrations" },
   { label: "Pricing", targetId: "#pricing" },
+  { label: "FAQ", targetId: "#faq" },
 ];
 
 export function Navbar() {
@@ -25,6 +25,22 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [authState, setAuthState] = useState<"loading" | "logged-in" | "logged-out">("loading");
+
+  // Check auth status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+          credentials: "include",
+        });
+        setAuthState(res.ok ? "logged-in" : "logged-out");
+      } catch {
+        setAuthState("logged-out");
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Handle scroll state and active section
   useEffect(() => {
@@ -90,16 +106,20 @@ export function Navbar() {
             {/* Logo */}
             <a
               href="/"
-              className="flex items-center gap-2.5"
+              className="flex items-center gap-2"
               onClick={(e) => {
                 e.preventDefault();
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             >
-              <AnimatedLogo size="md" />
-              <span className="text-xl font-bold text-gray-900">
-                EmoraTest
-              </span>
+              <img
+                src="/logo2.png"
+                alt="EmoraTest"
+                className="h-11 w-auto"
+                width="44"
+                height="44"
+              />
+              <span className="text-xl font-bold text-gray-900">EmoraTest</span>
             </a>
 
             {/* Desktop nav links */}
@@ -121,19 +141,38 @@ export function Navbar() {
                   )}
                 </a>
               ))}
+              <a
+                href="/docs"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+              >
+                Docs
+              </a>
             </div>
 
             {/* Right side CTAs */}
             <div className="hidden md:flex items-center gap-3">
-              <a
-                href="/login"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
-              >
-                Sign In
-              </a>
-              <GradientButton variant="primary" size="sm" href="/signup" glow>
-                Start Free
-              </GradientButton>
+              {authState === "loading" ? (
+                <div style={{ width: "140px" }}></div>
+              ) : authState === "logged-in" ? (
+                <a
+                  href="/dashboard"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-[#007BFF] to-[#7C3AED] hover:opacity-90 transition-all duration-200"
+                >
+                  Dashboard →
+                </a>
+              ) : (
+                <>
+                  <a
+                    href="/login"
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                  >
+                    Sign In
+                  </a>
+                  <GradientButton variant="primary" size="sm" href="/signup" glow>
+                    Start Free
+                  </GradientButton>
+                </>
+              )}
             </div>
 
             {/* Mobile hamburger */}
@@ -177,8 +216,15 @@ export function Navbar() {
           } transition-transform duration-300`}
         >
           {/* Mobile menu header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <span className="text-xl font-bold text-gray-900">EmoraTest</span>
+          <div className="flex items-center gap-2 p-4 border-b">
+            <img
+              src="/logo2.png"
+              alt="EmoraTest"
+              className="h-9 w-auto"
+              width="36"
+              height="36"
+            />
+            <span className="text-lg font-bold text-gray-900">EmoraTest</span>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
               className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"
@@ -202,20 +248,41 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
+            <a
+              href="/docs"
+              className="block px-4 py-3 rounded-lg text-base font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Docs
+            </a>
           </div>
 
           {/* Mobile menu footer */}
           <div className="p-4 border-t space-y-3">
-            <a
-              href="/login"
-              className="block w-full px-4 py-3 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Sign In
-            </a>
-            <GradientButton variant="primary" size="md" glow href="/signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-              Start Free
-            </GradientButton>
+            {authState === "loading" ? (
+              <div style={{ height: "48px" }}></div>
+            ) : authState === "logged-in" ? (
+              <a
+                href="/dashboard"
+                className="block w-full px-4 py-3 rounded-lg text-center font-medium text-white bg-gradient-to-r from-[#007BFF] to-[#7C3AED]"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Dashboard →
+              </a>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  className="block w-full px-4 py-3 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign In
+                </a>
+                <GradientButton variant="primary" size="md" glow href="/signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                  Start Free
+                </GradientButton>
+              </>
+            )}
           </div>
         </div>
       </div>
