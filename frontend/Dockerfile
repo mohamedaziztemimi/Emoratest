@@ -2,23 +2,39 @@
 # Frontend Dockerfile - EmoraTest Next.js Application
 # ────────────────────────────────────────────────────────────────
 
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy dependency files
 COPY package.json package-lock.json ./
 
-# Install dependencies (uses npm ci for reproducible builds)
-# In dev mode, node_modules is preserved via anonymous volume
+# Install dependencies
 RUN npm ci
 
 # Copy application code
-# In dev mode, this directory is bind-mounted for hot-reload
 COPY . .
+
+# Build the application (runs ESLint too)
+RUN npm run build
+
+# ────────────────────────────────────────────────────────────────
+# Production stage
+# ────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+# Copy package files and install production dependencies only
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy built application from builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./
 
 EXPOSE 3000
 
-# Development mode: hot-reload enabled via Next.js dev server
-# Production mode: override CMD with ["npm", "run", "start"]
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]

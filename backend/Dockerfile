@@ -14,12 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency file
 COPY pyproject.toml .
 
-# Install Python dependencies
-# In dev mode, site-packages is preserved via anonymous volume
-RUN pip install --no-cache-dir -e ".[dev]"
+# Install Python dependencies (without dev extras for production)
+RUN pip install --no-cache-dir -e "."
 
 # Copy application code
-# In dev mode, this directory is bind-mounted for hot-reload
 COPY . .
 
 EXPOSE 8000
