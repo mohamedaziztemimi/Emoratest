@@ -14,6 +14,7 @@ interface GlassCardProps {
   glow?: GlowType;
   hover?: boolean;
   padding?: PaddingSize;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const paddingClasses: Record<PaddingSize, string> = {
@@ -34,9 +35,11 @@ export function GlassCard({
   glow = "none",
   hover = true,
   padding = "md",
+  onClick,
 }: GlassCardProps) {
   return (
     <div
+      onClick={onClick}
       className={clsx(
         "bg-white",
         "border border-gray-200",
