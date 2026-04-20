@@ -74,7 +74,7 @@ export function StickyAuditBar() {
               </span>
             ) : (
               <span className="text-white text-sm">
-                Get Your Free Emotion Audit — See What's Killing Your Conversions
+                Get Your Free Emotion Audit — See What&apos;s Killing Your Conversions
               </span>
             )}
           </div>
@@ -83,14 +83,14 @@ export function StickyAuditBar() {
           <div className="flex items-center gap-3">
             {/* CTA button */}
             <a
-              href="/audit"
+              href="/signup"
               className={`
                 px-4 py-2 rounded-full text-sm font-medium text-[#007BFF]
                 bg-white hover:bg-white/90 transition-colors duration-200
                 ${isMobile ? "hidden sm:inline-block" : "inline-block"}
               `}
             >
-              Start Free →
+              Start Free Start Free →rarr;
             </a>
 
             {/* Dismiss button */}

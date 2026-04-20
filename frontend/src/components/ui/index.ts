@@ -21,3 +21,5 @@ export { StarRating } from "./StarRating";
 export type { StarRatingProps } from "./StarRating";
 
 export { DeleteModal } from "./DeleteModal";
+export { CookieConsentBanner, getConsentChoice, setConsentChoice } from "./CookieConsentBanner";
+export type { ConsentChoice } from "./CookieConsentBanner";

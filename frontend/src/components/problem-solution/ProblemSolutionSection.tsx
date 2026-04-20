@@ -225,7 +225,7 @@ export function ProblemSolutionSection() {
                 </div>
                 <div>
                   <p className="text-[15px] italic text-[var(--et-text-secondary)] mb-3">
-                    "{quote.text}"
+                    &ldquo;{quote.text}&rdquo;
                   </p>
                   <div>
                     <div className="font-medium text-[var(--et-text-primary)]">

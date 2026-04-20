@@ -501,6 +501,50 @@ export default function SignupPage() {
             )}
           </div>
 
+          {/* GDPR Consent Checkbox */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+            <input
+              id="consent"
+              type="checkbox"
+              required
+              style={{
+                marginTop: "3px",
+                width: "16px",
+                height: "16px",
+                accentColor: "#007BFF",
+                cursor: "pointer",
+              }}
+            />
+            <label
+              htmlFor="consent"
+              style={{
+                fontSize: "13px",
+                color: "#374151",
+                lineHeight: "1.5",
+                cursor: "pointer",
+              }}
+            >
+              I agree to the{" "}
+              <a
+                href="/privacy"
+                style={{ color: "#007BFF", textDecoration: "none" }}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Privacy Policy
+              </a>
+              {" and "}
+              <a
+                href="/terms"
+                style={{ color: "#007BFF", textDecoration: "none" }}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Terms of Service
+              </a>
+            </label>
+          </div>
+
           {/* Submit button */}
           <button
             type="submit"

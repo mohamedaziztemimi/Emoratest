@@ -103,7 +103,7 @@ export function DeleteModal({
                 color: "#111318",
               }}
             >
-              "{itemName}"
+              &ldquo;{itemName}&rdquo;
             </span>
           )}
         </p>

@@ -11,6 +11,7 @@ import { FAQSection } from "@/components/landing/FAQSection";
 import { FinalCTASection } from "@/components/landing/FinalCTASection";
 import { Footer } from "@/components/landing/Footer";
 import { StickyAuditBar } from "@/components/navigation/StickyAuditBar";
+import { CookieConsentBanner } from "@/components/ui/CookieConsentBanner";
 
 export default function LandingPage() {
   return (
@@ -41,6 +42,9 @@ export default function LandingPage() {
 
       {/* Sticky Audit Bar */}
       <StickyAuditBar />
+
+      {/* Cookie Consent Banner */}
+      <CookieConsentBanner />
     </>
   );
 }

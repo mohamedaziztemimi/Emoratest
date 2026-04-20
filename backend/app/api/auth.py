@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
+from redis import asyncio as aioredis
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,8 +26,13 @@ from app.core.auth import (
     hash_password,
     verify_password,
 )
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.rate_limit import limiter
+from app.core.redis_rate_limit import (
+    rate_limit_gdpr_export,
+    rate_limit_login,
+    rate_limit_signup,
+)
 from app.models.event import Event
 from app.models.experiment import Experiment
 from app.models.intervention_result import InterventionResult
@@ -35,6 +41,16 @@ from app.models.session import Session
 from app.models.session_features import SessionFeatures
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Login lockout settings
+MAX_FAILED_ATTEMPTS = 10
+LOCKOUT_MINUTES = 15
+LOCKOUT_SECONDS = LOCKOUT_MINUTES * 60
+
+
+async def get_redis() -> aioredis.Redis:
+    """Get async Redis client for login lockout tracking."""
+    return await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
 # ── Schemas ─────────────────────────────────────────────────────
@@ -94,7 +110,6 @@ class GdprExportResponse(BaseModel):
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
-@limiter.limit("10/minute")
 async def register(
     request: Request,
     response: Response,
@@ -102,6 +117,8 @@ async def register(
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new merchant with email + password."""
+    # Manual rate limiting via Redis
+    await rate_limit_signup(request)
     # Check existing email
     existing = await db.execute(select(Merchant).where(Merchant.email == body.email))
     if existing.scalar_one_or_none() is not None:
@@ -168,7 +185,6 @@ async def register(
 
 
 @router.post("/signup", response_model=AuthResponse, status_code=201)
-@limiter.limit("10/minute")
 async def signup(
     request: Request,
     response: Response,
@@ -176,6 +192,9 @@ async def signup(
     db: AsyncSession = Depends(get_db),
 ):
     """Signup a new merchant. Alias for /auth/register with frontend-compatible field names."""
+    # Manual rate limiting via Redis
+    await rate_limit_signup(request)
+
     # Check existing email
     existing = await db.execute(select(Merchant).where(Merchant.email == body.email))
     if existing.scalar_one_or_none() is not None:
@@ -241,25 +260,66 @@ async def signup(
 
 
 @router.post("/login", response_model=AuthResponse)
-@limiter.limit("20/minute")
 async def login(
     request: Request,
     response: Response,
     body: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Authenticate merchant and return JWT."""
-    result = await db.execute(select(Merchant).where(Merchant.email == body.email))
+    """Authenticate merchant and return JWT.
+
+    Implements account lockout after 10 failed attempts for 15 minutes.
+    """
+    # Manual rate limiting via Redis
+    await rate_limit_login(request)
+
+    redis = await get_redis()
+    email = body.email
+
+    # Check if account is locked out
+    lockout_key = f"login_lockout:{email}"
+    if await redis.exists(lockout_key):
+        ttl = await redis.ttl(lockout_key)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Account locked due to too many failed attempts. Try again in {ttl} seconds.",
+        )
+
+    result = await db.execute(select(Merchant).where(Merchant.email == email))
     merchant = result.scalar_one_or_none()
 
-    if merchant is None or merchant.password_hash is None:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    # Check credentials
+    password_valid = False
+    if merchant is not None and merchant.password_hash is not None:
+        password_valid = verify_password(body.password, merchant.password_hash)
 
-    if not verify_password(body.password, merchant.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not password_valid:
+        # Track failed attempt
+        attempts_key = f"login_attempts:{email}"
+        attempts = await redis.incr(attempts_key)
+        await redis.expire(attempts_key, LOCKOUT_SECONDS)
+
+        if attempts >= MAX_FAILED_ATTEMPTS:
+            # Set lockout
+            await redis.setex(lockout_key, LOCKOUT_SECONDS, "1")
+            await redis.delete(attempts_key)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Too many failed attempts. Account locked for {LOCKOUT_MINUTES} minutes.",
+            )
+
+        remaining = MAX_FAILED_ATTEMPTS - attempts
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid email or password ({remaining} attempts remaining)",
+        )
 
     if not merchant.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")
+
+    # Successful login - clear failed attempts
+    attempts_key = f"login_attempts:{email}"
+    await redis.delete(attempts_key)
 
     token = create_access_token(str(merchant.id), merchant.email)
 
@@ -291,9 +351,7 @@ async def login(
 
 
 @router.get("/me", response_model=MerchantProfileResponse)
-@limiter.limit("50/minute")
 async def get_me(
-    request: Request,
     merchant: Merchant = Depends(get_current_merchant),
 ):
     """Get authenticated merchant profile via JWT."""
@@ -313,9 +371,7 @@ async def get_me(
 
 
 @router.post("/onboarding-complete")
-@limiter.limit("10/minute")
 async def complete_onboarding(
-    request: Request,
     merchant: Merchant = Depends(get_current_merchant),
     db: AsyncSession = Depends(get_db),
 ):
@@ -343,9 +399,7 @@ async def complete_onboarding(
 
 
 @router.post("/gdpr/consent")
-@limiter.limit("10/minute")
 async def record_gdpr_consent(
-    request: Request,
     merchant: Merchant = Depends(get_current_merchant),
     db: AsyncSession = Depends(get_db),
 ):
@@ -358,13 +412,14 @@ async def record_gdpr_consent(
 
 
 @router.get("/gdpr/export", response_model=GdprExportResponse)
-@limiter.limit("5/minute")
 async def export_merchant_data(
     request: Request,
     merchant: Merchant = Depends(get_current_merchant),
     db: AsyncSession = Depends(get_db),
 ):
     """Export all merchant data (GDPR Article 20 — data portability)."""
+    # Manual rate limiting via Redis
+    await rate_limit_gdpr_export(request)
     sessions_count = (
         await db.execute(
             select(func.count()).select_from(
@@ -412,9 +467,7 @@ async def export_merchant_data(
 
 
 @router.delete("/gdpr/delete")
-@limiter.limit("2/minute")
 async def delete_merchant_data(
-    request: Request,
     merchant: Merchant = Depends(get_current_merchant),
     db: AsyncSession = Depends(get_db),
 ):

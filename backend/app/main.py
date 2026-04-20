@@ -6,13 +6,10 @@ and error handlers for production deployment.
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
@@ -34,7 +31,6 @@ from app.core.errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from app.core.rate_limit import limiter
 from app.core.security import SecurityHeadersMiddleware
 
 app = FastAPI(
@@ -65,12 +61,7 @@ app.add_middleware(AuditLogMiddleware)
 # Security headers + request ID (CONV-45)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# Rate limiter (CONV-41)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
-
-# CORS - allow credentials for localhost (required for cookies)
+# CORS - allow credentials for localhost and production
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -80,12 +71,35 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
-    ],  # Specific origins when using credentials
-    allow_credentials=True,  # Required for httpOnly cookies
+        "https://emoratest.com",
+        "https://www.emoratest.com",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# ── Payload size limit middleware ────────────────────────────────────
+
+MAX_PAYLOAD_SIZE = 1_048_576  # 1MB
+
+
+@app.middleware("http")
+async def limit_payload_size(request: Request, call_next):
+    """Reject requests with payload larger than 1MB to prevent DoS attacks."""
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            size = int(content_length)
+            if size > MAX_PAYLOAD_SIZE:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": f"Payload too large. Maximum size is {MAX_PAYLOAD_SIZE // 1024}KB."},
+                )
+        except ValueError:
+            pass
+    return await call_next(request)
 
 # ── Routers ───────────────────────────────────────────────────────
 

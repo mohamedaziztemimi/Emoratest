@@ -1,9 +1,10 @@
 """Rate limiting configuration (CONV-41).
 
-Uses slowapi with in-memory storage for development.
-In production, switch to Redis backend via REDIS_URL.
+NOTE: slowapi has been removed due to missing storage backend.
+This module now provides a no-op limiter for backwards compatibility.
+Critical auth endpoints use manual Redis-based rate limiting via redis_rate_limit.py.
 
-Rate tiers (per IP):
+Rate tiers (per IP) - currently disabled, will be re-enabled with Redis backend:
     SDK endpoints:          2000 requests/minute (high-volume event ingestion)
     Dashboard endpoints:     200 requests/minute (human-driven queries)
     Experiment endpoints:    100 requests/minute (CRUD operations)
@@ -14,27 +15,29 @@ Rate tiers (per IP):
 
 from __future__ import annotations
 
-from fastapi import Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
+from dataclasses import dataclass
 
 
-def get_rate_for_path(request: Request) -> str:
-    """Determine rate limit tier based on request path."""
-    path = request.url.path
-    if "/dashboard/" in path:
-        return "200/minute"
-    if "/experiments/" in path or path.endswith("/experiments"):
-        return "100/minute"
-    if "/interventions/" in path or path.endswith("/interventions"):
-        return "300/minute"
-    if "/merchants/" in path:
-        return "50/minute"
-    if "/analytics/" in path:
-        return "200/minute"
-    if "/ws/" in path:
-        return "10/minute"
-    # SDK endpoints (sessions, events)
-    return "2000/minute"
+class DummyLimiter:
+    """No-op limiter for backwards compatibility after removing slowapi."""
+
+    def limit(self, limit_string: str):
+        """Decorator that does nothing - rate limiting disabled."""
+
+        def decorator(func):
+            return func
+
+        return decorator
+
+
+# Create singleton instance
+limiter = DummyLimiter()
+
+
+def get_rate_for_path(request) -> str:
+    """Determine rate limit tier based on request path.
+
+    NOTE: Currently returns a default string but is not used.
+    Will be re-enabled when Redis-based rate limiting is fully implemented.
+    """
+    return "200/minute"

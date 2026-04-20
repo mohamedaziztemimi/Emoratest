@@ -514,7 +514,90 @@ export default function SettingsPage() {
               </dl>
             ) : null}
           </CardBody>
+        </Card>        {/* Privacy Notice Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                style={{ background: "#FEF3C7" }}
+              >
+                <svg
+                  className="h-4 w-4"
+                  style={{ color: "#D97706" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">Privacy Disclosure</h2>
+                <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Important legal requirement</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <div
+              style={{
+                background: "#FFFBEB",
+                border: "1px solid #FCD34D",
+                borderRadius: "12px",
+                padding: "20px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "#92400E",
+                  margin: "0 0 12px 0",
+                }}
+              >
+                Update Your Privacy Policy
+              </h3>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#78350F",
+                  margin: "0 0 12px 0",
+                  lineHeight: "1.6",
+                }}
+              >
+                You are collecting behavioral data from your website visitors. Under GDPR, CCPA, and other
+                privacy laws, you must disclose this tracking in your own privacy policy.
+              </p>
+              <div
+                style={{
+                  background: "white",
+                  border: "1px solid #FDE68A",
+                  borderRadius: "8px",
+                  padding: "12px",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#92400E",
+                    margin: 0,
+                    fontStyle: "italic",
+                  }}
+                >
+                  "We use EmoraTest to analyze user behavior and emotions on our website. This includes
+                  tracking clicks, scrolls, and mouse movements to improve your experience."
+                </p>
+              </div>
+            </div>
+          </CardBody>
         </Card>
+
+
       </div>
 
       {/* Regenerate SDK Key Modal */}
