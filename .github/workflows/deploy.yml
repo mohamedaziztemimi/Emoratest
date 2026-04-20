@@ -41,6 +41,12 @@ jobs:
             HAS_COMPOSE_CHANGE=$(echo "$CHANGED_FILES" | grep -c "docker-compose.prod.yml" || true)
             set -e
             if [ "$HAS_COMPOSE_CHANGE" -gt 0 ]; then
+              echo "🐳 Compose file changed - rebuilding all containers..."
+              docker compose -f docker-compose.prod.yml --env-file .env build
+            else
+              echo "🐳 Rebuilding backend and frontend only..."
+              docker compose -f docker-compose.prod.yml --env-file .env build backend frontend
+            fi
 
             # Run database migrations
             echo "🗄️ Running database migrations..."
