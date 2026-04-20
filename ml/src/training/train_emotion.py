@@ -3,11 +3,9 @@ import pickle
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
-    confusion_matrix,
 )
 from sklearn.model_selection import (
     StratifiedKFold,
@@ -20,7 +18,6 @@ try:
     import xgboost as xgb
     HAS_XGB = True
 except ImportError:
-    from sklearn.ensemble import GradientBoostingClassifier
     HAS_XGB = False
 
 ARTIFACTS_DIR = Path(__file__).parent.parent.parent / "artifacts"
@@ -234,10 +231,10 @@ def train():
         json.dump(meta, f, indent=2)
 
     print(f"\n[SUCCESS] Model saved to {ARTIFACTS_DIR}")
-    print(f"   emotion_v1.pkl")
-    print(f"   emotion_v1_scaler.pkl")
-    print(f"   emotion_v1_encoder.pkl")
-    print(f"   emotion_v1_meta.json")
+    print("   emotion_v1.pkl")
+    print("   emotion_v1_scaler.pkl")
+    print("   emotion_v1_encoder.pkl")
+    print("   emotion_v1_meta.json")
 
     return accuracy
 

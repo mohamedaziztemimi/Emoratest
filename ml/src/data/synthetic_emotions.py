@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def generate_emotion_samples(emotion, n=1000, seed=None):
     rng = np.random.default_rng(seed)
 
