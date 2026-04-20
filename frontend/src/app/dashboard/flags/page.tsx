@@ -320,7 +320,7 @@ function FlagResultsPanel({ flagKey }: { flagKey: string }) {
               )}
               {data.total_conversions === 0 && data.total_exposures > 0 && (
                 <p className="text-xs text-gray-400 mt-3 pt-2 border-t border-gray-50">
-                  No conversions tracked yet. Make sure your site calls EmoraTest.track("purchase") on conversion.
+                  No conversions tracked yet. Make sure your site calls EmoraTest.track(&quot;purchase&quot;) on conversion.
                 </p>
               )}
             </>

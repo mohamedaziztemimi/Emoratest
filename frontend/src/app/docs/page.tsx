@@ -307,7 +307,7 @@ setupABTest();`}
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mt-6">
                 <p className="text-sm text-purple-800">
                   <strong>How it works:</strong> Each visitor automatically gets assigned one variant and always sees the same one.
-                  The SDK handles this deterministically — you don't need to manage user assignments.
+                  The SDK handles this deterministically — you don&apos;t need to manage user assignments.
                 </p>
               </div>
             </section>

@@ -266,7 +266,7 @@ setupABTest();`, "abtest-step2")}
                   <StepCard
                     step={3}
                     title="Track conversions"
-                    description="Make sure you have EmoraTest.reportOutcome('purchase') on your conversion page (see Tracking Conversions section)."
+                    description="Make sure you have EmoraTest.reportOutcome(&apos;purchase&apos;) on your conversion page (see Tracking Conversions section)."
                   />
 
                   <StepCard
@@ -279,7 +279,7 @@ setupABTest();`, "abtest-step2")}
                 <div className="bg-[#007BFF]/10 border border-[#007BFF]/30 rounded-xl p-4 mt-6">
                   <p className="text-sm text-gray-300">
                     <strong className="text-[#007BFF]">Each visitor automatically gets assigned one variant</strong> and
-                    always sees the same one. The SDK handles this — you don't need to manage user assignments.
+                    always sees the same one. The SDK handles this — you don&apos;t need to manage user assignments.
                   </p>
                 </div>
               </section>
