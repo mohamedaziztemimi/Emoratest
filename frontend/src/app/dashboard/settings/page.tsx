@@ -589,8 +589,8 @@ export default function SettingsPage() {
                     fontStyle: "italic",
                   }}
                 >
-                  "We use EmoraTest to analyze user behavior and emotions on our website. This includes
-                  tracking clicks, scrolls, and mouse movements to improve your experience."
+                  &ldquo;We use EmoraTest to analyze user behavior and emotions on our website. This includes
+                  tracking clicks, scrolls, and mouse movements to improve your experience.&rdquo;
                 </p>
               </div>
             </div>

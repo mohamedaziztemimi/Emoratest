@@ -135,6 +135,29 @@ export default function OverviewPage() {
     fetchDashboardData();
   }, [router]);
 
+  // Add shimmer animation to global styles
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (document.getElementById("dashboard-shimmer")) return;
+
+    const style = document.createElement("style");
+    style.id = "dashboard-shimmer";
+    style.textContent = `
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      const existing = document.getElementById("dashboard-shimmer");
+      if (existing) {
+        document.head.removeChild(existing);
+      }
+    };
+  }, []);
+
   // Format number with commas
   const formatNumber = (num: number) => {
     return num.toLocaleString();
@@ -348,29 +371,6 @@ export default function OverviewPage() {
       )}
     </div>
   );
-
-  // Add shimmer animation to global styles
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (document.getElementById("dashboard-shimmer")) return;
-
-    const style = document.createElement("style");
-    style.id = "dashboard-shimmer";
-    style.textContent = `
-      @keyframes shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      const existing = document.getElementById("dashboard-shimmer");
-      if (existing) {
-        document.head.removeChild(existing);
-      }
-    };
-  }, []);
 }
 
 // ── Skeleton Card Component ─────────────────────────────────────────────

@@ -93,7 +93,7 @@ export default function PrivacyPage() {
         <p style={paragraphStyle}>
           Merchants install the EmoraTest SDK on <strong>their own websites</strong> to collect
           behavioral data from <strong>their visitors</strong>. As a Data Processor, we process this
-          data on merchants' behalf:
+          data on merchants&apos; behalf:
         </p>
         <ul style={listStyle}>
           <li>

@@ -107,7 +107,7 @@ export default function DocsPage() {
                 </p>
                 <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-800">
                   <p className="text-sm text-gray-300">
-                    <strong className="text-white">What you'll need:</strong>
+                    <strong className="text-white">What you&apos;ll need:</strong>
                   </p>
                   <ul className="list-disc list-inside text-gray-400 mt-2 space-y-1">
                     <li>Your SDK key (found in the Settings page)</li>
@@ -208,8 +208,8 @@ document.getElementById('signup-form').addEventListener('submit', function() {
 
                 <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-800 mt-4">
                   <p className="text-sm text-gray-300">
-                    Use <code className="bg-[#f1f5f9] px-1 rounded text-[#1e293b]">reportOutcome('purchase')</code> for
-                    e-commerce conversions. The outcome is recorded and linked to the session's
+                    Use <code className="bg-[#f1f5f9] px-1 rounded text-[#1e293b]">reportOutcome(&apos;purchase&apos;)</code> for
+                    e-commerce conversions. The outcome is recorded and linked to the session&apos;s
                     emotion data for analysis.
                   </p>
                 </div>
@@ -624,7 +624,7 @@ function TroubleshootItem({
 }) {
   return (
     <div className="bg-[#1a1a2e] rounded-xl p-4 border border-gray-800">
-      <h4 className="font-semibold text-red-400 mb-2">"{problem}"</h4>
+      <h4 className="font-semibold text-red-400 mb-2">&ldquo;{problem}&rdquo;</h4>
       <p className="text-gray-400 text-sm">→ {solution}</p>
     </div>
   );

@@ -60,7 +60,7 @@ export function FAQSection() {
             Questions We Get Asked Every Day
           </h2>
           <p style={{ fontSize: "16px", color: "#6B7280" }}>
-            If you have others, we're always at hello@emoratest.com
+            If you have others, we&apos;re always at hello@emoratest.com
           </p>
         </div>
 

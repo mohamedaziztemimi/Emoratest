@@ -115,7 +115,7 @@ export function HowItWorksSection({ id }: HowItWorksSectionProps) {
               <GlassCard padding="lg" className="bg-white border-gray-200">
                 {/* Quote */}
                 <p className="text-base text-[#374151] italic leading-relaxed mb-4">
-                  "{quote.text}"
+                  &ldquo;{quote.text}&rdquo;
                 </p>
 
                 {/* Attribution */}

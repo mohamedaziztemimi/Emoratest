@@ -121,7 +121,7 @@ export default function DocsPage() {
                 Add one script to your site to start tracking sessions, emotions, and run A/B tests.
               </p>
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <p className="text-sm text-blue-800 font-medium mb-2">What you'll need:</p>
+                <p className="text-sm text-blue-800 font-medium mb-2">What you&apos;ll need:</p>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Your <strong>SDK Key</strong> — found in Settings → SDK & Integration</li>
                   <li>• Your <strong>Server URL</strong> — e.g., <code>https://your-emoratest-server.com</code></li>
@@ -232,7 +232,7 @@ document.getElementById('contact-form').addEventListener('submit', function() {
               />
 
               <p className="text-gray-600 mt-4 text-sm">
-                The first argument is the event name. Use <code className="bg-gray-100 px-1 rounded">'purchase'</code> for e-commerce conversions.
+                The first argument is the event name. Use <code className="bg-gray-100 px-1 rounded">&apos;purchase&apos;</code> for e-commerce conversions.
                 You can use any name for custom goals.
               </p>
             </section>
@@ -291,7 +291,7 @@ setupABTest();`}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 3: Track Conversions</h3>
                   <p className="text-sm text-gray-600">
-                    Make sure you have <code className="bg-gray-100 px-1 rounded">EmoraTest.track('purchase')</code> on your conversion page (see Section 4 above).
+                    Make sure you have <code className="bg-gray-100 px-1 rounded">EmoraTest.track(&apos;purchase&apos;)</code> on your conversion page (see Section 4 above).
                   </p>
                 </div>
 
@@ -299,7 +299,7 @@ setupABTest();`}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 4: Check Results</h3>
                   <p className="text-sm text-gray-600">
-                    Go to <strong>Feature Flags</strong> → click <strong>View Results</strong> on your flag. You'll see how many visitors saw each variant and which one converts better.
+                    Go to <strong>Feature Flags</strong> → click <strong>View Results</strong> on your flag. You&apos;ll see how many visitors saw each variant and which one converts better.
                   </p>
                 </div>
               </div>
