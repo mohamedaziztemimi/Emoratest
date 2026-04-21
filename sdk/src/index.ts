@@ -83,7 +83,7 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   // Store config with resolved defaults
   config = {
     sdkKey: userConfig.sdkKey,
-    apiUrl: userConfig.apiUrl ?? window.location.origin,
+    apiUrl: userConfig.apiUrl ?? "https://emoratest.com",
     flushIntervalMs: userConfig.flushIntervalMs ?? 2000,
     maxBatchSize: userConfig.maxBatchSize ?? 50,
     mouseMoveThrottleMs: userConfig.mouseMoveThrottleMs ?? 100,
