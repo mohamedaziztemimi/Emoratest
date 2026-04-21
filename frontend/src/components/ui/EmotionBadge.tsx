@@ -17,7 +17,7 @@ export type EmotionType =
 
 type BadgeSize = "sm" | "md";
 
-interface EmotionBadgeProps {
+export interface EmotionBadgeProps {
   emotion: EmotionType | string;
   score?: number;
   size?: BadgeSize;

@@ -7,7 +7,7 @@
 import { clsx } from "clsx";
 import { ReactNode, useEffect, useState } from "react";
 
-interface StatCardProps {
+export interface StatCardProps {
   label: string;
   value: string | number;
   delta?: string;
@@ -62,7 +62,7 @@ function useAnimatedCounter(
   return current;
 }
 
-interface AnimatedCounterProps {
+export interface AnimatedCounterProps {
   value: number;
   duration?: number;
   start?: number;

@@ -4,7 +4,7 @@
 
 "use client";
 
-interface StarRatingProps {
+export interface StarRatingProps {
   rating: number;
   max?: number;
 }

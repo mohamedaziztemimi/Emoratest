@@ -91,11 +91,12 @@ export function CookieConsentBanner({ storageKey = CONSENT_STORAGE_KEY }: Cookie
           maxWidth: "1200px",
           margin: "0 auto",
           display: "flex",
-          flexDirection: { xs: "column", md: "row" },
+          flexDirection: "row",
           alignItems: "center",
           gap: "16px",
           flexWrap: "wrap",
         }}
+        className="flex-col md:flex-row"
       >
         <p
           style={{

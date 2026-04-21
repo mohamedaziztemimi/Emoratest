@@ -8,7 +8,7 @@ import { ReactNode } from "react";
 type GlowType = "blue" | "purple" | "none";
 type PaddingSize = "sm" | "md" | "lg";
 
-interface GlassCardProps {
+export interface GlassCardProps {
   children: ReactNode;
   className?: string;
   glow?: GlowType;

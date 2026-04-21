@@ -10,7 +10,7 @@ import { ButtonHTMLAttributes, ReactNode, forwardRef } from "react";
 type ButtonVariant = "primary" | "outline" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
 
-interface GradientButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface GradientButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;

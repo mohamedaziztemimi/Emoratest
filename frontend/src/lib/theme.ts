@@ -151,8 +151,6 @@ export const GRADIENTS = {
   error: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
   sunset: "linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)",
   midnight: "linear-gradient(180deg, #0A0B0F 0%, #7C3AED 100%)",
-  "unset": "linear-gradient(135deg, #FFD966 0%, #FF9F43 100%)",
-  "sunset": "linear-gradient(135deg, #FFD966 0%, #FF9F43 100%)",
 };
 
 /**
@@ -340,7 +338,7 @@ export const Z_INDEX = {
  * Get z-index by name
  */
 export function getZIndex(name: keyof typeof Z_INDEX): number {
-  return Z_INDEX[name] || "auto";
+  return Z_INDEX[name] ?? 0;
 }
 
 /* ── TRANSITION EASING ──────────────────────────────── */

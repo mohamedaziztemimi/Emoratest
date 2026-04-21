@@ -4,7 +4,7 @@
 
 import { clsx } from "clsx";
 
-interface PulsingDotProps {
+export interface PulsingDotProps {
   color: string;
   size?: number;
   label?: string;
