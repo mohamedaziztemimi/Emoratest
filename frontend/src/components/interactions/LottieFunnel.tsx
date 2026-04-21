@@ -78,8 +78,8 @@ export function LottieFunnel({ className, speed = 1 }: LottieFunnelProps) {
       // Update particle positions
       setParticles((prev) =>
         prev.map((p, idx) => {
-          const speed = 0.5 * speed;
-          let newY = p.y + speed;
+          const particleSpeed = 0.5 * speed;
+          let newY = p.y + particleSpeed;
           let newX = p.x;
           let newState = p.state;
           let newColor = p.color;
@@ -107,8 +107,8 @@ export function LottieFunnel({ className, speed = 1 }: LottieFunnelProps) {
 
           // Animate dropping particles
           if (newState === "dropping") {
-            newY += speed * 0.5;
-            newX += (newX < 50 ? 1 : -1) * speed * 0.3;
+            newY += particleSpeed * 0.5;
+            newX += (newX < 50 ? 1 : -1) * particleSpeed * 0.3;
           }
 
           // Reset completed particles
