@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { AuthProvider } from "@/lib/auth";
 import { Inter, Figtree } from "next/font/google";
 import "./globals.css";
@@ -17,13 +18,14 @@ const figtree = Figtree({
 
 // Get base URL from env or fallback
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://emoratest.com";
+const EMORATEST_SDK_KEY = process.env.NEXT_PUBLIC_EMORATEST_KEY || "";
 
 export const metadata: Metadata = {
 
   title: {
     default: "EmoraTest",
     template: "%s | EmoraTest",
-    
+
   },
 
   description: "See why users quit with emotion-powered heatmaps and AI insights. Real-time emotion ML, auto-variant generation, and statistically sound A/B testing.",
@@ -133,6 +135,25 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${figtree.variable} font-sans antialiased`}>
         <AuthProvider>{children}</AuthProvider>
+
+        {/* EmoraTest SDK - loads on all pages, client-side only */}
+        {EMORATEST_SDK_KEY && (
+          <>
+            <Script
+              src="https://emoratest.com/static/sdk/emoratest.umd.js"
+              strategy="afterInteractive"
+              onLoad={() => {
+                // SDK loaded, safe to initialize
+                if (typeof window !== "undefined" && (window as any).EmoraTest) {
+                  (window as any).EmoraTest.init({
+                    sdkKey: EMORATEST_SDK_KEY,
+                    apiUrl: "https://emoratest.com",
+                  });
+                }
+              }}
+            />
+          </>
+        )}
       </body>
     </html>
   );
