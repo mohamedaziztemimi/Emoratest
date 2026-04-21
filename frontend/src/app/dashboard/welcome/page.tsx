@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/api";
 
 type TabType = "html" | "nextjs" | "react";
 
@@ -38,7 +39,7 @@ export default function WelcomePage() {
 
     const completeOnboarding = async () => {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/onboarding-complete`, {
+        await fetch(`${API_BASE}/api/v1/auth/onboarding-complete`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -59,7 +60,7 @@ export default function WelcomePage() {
 
     const checkForSignal = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sessions`, {
+        const res = await fetch(`${API_BASE}/api/v1/sessions`, {
           credentials: "include",
         });
         if (res.ok) {

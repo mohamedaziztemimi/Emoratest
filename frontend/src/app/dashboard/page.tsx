@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/api";
 
 interface Session {
   id: string;
@@ -41,7 +42,7 @@ export default function OverviewPage() {
   // Fetch dashboard data on mount
   useEffect(() => {
     const fetchDashboardData = async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = API_BASE;
 
       try {
         // Fetch sessions to check if user has data
@@ -498,7 +499,7 @@ function EmotionTrendsChart({ hasData }: { hasData: boolean }) {
 
   useEffect(() => {
     const fetchTrends = async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = API_BASE;
       try {
         const res = await fetch(`${apiUrl}/api/v1/dashboard/emotion-trends?days=7`, {
           credentials: "include",
@@ -725,7 +726,7 @@ function ConfusionPagesList({ hasData }: { hasData: boolean }) {
 
   useEffect(() => {
     const fetchConfusionPages = async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = API_BASE;
       try {
         const res = await fetch(`${apiUrl}/api/v1/dashboard/confusion-pages`, {
           credentials: "include",

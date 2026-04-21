@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { GradientButton } from "../ui";
+import { API_BASE } from "@/lib/api";
 
 interface NavLink {
   label: string;
@@ -31,7 +32,7 @@ export function Navbar() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+        const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
           credentials: "include",
         });
         setAuthState(res.ok ? "logged-in" : "logged-out");

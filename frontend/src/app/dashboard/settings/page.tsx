@@ -5,6 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
+import { API_BASE } from "@/lib/api";
 
 interface MerchantProfile {
   id: string;
@@ -44,7 +45,7 @@ export default function SettingsPage() {
       setProfileError(null);
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const apiUrl = API_BASE;
         const res = await fetch(`${apiUrl}/api/v1/auth/me`, {
           credentials: "include",
         });
@@ -85,7 +86,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = API_BASE;
       const res = await fetch(`${apiUrl}/api/v1/auth/onboarding-complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,7 +144,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = API_BASE;
       const res = await fetch(`${apiUrl}/api/v1/auth/onboarding-complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

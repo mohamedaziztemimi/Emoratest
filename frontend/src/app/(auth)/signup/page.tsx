@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import { API_BASE } from "@/lib/api";
 
 interface FieldError {
   name?: string;
@@ -104,7 +105,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/signup`, {
+      const res = await fetch(`${API_BASE}/api/v1/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

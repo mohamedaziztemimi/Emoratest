@@ -5,12 +5,18 @@
  * Uses httpOnly cookies for authentication - no localStorage tokens.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://emoratest.com";
 const REQUEST_TIMEOUT = 5_000; // 5s timeout - fail fast
 
-if (!API_BASE) {
-  console.warn("NEXT_PUBLIC_API_URL not set");
+// One-time warning if fallback is used
+let _warned = false;
+if (!process.env.NEXT_PUBLIC_API_URL && !_warned) {
+  console.warn("[API] NEXT_PUBLIC_API_URL not set, using fallback:", API_BASE);
+  _warned = true;
 }
+
+// Export for use in components
+export { API_BASE };
 
 class ApiError extends Error {
   status: number;
