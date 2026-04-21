@@ -90,7 +90,7 @@ export function StickyAuditBar() {
                 ${isMobile ? "hidden sm:inline-block" : "inline-block"}
               `}
             >
-              Start Free Start Free →rarr;
+              Start Free →
             </a>
 
             {/* Dismiss button */}
