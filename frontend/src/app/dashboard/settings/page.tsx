@@ -26,7 +26,7 @@ export default function SettingsPage() {
   const [sdkKey, setSdkKey] = useState("");
   const [sdkKeyMasked, setSdkKeyMasked] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [revealing, setRevealing] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Modal state
   const [showRegenModal, setShowRegenModal] = useState(false);
@@ -80,43 +80,9 @@ export default function SettingsPage() {
     };
   }, []);
 
-  // Reveal SDK key - calls onboarding-complete to get current key
-  const revealSdkKey = useCallback(async () => {
-    setRevealing(true);
-    setError(null);
-
-    try {
-      const apiUrl = API_BASE;
-      const res = await fetch(`${apiUrl}/api/v1/auth/onboarding-complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to retrieve SDK key");
-      }
-
-      const data = await res.json();
-      if (data.sdk_key) {
-        setSdkKey(data.sdk_key);
-        setSdkKeyMasked(false);
-
-        // Auto-hide after 30 seconds
-        if (revealTimerRef.current) {
-          clearTimeout(revealTimerRef.current);
-        }
-        revealTimerRef.current = setTimeout(() => {
-          setSdkKeyMasked(true);
-          setSdkKey("");
-        }, 30000);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reveal SDK key");
-    } finally {
-      setRevealing(false);
-    }
-  }, []);
+  // Reveal SDK key - NOTE: SDK keys are stored as hashes only, so we cannot retrieve the original key.
+  // This function is now removed because calling onboarding-complete would generate a NEW key each time.
+  // Users should use "Regenerate" to get a new key instead.
 
   // Copy SDK key to clipboard
   const copyToClipboard = useCallback(() => {
@@ -138,14 +104,14 @@ export default function SettingsPage() {
     setShowRegenModal(false);
   }, []);
 
-  // Confirm regenerate SDK key
+  // Confirm regenerate SDK key - uses the correct rotate-key endpoint
   const confirmRegenerate = useCallback(async () => {
     setRegenLoading(true);
     setError(null);
 
     try {
       const apiUrl = API_BASE;
-      const res = await fetch(`${apiUrl}/api/v1/auth/onboarding-complete`, {
+      const res = await fetch(`${apiUrl}/api/v1/merchants/rotate-key`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -156,8 +122,8 @@ export default function SettingsPage() {
       }
 
       const data = await res.json();
-      if (data.sdk_key) {
-        setSdkKey(data.sdk_key);
+      if (data.new_sdk_key) {
+        setSdkKey(data.new_sdk_key);
         setSdkKeyMasked(false); // show it immediately after regeneration
         setShowRegenModal(false);
         setRegenSuccess(true);
@@ -287,25 +253,6 @@ export default function SettingsPage() {
                   {sdkKeyMasked ? maskedKey : sdkKey}
                 </code>
 
-                {/* Reveal/Hide button */}
-                <button
-                  onClick={sdkKeyMasked ? revealSdkKey : () => setSdkKeyMasked(true)}
-                  disabled={revealing}
-                  style={{
-                    background: "white",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: "8px",
-                    padding: "10px 16px",
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    color: "#374151",
-                    cursor: revealing ? "not-allowed" : "pointer",
-                    opacity: revealing ? 0.6 : 1,
-                  }}
-                >
-                  {revealing ? "Loading..." : sdkKeyMasked ? "Reveal" : "Hide"}
-                </button>
-
                 {/* Copy button - only shown when revealed */}
                 {!sdkKeyMasked && (
                   <button
@@ -324,12 +271,35 @@ export default function SettingsPage() {
                     {copied ? "✓ Copied!" : "Copy"}
                   </button>
                 )}
+
+                {/* Hide button - only shown when revealed */}
+                {!sdkKeyMasked && (
+                  <button
+                    onClick={() => {
+                      setSdkKeyMasked(true);
+                      setSdkKey("");
+                    }}
+                    style={{
+                      background: "white",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "8px",
+                      padding: "10px 16px",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: "#374151",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Hide
+                  </button>
+                )}
               </div>
 
               {/* Regenerate button */}
               <div style={{ marginTop: "16px" }}>
                 <button
                   onClick={openRegenModal}
+                  disabled={regenerating}
                   style={{
                     background: "white",
                     border: "1px solid #EF4444",
@@ -338,11 +308,21 @@ export default function SettingsPage() {
                     fontSize: "13px",
                     fontWeight: "500",
                     color: "#EF4444",
-                    cursor: "pointer",
+                    cursor: regenerating ? "not-allowed" : "pointer",
+                    opacity: regenerating ? 0.6 : 1,
                   }}
                 >
-                  Regenerate SDK Key
+                  {regenerating ? "Generating..." : "Regenerate SDK Key"}
                 </button>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "#9CA3AF",
+                    margin: "8px 0 0 0",
+                  }}
+                >
+                  Generates a new SDK key and invalidates the old one. Your existing integration will stop working until updated.
+                </p>
               </div>
             </div>
 
