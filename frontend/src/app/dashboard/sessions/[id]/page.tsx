@@ -368,7 +368,7 @@ export default function SessionDetailPage() {
                             e.type === "click" ? "default" :
                             e.type === "exit_intent" ? "destructive" :
                             e.type === "visibility" ? "outline" :
-                            "secondary"
+                            "outline"
                           }
                         >
                           {e.type.replace("_", " ")}
