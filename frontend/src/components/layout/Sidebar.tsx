@@ -26,14 +26,6 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "EMOTION ML",
-    items: [
-      { href: "/dashboard/heatmap", label: "Heatmaps", icon: FireIcon },
-      { href: "/dashboard/sessions", label: "Session Replay", icon: PlayIcon },
-      { href: "/dashboard/analytics", label: "Why-Analysis", icon: SearchIcon },
-    ],
-  },
-  {
     label: "INSIGHTS",
     items: [
       { href: "/dashboard/segments", label: "Segments", icon: UsersIcon },

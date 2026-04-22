@@ -15,9 +15,14 @@ const PAGE_SIZE = 20;
 
 const OUTCOME_DISPLAY: Record<string, string> = {
   purchase: "Converted",
-  abandon: "Abandoned",
-  browse: "Active",
-  unknown: "Unknown",
+  abandon: "Left",
+  unknown: "Active",
+  browse: "Browsing",
+  signup: "Signed Up",
+  trial_started: "Trial Started",
+  lead_generated: "Lead",
+  demo_booked: "Demo Booked",
+  checkout_completed: "Checkout Done",
 };
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -148,7 +153,15 @@ export default function SessionsPage() {
                       {formatDate(s.started_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_DISPLAY[s.outcome] || s.outcome}</Badge>
+                      <Badge variant={outcomeVariant(s.outcome)}>
+                        {(() => {
+                          // If session ended but outcome is still unknown, show "Left"
+                          if (s.outcome === "unknown" && s.ended_at) {
+                            return "Left";
+                          }
+                          return OUTCOME_DISPLAY[s.outcome] || s.outcome;
+                        })()}
+                      </Badge>
                     </td>
                     <td className="px-5 py-3.5">
                       <Badge variant={riskVariant(s.abandonment_risk)}>

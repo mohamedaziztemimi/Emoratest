@@ -155,13 +155,16 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     collectVisibility(queue, getActiveVariants),
   ];
 
-  // Handle page unload — only flush events, do NOT end session
-  // Session persists in sessionStorage for multi-page navigation
+  // Handle page unload — close session and flush events
+  // For single-page apps, the session closes. For multi-page, it persists.
   const unloadHandler = () => {
-    // Only flush events — do NOT end the session
-    // Session persists in sessionStorage for multi-page navigation
+    // Flush events
     if (queue) {
       queue.flushBeacon();
+    }
+    // Close session via beacon (marks as abandon if no outcome set)
+    if (sessionManager) {
+      sessionManager.endBeacon();
     }
   };
 
