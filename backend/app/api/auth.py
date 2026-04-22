@@ -172,11 +172,11 @@ async def register(
         key="auth_token",
         value=token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
+        secure=settings.COOKIE_SECURE,  # True in production (HTTPS), False in dev
+        samesite=settings.COOKIE_SAMESITE,  # "none" for cross-domain, "lax" for same-site
         max_age=60 * 60 * 24 * 7,  # 7 days
         path="/",  # Available on all paths
-        domain=None,  # None means current host (localhost for dev)
+        domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
     )
     return response
 
@@ -247,11 +247,11 @@ async def signup(
         key="auth_token",
         value=token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
+        secure=settings.COOKIE_SECURE,  # True in production (HTTPS), False in dev
+        samesite=settings.COOKIE_SAMESITE,  # "none" for cross-domain, "lax" for same-site
         max_age=60 * 60 * 24 * 7,  # 7 days
         path="/",  # Available on all paths
-        domain=None,  # None means current host (localhost for dev)
+        domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
     )
     return response
 
@@ -338,11 +338,11 @@ async def login(
         key="auth_token",
         value=token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
+        secure=settings.COOKIE_SECURE,  # True in production (HTTPS), False in dev
+        samesite=settings.COOKIE_SAMESITE,  # "none" for cross-domain, "lax" for same-site
         max_age=60 * 60 * 24 * 7,  # 7 days
         path="/",  # Available on all paths
-        domain=None,  # None means current host (localhost for dev)
+        domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
     )
     return response
 

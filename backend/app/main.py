@@ -82,9 +82,12 @@ cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGI
 
 if os.getenv("ENVIRONMENT") == "production":
     # In production, use configured origins
+    # Include all subdomains for cross-domain support
     default_origins = [
         "https://emoratest.com",
         "https://www.emoratest.com",
+        "https://api.emoratest.com",
+        "https://dashboard.emoratest.com",
     ]
 elif not cors_origins:
     # In development, allow localhost and local network IPs
@@ -135,7 +138,25 @@ def is_local_network(origin: str) -> bool:
             return True
     return False
 
+
+def is_production_domain(origin: str) -> bool:
+    """Check if origin is from the production domain (emoratest.com)."""
+    if not origin:
+        return False
+    # Allow any subdomain of emoratest.com
+    allowed_domains = [
+        "emoratest.com",
+        "www.emoratest.com",
+        "api.emoratest.com",
+        "dashboard.emoratest.com",
+    ]
+    for domain in allowed_domains:
+        if origin == f"https://{domain}" or origin.endswith(f".{domain}"):
+            return True
+    return False
+
 # In development mode, dynamically allow local network origins
+# In production, also allow any subdomain of emoratest.com
 if os.getenv("ENVIRONMENT") != "production":
 
     class DynamicCORSMiddleware(CORSMiddleware):
@@ -143,15 +164,15 @@ if os.getenv("ENVIRONMENT") != "production":
 
         async def preflight_handler(self, request: Request, call_next):
             origin = request.headers.get("origin")
-            if origin and is_local_network(origin):
-                # Add local network origin to allow_origins temporarily
+            if origin and (is_local_network(origin) or is_production_domain(origin)):
+                # Add origin to allow_origins temporarily
                 if origin not in self.allow_origins:
                     self.allow_origins.append(origin)
             return await super().preflight_handler(request, call_next)
 
         async def simple_response(self, request: Request, call_next, response):
             origin = request.headers.get("origin")
-            if origin and is_local_network(origin):
+            if origin and (is_local_network(origin) or is_production_domain(origin)):
                 if origin not in self.allow_origins:
                     self.allow_origins.append(origin)
             return await super().simple_response(request, call_next, response)
@@ -165,8 +186,26 @@ if os.getenv("ENVIRONMENT") != "production":
         expose_headers=["*"],
     )
 else:
+    # Production: also use dynamic middleware for subdomain support
+    class ProductionCORSMiddleware(CORSMiddleware):
+        """CORS middleware that dynamically allows production subdomains."""
+
+        async def preflight_handler(self, request: Request, call_next):
+            origin = request.headers.get("origin")
+            if origin and is_production_domain(origin):
+                if origin not in self.allow_origins:
+                    self.allow_origins.append(origin)
+            return await super().preflight_handler(request, call_next)
+
+        async def simple_response(self, request: Request, call_next, response):
+            origin = request.headers.get("origin")
+            if origin and is_production_domain(origin):
+                if origin not in self.allow_origins:
+                    self.allow_origins.append(origin)
+            return await super().simple_response(request, call_next, response)
+
     app.add_middleware(
-        CORSMiddleware,
+        ProductionCORSMiddleware,
         allow_origins=default_origins + cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
