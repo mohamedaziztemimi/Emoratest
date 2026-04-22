@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { AuthProvider } from "@/lib/auth";
+import EmoraTestScript from "@/components/EmoraTestScript";
 import { Inter, Figtree } from "next/font/google";
 import "./globals.css";
 
@@ -137,23 +137,7 @@ export default function RootLayout({
         <AuthProvider>{children}</AuthProvider>
 
         {/* EmoraTest SDK - loads on all pages, client-side only */}
-        {EMORATEST_SDK_KEY && (
-          <>
-            <Script
-              src="https://emoratest.com/static/sdk/emoratest.umd.js"
-              strategy="afterInteractive"
-              onLoad={() => {
-                // SDK loaded, safe to initialize
-                if (typeof window !== "undefined" && (window as any).EmoraTest) {
-                  (window as any).EmoraTest.init({
-                    sdkKey: EMORATEST_SDK_KEY,
-                    apiUrl: "https://emoratest.com",
-                  });
-                }
-              }}
-            />
-          </>
-        )}
+        <EmoraTestScript sdkKey={EMORATEST_SDK_KEY} />
       </body>
     </html>
   );
