@@ -31,6 +31,15 @@ export interface BatchPayload {
 
 // ── Session ───────────────────────────────────────────────────
 
+export type OutcomeType =
+  | "purchase"
+  | "abandon"
+  | "signup"
+  | "checkout_completed"
+  | "demo_booked"
+  | "lead_generated"
+  | "trial_started";
+
 export interface SessionCreatePayload {
   page_url: string;
   started_at: string;

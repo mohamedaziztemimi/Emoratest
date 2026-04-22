@@ -27,6 +27,7 @@ import type {
   FlagEvaluationRequest,
   FlagEvaluationResponse,
   FlagEvaluationResult,
+  OutcomeType,
 } from "./types";
 import { sha256, uuid4 } from "./utils";
 
@@ -40,6 +41,7 @@ export type {
   FlagEvaluationRequest,
   FlagEvaluationResponse,
   FlagEvaluationResult,
+  OutcomeType,
 } from "./types";
 
 // ── Module state ──────────────────────────────────────────────
@@ -57,6 +59,37 @@ const VISITOR_ID_KEY = "emoratest_visitor_id";
 let visitorId: string | null = null;
 let activeVariants: Record<string, string | null> = {};
 const flagCache: Record<string, FlagEvaluationResult> = {};
+
+// ── Auto-detection based on URL patterns ────────────────────────
+
+/** Auto-detect outcome from URL patterns. Call this after init() or it runs automatically. */
+export function detectOutcomeFromUrl(): void {
+  if (!initialized || !sessionManager) return;
+
+  const url = window.location.href.toLowerCase();
+  const pathname = window.location.pathname.toLowerCase();
+
+  // Define pattern → outcome mappings
+  const patterns: Array<{ pattern: RegExp; outcome: OutcomeType }> = [
+    { pattern: /\/success|\/thank-?you|\/confirmation|\/complete/i, outcome: "purchase" },
+    { pattern: /\/signup\/success|\/registered|\/sign-?up\/success/i, outcome: "signup" },
+    { pattern: /\/checkout\/success|\/order\/confirm|\/payment\/success/i, outcome: "checkout_completed" },
+    { pattern: /\/demo\/booked|\/demo\/confirm|\/meeting\/scheduled/i, outcome: "demo_booked" },
+    { pattern: /\/lead\/success|\/submitted|\/form\/success/i, outcome: "lead_generated" },
+    { pattern: /\/trial\/started|\/subscribed|\/welcome/i, outcome: "trial_started" },
+  ];
+
+  // Check each pattern
+  for (const { pattern, outcome } of patterns) {
+    if (pattern.test(url) || pattern.test(pathname)) {
+      reportOutcome(outcome);
+      if (config?.debug) {
+        console.debug(`[EmoraTest] Auto-detected outcome: ${outcome}`);
+      }
+      return;
+    }
+  }
+}
 
 // ── Public API ────────────────────────────────────────────────
 
@@ -156,6 +189,9 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
       apiUrl: config.apiUrl,
     });
   }
+
+  // Auto-detect outcome based on URL patterns
+  detectOutcomeFromUrl?.();
 }
 
 /** Stop tracking and clean up all resources. */
@@ -322,7 +358,7 @@ function getActiveVariants(): Record<string, unknown> | null {
 
 /** Manually report a conversion outcome. */
 export async function reportOutcome(
-  outcome: "purchase" | "abandon",
+  outcome: OutcomeType,
 ): Promise<void> {
   if (!initialized || !config || !sessionManager) return;
 

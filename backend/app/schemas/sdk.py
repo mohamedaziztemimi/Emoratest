@@ -18,7 +18,11 @@ class SessionCreateResponse(BaseModel):
 
 
 class SessionOutcomeRequest(BaseModel):
-    outcome: str = Field(..., pattern=r"^(purchase|abandon)$")
+    outcome: str = Field(
+        ...,
+        pattern=r"^(purchase|abandon|signup|checkout_completed|demo_booked|lead_generated|trial_started)$",
+        description="Conversion outcome type"
+    )
 
 
 # ── Events ─────────────────────────────────────────────────────

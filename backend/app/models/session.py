@@ -12,7 +12,7 @@ class Session(Base):
     __tablename__ = "sessions"
     __table_args__ = (
         CheckConstraint(
-            "outcome IN ('purchase','abandon','unknown')",
+            "outcome IN ('purchase','abandon','unknown','signup','checkout_completed','demo_booked','lead_generated','trial_started')",
             name="ck_sessions_outcome",
         ),
         CheckConstraint(

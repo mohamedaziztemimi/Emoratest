@@ -321,49 +321,128 @@ function App() {
 
             {/* Tracking Conversions */}
             <section id="tracking-conversions" className="mb-12 scroll-mt-20">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Tracking Conversions</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Tracking Conversions & Outcomes</h2>
               <p className="text-gray-600 mb-4">
-                To measure what matters, tell EmoraTest when a user converts (makes a purchase, signs up, completes a goal).
+                Use <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">reportOutcome()</code> to mark session outcomes. This tells EmoraTest the final result of a user&apos;s journey.
               </p>
 
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">Available outcome types:</p>
+                <ul className="text-sm text-blue-700 grid grid-cols-2 gap-1">
+                  <li><code className="bg-blue-100 px-1 rounded">purchase</code> — Completed purchase</li>
+                  <li><code className="bg-blue-100 px-1 rounded">signup</code> — Signed up / registered</li>
+                  <li><code className="bg-blue-100 px-1 rounded">checkout_completed</code> — Finished checkout</li>
+                  <li><code className="bg-blue-100 px-1 rounded">demo_booked</code> — Scheduled a demo</li>
+                  <li><code className="bg-blue-100 px-1 rounded">lead_generated</code> — Submitted lead form</li>
+                  <li><code className="bg-blue-100 px-1 rounded">trial_started</code> — Started free trial</li>
+                </ul>
+              </div>
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Manual Outcome Reporting</h3>
               <CodeBlock
-                id="conversion-tracking"
+                id="outcome-tracking"
                 language="javascript"
-                code={`// Call this when a user completes your goal action
-
-// Example 1: After a purchase button click
-document.getElementById('buy-button').addEventListener('click', function() {
-  EmoraTest.track('purchase', { value: 49.99, currency: 'USD' });
-});
-
-// Example 2: After form submission
-document.getElementById('signup-form').addEventListener('submit', function() {
-  EmoraTest.track('signup', { plan: 'premium' });
-});
-
-// Example 3: Custom conversion event
-document.getElementById('contact-form').addEventListener('submit', function() {
-  EmoraTest.track('contact', { source: 'landing_page' });
-});
-
-// Example 4: In React/Next.js
-const handlePurchase = () => {
-  // Your purchase logic
+                code={`// Example 1: After successful purchase
+function onPurchaseComplete() {
+  // Your order logic
   completeOrder();
 
-  // Track conversion
+  // Report outcome to EmoraTest
   if (window.EmoraTest) {
-    window.EmoraTest.track('purchase', { value: orderTotal });
+    window.EmoraTest.reportOutcome('purchase');
+  }
+}
+
+// Example 2: After signup form submission
+document.getElementById('signup-form').addEventListener('submit', function() {
+  // Your signup logic
+  submitSignup();
+
+  // Report outcome
+  if (window.EmoraTest) {
+    window.EmoraTest.reportOutcome('signup');
+  }
+});
+
+// Example 3: React/Next.js - after demo booking
+const handleDemoBooked = async () => {
+  const result = await bookDemo();
+
+  if (result.success && window.EmoraTest) {
+    window.EmoraTest.reportOutcome('demo_booked');
+  }
+};
+
+// Example 4: After checkout completion
+const onCheckoutComplete = () => {
+  if (window.EmoraTest) {
+    window.EmoraTest.reportOutcome('checkout_completed');
   }
 };`}
                 copiedId={copiedCode}
                 onCopy={copyToClipboard}
               />
 
-              <p className="text-gray-600 mt-4 text-sm">
-                The first argument is the event name. Common events: <code className="bg-gray-100 px-1 rounded">&apos;purchase&apos;</code>, <code className="bg-gray-100 px-1 rounded">&apos;signup&apos;</code>, <code className="bg-gray-100 px-1 rounded">&apos;lead&apos;</code>.
-                You can use any name for custom goals and include additional properties as an optional second argument.
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 mt-6">Auto-Detection (Built-in)</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                EmoraTest automatically detects outcomes from common URL patterns:
               </p>
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2">URL Pattern</th>
+                      <th className="text-left py-2">Auto Outcome</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 font-mono text-xs">/success, /thank-you, /confirmation</td>
+                      <td className="py-2"><code className="bg-gray-200 px-1 rounded">purchase</code></td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 font-mono text-xs">/signup/success, /registered</td>
+                      <td className="py-2"><code className="bg-gray-200 px-1 rounded">signup</code></td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-2 font-mono text-xs">/checkout/success, /order/confirm</td>
+                      <td className="py-2"><code className="bg-gray-200 px-1 rounded">checkout_completed</code></td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 font-mono text-xs">/demo/booked, /meeting/scheduled</td>
+                      <td className="py-2"><code className="bg-gray-200 px-1 rounded">demo_booked</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-gray-500 mb-6">
+                <strong>Tip:</strong> Auto-detection runs automatically after SDK init. You can also trigger manually with <code className="bg-gray-100 px-1 rounded">EmoraTest.detectOutcomeFromUrl()</code>
+              </p>
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Session Outcome Lifecycle</h3>
+              <div className="space-y-3">
+                {[
+                  { step: "1", title: "Session starts", desc: "outcome = 'unknown'", color: "gray" },
+                  { step: "2", title: "User takes action", desc: "You call reportOutcome()", color: "blue" },
+                  { step: "3", title: "Outcome saved", desc: "outcome = 'purchase' (or other)", color: "green" },
+                  { step: "4", title: "User leaves without action", desc: "auto-set to 'abandon'", color: "orange" },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      item.color === "gray" ? "bg-gray-100 text-gray-600" :
+                      item.color === "blue" ? "bg-blue-100 text-blue-600" :
+                      item.color === "green" ? "bg-green-100 text-green-600" :
+                      "bg-orange-100 text-orange-600"
+                    }`}>
+                      {item.step}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{item.title}</p>
+                      <p className="text-sm text-gray-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
 
             <hr className="border-gray-200 my-10" />
@@ -616,16 +695,24 @@ switch (result.variant) {
                   <tbody className="divide-y divide-gray-200">
                     {[
                       {
-                        method: "EmoraTest.init({ sdkKey, apiUrl })",
+                        method: "await EmoraTest.init({ sdkKey, apiUrl })",
                         desc: "Initialize the SDK. Call once per page load. apiUrl defaults to https://emoratest.com.",
+                      },
+                      {
+                        method: "await EmoraTest.reportOutcome(outcome)",
+                        desc: "Report session outcome. Options: purchase, signup, checkout_completed, demo_booked, lead_generated, trial_started, abandon.",
+                      },
+                      {
+                        method: "EmoraTest.detectOutcomeFromUrl()",
+                        desc: "Auto-detect outcome from URL patterns. Runs automatically on init, or call manually.",
                       },
                       {
                         method: "await EmoraTest.evaluateFlag(flagKey)",
                         desc: "Get assigned variant for an A/B test. Returns { variant: string, enabled: boolean }.",
                       },
                       {
-                        method: "EmoraTest.track(eventName, properties?)",
-                        desc: "Track a custom event like purchase, signup, etc. Optional properties object for metadata.",
+                        method: "await EmoraTest.getVariant(flagKey)",
+                        desc: "Convenience method that returns just the variant string or null.",
                       },
                       {
                         method: "EmoraTest.getSessionId()",
@@ -636,8 +723,12 @@ switch (result.variant) {
                         desc: "Get the persistent visitor ID (same across sessions for the same browser).",
                       },
                       {
-                        method: "EmoraTest.destroy()",
-                        desc: "Clean up the SDK instance. Useful for single-page apps.",
+                        method: "EmoraTest.isInitialized()",
+                        desc: "Check if the SDK has been initialized and is actively tracking.",
+                      },
+                      {
+                        method: "await EmoraTest.destroy()",
+                        desc: "Clean up the SDK instance, flush events, and end session. Useful for single-page apps.",
                       },
                     ].map((item) => (
                       <tr key={item.method}>
