@@ -11,25 +11,9 @@
 
 const REQUEST_TIMEOUT = 10_000; // 10s timeout for production
 
-// Determine API_BASE based on environment
-let API_BASE = "";
-
-if (typeof window !== "undefined") {
-  const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-  if (envApiUrl) {
-    // Environment variable takes precedence
-    API_BASE = envApiUrl;
-  } else {
-    // No env var: use same-origin (works for www.emoratest.com/api/v1/*)
-    API_BASE = "";
-  }
-}
-
-// Log for debugging
-if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-  console.log("[API] Using backend:", API_BASE || "(same-origin)");
-}
+// Use same-origin for all requests (works for www.emoratest.com/api/v1/*)
+// In production, frontend and backend are on the same domain
+const API_BASE = "";
 
 // Export for use in components
 export { API_BASE };
