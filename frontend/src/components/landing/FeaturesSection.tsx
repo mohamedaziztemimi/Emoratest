@@ -14,16 +14,6 @@ const FEATURES = [
     description: "See where users feel confused, frustrated, or delighted on any page. Color-coded overlays update in real-time.",
   },
   {
-    icon: "⚡",
-    title: "A/B & Multivariate Testing",
-    description: "Run A/B, MVT, split URL, and multi-page tests with flicker-free delivery and auto-stopping when winners emerge.",
-  },
-  {
-    icon: "🎯",
-    title: "Multi-Armed Bandits",
-    description: "Automatically shift traffic to winning variants 30-50% faster than fixed splits using Thompson Sampling.",
-  },
-  {
     icon: "🧠",
     title: "8-Emotion ML Classifier",
     description: "Our ML detects confusion, frustration, delight, anxiety, hesitation, focus, boredom, and satisfaction with 85-95% accuracy.",
@@ -34,9 +24,19 @@ const FEATURES = [
     description: "Automatically links emotions to revenue. See exactly which confusion event caused a 34% drop-off — and what to fix.",
   },
   {
-    icon: "🚩",
-    title: "Feature Flags",
-    description: "Progressive rollouts, kill switches, and targeting rules. Ship safely to segments based on emotional behavior.",
+    icon: "🎯",
+    title: "Session Replay",
+    description: "Watch exactly how users interact with your site. See clicks, scrolls, and rage clicks in context with emotional responses.",
+  },
+  {
+    icon: "📊",
+    title: "Funnel Analytics",
+    description: "Identify exactly where users drop off in your conversion funnel with emotion-based insights at each step.",
+  },
+  {
+    icon: "⚡",
+    title: "Real-time Alerts",
+    description: "Get notified instantly when frustration spikes or users encounter problems. Respond before they churn.",
   },
 ];
 
@@ -58,7 +58,7 @@ export function FeaturesSection({ id }: FeaturesSectionProps) {
               Everything You Need to Win
             </h2>
             <p className="text-lg text-[#4B5563]">
-              From emotion detection to A/B testing — one platform, zero guesswork.
+              Complete emotion intelligence platform — see what users feel, not just what they do.
             </p>
           </div>
         </FadeInOnScroll>
