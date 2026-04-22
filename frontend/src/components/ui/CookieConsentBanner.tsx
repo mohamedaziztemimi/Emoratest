@@ -73,6 +73,7 @@ export function CookieConsentBanner({ storageKey = CONSENT_STORAGE_KEY }: Cookie
 
   return (
     <div
+      className="px-4 sm:px-6"
       style={{
         position: "fixed",
         bottom: 0,
@@ -82,7 +83,7 @@ export function CookieConsentBanner({ storageKey = CONSENT_STORAGE_KEY }: Cookie
         background: "rgba(255, 255, 255, 0.95)",
         backdropFilter: "blur(10px)",
         borderTop: "1px solid #E5E7EB",
-        padding: "16px 24px",
+        padding: "12px 16px",
         boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.08)",
       }}
     >
@@ -91,37 +92,37 @@ export function CookieConsentBanner({ storageKey = CONSENT_STORAGE_KEY }: Cookie
           maxWidth: "1200px",
           margin: "0 auto",
           display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: "16px",
-          flexWrap: "wrap",
+          flexDirection: "column",
+          alignItems: "stretch",
+          gap: "12px",
         }}
-        className="flex-col md:flex-row"
+        className="sm:flex-row sm:items-center sm:gap-4"
       >
         <p
           style={{
             flex: 1,
-            fontSize: "14px",
+            fontSize: "13px",
             color: "#374151",
             margin: 0,
             minWidth: "200px",
             lineHeight: "1.5",
           }}
+          className="sm:text-sm"
         >
-          We use essential cookies for authentication and session management. By using EmoraTest, you
-          agree to our{" "}
+          We use essential cookies for authentication. By using EmoraTest, you agree to our{" "}
           <a href="/privacy" style={{ color: "#007BFF", textDecoration: "none" }}>
             Privacy Policy
           </a>
           .
         </p>
 
-        <div style={{ display: "flex", gap: "12px", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: "8px", flexShrink: 0 }} className="sm:gap-3 w-full sm:w-auto">
           <button
             onClick={handleReject}
+            className="flex-1 sm:flex-none"
             style={{
-              padding: "10px 20px",
-              fontSize: "14px",
+              padding: "8px 16px",
+              fontSize: "13px",
               fontWeight: "500",
               color: "#374151",
               background: "white",
@@ -141,9 +142,10 @@ export function CookieConsentBanner({ storageKey = CONSENT_STORAGE_KEY }: Cookie
           </button>
           <button
             onClick={handleAccept}
+            className="flex-1 sm:flex-none"
             style={{
-              padding: "10px 20px",
-              fontSize: "14px",
+              padding: "8px 16px",
+              fontSize: "13px",
               fontWeight: "500",
               color: "white",
               background: "linear-gradient(135deg, #007BFF, #7C3AED)",

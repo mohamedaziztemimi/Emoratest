@@ -18,11 +18,11 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "EXPERIMENTS",
+    label: "EMOTION ML",
     items: [
-      { href: "/dashboard/experiments", label: "A/B Tests", icon: FlaskIcon },
-      { href: "/dashboard/flags", label: "Feature Flags", icon: FlagIcon },
-      { href: "/dashboard/bandits", label: "Bandits", icon: TargetIcon },
+      { href: "/dashboard/heatmap", label: "Heatmaps", icon: FireIcon },
+      { href: "/dashboard/sessions", label: "Session Replay", icon: PlayIcon },
+      { href: "/dashboard/analytics", label: "Why-Analysis", icon: SearchIcon },
     ],
   },
   {

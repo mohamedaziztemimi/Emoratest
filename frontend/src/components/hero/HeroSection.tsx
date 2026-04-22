@@ -23,10 +23,10 @@ export function HeroSection({ id }: HeroSectionProps) {
   };
 
   return (
-    <section id={id} className="relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)", paddingTop: "180px", paddingBottom: "180px" }}>
-      <div className="max-w-[1200px] mx-auto px-6">
+    <section id={id} className="relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)", paddingTop: "100px", paddingBottom: "60px" }}>
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         {/* Two column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "55% 45%", gap: "60px", alignItems: "center", width: "100%" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "40px", alignItems: "center", width: "100%" }} className="lg:grid-cols-[55%_45%] lg:gap-16">
           {/* Left Column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* H1 */}
@@ -82,7 +82,7 @@ export function HeroSection({ id }: HeroSectionProps) {
         </div>
 
         {/* Stat Cards - below columns in normal flow */}
-        <div className="grid grid-cols-3 gap-6" style={{ marginTop: "40px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6" style={{ marginTop: "32px" }}>
           {STATS.map((stat, index) => (
             <div
               key={index}

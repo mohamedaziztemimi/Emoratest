@@ -234,7 +234,7 @@ export default function OverviewPage() {
 
       {/* Row 1: Stat Cards */}
       {!stats.loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             label="Active Experiments"
             value={stats.hasData ? String(stats.activeExperiments) : "3"}
@@ -272,7 +272,7 @@ export default function OverviewPage() {
 
       {/* Row 2: Emotion Trends + Top Confusion Pages */}
       {!stats.loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Emotion Trends Chart */}
           <Card>
             <div className="mb-4">
@@ -295,7 +295,7 @@ export default function OverviewPage() {
 
       {/* Row 3: Active Experiments + AI Suggestions */}
       {!stats.loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Active Experiments */}
           <Card>
             <div className="mb-4">

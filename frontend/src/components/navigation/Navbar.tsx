@@ -212,7 +212,7 @@ export function Navbar() {
 
         {/* Mobile menu panel */}
         <div
-          className={`absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col ${
+          className={`absolute right-0 top-0 bottom-0 w-[85%] max-w-[320px] bg-white shadow-2xl flex flex-col ${
             isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
           } transition-transform duration-300`}
         >
