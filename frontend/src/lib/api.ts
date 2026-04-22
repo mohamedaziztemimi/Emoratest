@@ -138,6 +138,10 @@ export interface EventOut {
   velocity: number | null;
   element_id: string | null;
   metadata: Record<string, unknown> | null;
+  label: string | null;
+  element_type: string | null;
+  section: string | null;
+  selector: string | null;
 }
 
 export interface SessionDetail extends SessionListItem {

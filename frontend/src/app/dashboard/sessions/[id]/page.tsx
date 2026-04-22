@@ -66,6 +66,94 @@ function formatVelocityVariance(value: number | null | undefined): string {
   return "High";
 }
 
+// Format event description based on type and metadata
+function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; metadata: Record<string, unknown> | null }): string {
+  const metadata = e.metadata as Record<string, unknown> | null;
+
+  switch (e.type) {
+    case "click":
+      if (metadata?.rage_click) return `Rage click: ${metadata.click_count || 3}+ rapid clicks`;
+      if (e.label) return `Clicked: "${e.label}"`;
+      if (e.element_type) return `Clicked ${e.element_type}`;
+      return "Click detected";
+
+    case "scroll":
+      if (metadata?.is_retreat) return "⚠️ Scrolled back up (retreat - indicates uncertainty)";
+      if (metadata?.direction) {
+        const direction = metadata.direction === "up" ? "↑ Scrolled up" : "↓ Scrolled down";
+        const pct = metadata.viewport_pct ? ` to ${Math.round(Number(metadata.viewport_pct))}%` : "";
+        return `${direction}${pct}`;
+      }
+      return "Page scroll";
+
+    case "exit_intent":
+      if (metadata?.trigger === "mouse_leave") return "Mouse left viewport (exit intent)";
+      if (metadata?.trigger === "back_button") return "Browser back button pressed";
+      if (metadata?.trigger === "tab_switch") return "User switched tabs";
+      return "Exit intent detected";
+
+    case "visibility":
+      if (metadata?.state === "hidden") return "Tab hidden / minimized";
+      if (metadata?.state === "visible") return "Tab visible / focused";
+      return "Visibility changed";
+
+    case "mouse_move":
+      if (e.section && e.label) return `Moved over "${e.label}" in ${e.section}`;
+      if (e.label) return `Moved over "${e.label}"`;
+      return "Mouse movement";
+
+    case "mouse_summary":
+      if (metadata?.movement_pattern) {
+        const pattern = metadata.movement_pattern as string;
+        const avgVel = metadata.avg_velocity ? ` (${Math.round(Number(metadata.avg_velocity))}px/s avg)` : "";
+        return `Mouse pattern: ${pattern}${avgVel}`;
+      }
+      return "Mouse activity summary";
+
+    default:
+      if (e.label) return e.label;
+      return `${e.type} event`;
+  }
+}
+
+// Format additional event details
+function formatEventDetails(e: { type: string; x: number | null; y: number | null; velocity: number | null; metadata: Record<string, unknown> | null; section: string | null }): string {
+  const parts: string[] = [];
+
+  // Position for click events
+  if (e.type === "click" && e.x != null && e.y != null) {
+    parts.push(`Position: (${e.x}, ${e.y})`);
+  }
+
+  // Velocity for mouse events
+  if (e.velocity != null && e.velocity > 0) {
+    parts.push(`Velocity: ${Math.round(e.velocity)}px/s`);
+  }
+
+  // Section info
+  if (e.section) {
+    parts.push(`Section: ${e.section}`);
+  }
+
+  // Scroll-specific details
+  if (e.type === "scroll" && e.metadata) {
+    const metadata = e.metadata as Record<string, unknown>;
+    if (metadata.delta) {
+      parts.push(`Distance: ${Math.round(Number(metadata.delta))}px`);
+    }
+    if (metadata.is_retreat) {
+      parts.push("⚠️ Retreat detected");
+    }
+  }
+
+  // Rage click details
+  if (e.metadata?.rage_click) {
+    parts.push("🔥 Rage pattern");
+  }
+
+  return parts.length > 0 ? parts.join(" • ") : "--";
+}
+
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionFetcher = useCallback(() => fetchSessionDetail(id), [id]);
@@ -261,7 +349,7 @@ export default function SessionDetailPage() {
               <table className="w-full text-left text-[13px]">
                 <thead className="sticky top-0 z-10 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
                   <tr>
-                    {["Time", "Type", "Element", "Position", "Velocity"].map((h) => (
+                    {["Time", "Type", "Description", "Details"].map((h) => (
                       <th key={h} className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
                         {h}
                       </th>
@@ -274,13 +362,23 @@ export default function SessionDetailPage() {
                       <td className="whitespace-nowrap px-5 py-3 text-[hsl(var(--muted-foreground))]">
                         {formatDate(e.ts)}
                       </td>
-                      <td className="px-5 py-3"><Badge>{e.type}</Badge></td>
-                      <td className="px-5 py-3 text-[hsl(var(--muted-foreground))]">{e.element_id || "--"}</td>
-                      <td className="px-5 py-3 text-[hsl(var(--muted-foreground))]">
-                        {e.x != null && e.y != null ? `(${e.x}, ${e.y})` : "--"}
+                      <td className="px-5 py-3">
+                        <Badge
+                          variant={
+                            e.type === "click" ? "default" :
+                            e.type === "exit_intent" ? "destructive" :
+                            e.type === "visibility" ? "outline" :
+                            "secondary"
+                          }
+                        >
+                          {e.type.replace("_", " ")}
+                        </Badge>
                       </td>
-                      <td className="px-5 py-3 text-[hsl(var(--muted-foreground))]">
-                        {e.velocity != null ? e.velocity.toFixed(1) : "--"}
+                      <td className="px-5 py-3 text-[hsl(var(--foreground))]">
+                        {formatEventDescription(e)}
+                      </td>
+                      <td className="px-5 py-3 text-[hsl(var(--muted-foreground))] text-[12px]">
+                        {formatEventDetails(e)}
                       </td>
                     </tr>
                   ))}

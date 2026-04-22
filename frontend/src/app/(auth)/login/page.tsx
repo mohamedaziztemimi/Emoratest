@@ -21,6 +21,10 @@ export default function LoginPage() {
     try {
       const data = await authLogin({ email, password });
 
+      // Wait for cookie to be set, then redirect
+      // Use router for client-side navigation instead of hard navigation
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       // Redirect based on onboarding status
       if (!data.onboarding_completed) {
         window.location.href = "/dashboard/welcome";
