@@ -1,12 +1,32 @@
 /**
- * Event queue with periodic flushing (CONV-33).
+ * Event queue with periodic flushing and priority-based filtering.
+ *
+ * ── COLLECTION vs STORAGE SEPARATION ─────────────────────────────────
+ *
+ * This queue handles STORAGE only. COLLECTION happens in collectors.ts.
+ *
+ * COLLECTORS (always active, never stop listening):
+ *   - Maintain internal buffers (rage clicks, velocity samples)
+ *   - Compute behavioral signals (rage_click, movement_pattern)
+ *   - Pass events to queue.push() regardless of limit
+ *
+ * QUEUE (filters based on priority and limit):
+ *   - HIGH PRIORITY events: ALWAYS stored (click, exit_intent, visibility, mouse_summary)
+ *   - LOW PRIORITY events: Dropped after MAX_EVENTS_PER_SESSION (mouse_move, scroll)
+ *
+ * This ensures behavioral analytics quality even after 1000 events:
+ *   - Rage click detection works (clicks are high priority)
+ *   - Velocity signals preserved (mouse_summary is high priority)
+ *   - Exit intent captured (exit_intent is high priority)
+ *
+ * ────────────────────────────────────────────────────────────────────────
  *
  * Events are queued locally and flushed to the backend every N ms
  * or when the queue reaches maxBatchSize. On page unload, remaining
  * events are sent via navigator.sendBeacon().
  */
 
-import type { RawEvent } from "./types";
+import type { RawEvent, EventType, HIGH_PRIORITY_EVENTS, LOW_PRIORITY_EVENTS } from "./types";
 import type { Transport } from "./transport";
 
 export class EventQueue {
@@ -17,17 +37,33 @@ export class EventQueue {
   private readonly flushIntervalMs: number;
   private readonly maxBatchSize: number;
   private readonly debug: boolean;
+  private readonly maxEvents: number;
+  private eventCount = 0;
+  private isStopped = false;
+
+  // Import types dynamically for priority checking
+  // Fallback sets in case dynamic import fails (mouse_summary is high priority)
+  private highPriorityEvents: Set<EventType> = new Set(["click", "exit_intent", "visibility", "mouse_summary"]);
+  private lowPriorityEvents: Set<EventType> = new Set(["mouse_move", "scroll"]);
 
   constructor(
     transport: Transport,
     flushIntervalMs: number,
     maxBatchSize: number,
     debug: boolean,
+    maxEvents: number = 1000,
   ) {
     this.transport = transport;
     this.flushIntervalMs = flushIntervalMs;
     this.maxBatchSize = maxBatchSize;
     this.debug = debug;
+    this.maxEvents = maxEvents;
+
+    // Load priority sets
+    import("./types").then((types) => {
+      this.highPriorityEvents = types.HIGH_PRIORITY_EVENTS as unknown as Set<EventType>;
+      this.lowPriorityEvents = types.LOW_PRIORITY_EVENTS as unknown as Set<EventType>;
+    });
   }
 
   /** Set the active session ID (events require this). */
@@ -35,32 +71,88 @@ export class EventQueue {
     this.sessionId = sessionId;
   }
 
-  /** Start the periodic flush timer. */
-  start(): void {
-    if (this.flushTimer) return;
-    this.flushTimer = setInterval(() => {
-      this.flush().catch(this.logError);
-    }, this.flushIntervalMs);
+  /** Get the current event count. */
+  getEventCount(): number {
+    return this.eventCount;
   }
 
-  /** Stop the flush timer. */
-  stop(): void {
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-      this.flushTimer = null;
+  /** Check if event limit has been reached. */
+  isAtLimit(): boolean {
+    return this.eventCount >= this.maxEvents;
+  }
+
+  /** Check if should track an event based on type and limit. */
+  shouldTrack(eventType: EventType): boolean {
+    // Always allow high priority events
+    if (this.highPriorityEvents.has(eventType)) {
+      return true;
     }
+
+    // Check limit for low priority events
+    if (this.lowPriorityEvents.has(eventType)) {
+      return this.eventCount < this.maxEvents;
+    }
+
+    // Default: allow if under limit
+    return this.eventCount < this.maxEvents;
   }
 
-  /** Add an event to the queue. Triggers flush if batch is full. */
-  push(event: RawEvent): void {
+  /** Add an event to the queue. Returns true if queued, false if dropped. */
+  push(event: RawEvent): boolean {
+    if (this.isStopped) return false;
+
+    // Check if we should track this event
+    if (!this.shouldTrack(event.type)) {
+      if (this.debug) {
+        console.debug(`[EmoraTest] Event dropped (limit): ${event.type}`);
+      }
+      return false;
+    }
+
     this.queue.push(event);
+    this.eventCount++;
+
+    if (this.debug && this.eventCount >= this.maxEvents) {
+      console.debug(`[EmoraTest] Event limit reached: ${this.eventCount} >= ${this.maxEvents}`);
+    }
 
     if (this.debug) {
-      console.debug("[EmoraTest] Event queued:", event.type, event);
+      console.debug("[EmoraTest] Event queued:", event.type, `count: ${this.eventCount}/${this.maxEvents}`);
     }
 
     if (this.queue.length >= this.maxBatchSize) {
       this.flush().catch(this.logError);
+    }
+
+    return true;
+  }
+
+  /** Start the periodic flush timer. */
+  start(): void {
+    if (this.flushTimer) return;
+
+    this.flushTimer = setInterval(() => {
+      if (!this.isStopped) {
+        this.flush().catch(this.logError);
+      }
+    }, this.flushIntervalMs);
+
+    // Also flush on tab visibility change (user switching away)
+    const visibilityHandler = () => {
+      if (document.visibilityState === "hidden" && !this.isStopped) {
+        this.flushBeacon();
+      }
+    };
+
+    document.addEventListener("visibilitychange", visibilityHandler);
+  }
+
+  /** Stop the flush timer and prevent further queuing. */
+  stop(): void {
+    this.isStopped = true;
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
     }
   }
 
@@ -107,6 +199,11 @@ export class EventQueue {
   /** Number of events currently queued. */
   get size(): number {
     return this.queue.length;
+  }
+
+  /** Get total events tracked this session. */
+  getTotalTracked(): number {
+    return this.eventCount;
   }
 
   private logError = (err: unknown): void => {
