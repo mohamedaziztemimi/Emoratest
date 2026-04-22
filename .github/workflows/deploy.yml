@@ -45,7 +45,7 @@ jobs:
 
             # Restart all services
             echo "🔄 Restarting services..."
-            docker compose -f docker-compose.prod.yml --env-file .env up -d
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate --remove-orphans
 
             # Cleanup old images (optional)
             echo "🧹 Cleaning up old images..."
