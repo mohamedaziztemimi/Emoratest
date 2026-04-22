@@ -5,14 +5,26 @@
  * Uses httpOnly cookies for authentication - no localStorage tokens.
  *
  * Environment variables:
- * - NEXT_PUBLIC_API_URL: Backend API URL (e.g., https://api.emoratest.com)
- * - Falls back to same-origin if not set (works for monolithic deployments)
+ * - NEXT_PUBLIC_API_URL: Backend API URL (optional)
+ * - If not set, uses same-origin (works for monolithic deployments)
  */
 
-const REQUEST_TIMEOUT = 5_000; // 5s timeout - fail fast
+const REQUEST_TIMEOUT = 10_000; // 10s timeout for production
 
-// API_BASE: Use environment variable or fall back to empty string (same-origin)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+// Determine API_BASE based on environment
+let API_BASE = "";
+
+if (typeof window !== "undefined") {
+  const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (envApiUrl) {
+    // Environment variable takes precedence
+    API_BASE = envApiUrl;
+  } else {
+    // No env var: use same-origin (works for www.emoratest.com/api/v1/*)
+    API_BASE = "";
+  }
+}
 
 // Log for debugging
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
@@ -73,8 +85,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         // Check if it's backend format {field, message} or Pydantic format {loc, msg}
         if (detail.length > 0 && 'field' in detail[0]) {
           errorMessage = detail.map((e: any) => `${e.field || 'field'}: ${e.message || 'invalid'}`).join('; ');
-        } else {
+        } else if (detail.length > 0 && 'loc' in detail[0]) {
           errorMessage = detail.map((e: any) => `${e.loc?.join('.') || 'field'} - ${e.msg || 'invalid'}`).join(', ');
+        } else {
+          errorMessage = JSON.stringify(detail);
         }
       } else if (typeof body === 'object' && body !== null) {
         errorMessage = JSON.stringify(body);
@@ -87,6 +101,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (res.status === 204) return undefined as T;
     return res.json();
   } catch (err) {
+    if (err instanceof ApiError) throw err;
     if (err instanceof DOMException && err.name === "AbortError") {
       throw new Error("Request timed out. Please try again.");
     }
@@ -152,7 +167,6 @@ export interface EventOut {
 export interface SessionDetail extends SessionListItem {
   events: EventOut[];
   features: SessionFeatures | null;
-  emotion_scores?: Record<string, number>;
 }
 
 export interface SessionFilters {
@@ -244,7 +258,7 @@ export function fetchFunnel(dateFrom?: string, dateTo?: string): Promise<FunnelR
   const params = new URLSearchParams();
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
-  return request(`/dashboard/analytics/funnel?${params}`);
+  return request(`/analytics/funnel?${params}`);
 }
 
 export function fetchFrictionMap(limit = 50): Promise<FrictionMapResponse> {
@@ -422,7 +436,7 @@ export interface Experiment {
   ran_at: string | null;
   source: string | null;
   created_at: string;
-  experiment_type: string | null;  // ab, mvt, split_url, multipage, server_side
+  experiment_type: string | null;
   n_variants: number | null;
   flicker_free: boolean | null;
   is_active: boolean | null;
@@ -463,7 +477,6 @@ export function createExperiment(data: {
   variant_a?: string;
   variant_b?: string;
 }): Promise<Experiment> {
-  // Remove undefined values before sending
   const cleanData = Object.fromEntries(
     Object.entries(data).filter(([_, v]) => v !== undefined)
   );
