@@ -6,39 +6,17 @@
  *
  * Environment variables:
  * - NEXT_PUBLIC_API_URL: Backend API URL (e.g., https://api.emoratest.com)
- * - Falls back to same-origin (window.location.origin) if not set
+ * - Falls back to same-origin if not set (works for monolithic deployments)
  */
-
-// Detect if we're in development or production
-const isDevelopment = process.env.NODE_ENV === "development";
-
-// In production, use explicit API URL or derive from current domain
-let API_BASE: string;
-
-if (process.env.NEXT_PUBLIC_API_URL) {
-  // Use explicit API URL from environment
-  API_BASE = process.env.NEXT_PUBLIC_API_URL;
-} else if (isDevelopment) {
-  // Development: use localhost backend
-  API_BASE = "http://localhost:8000";
-} else {
-  // Production: derive from current domain
-  // If on emoratest.com, use api.emoratest.com
-  // If on api.emoratest.com, use api.emoratest.com (same)
-  const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
-  if (currentHost.endsWith("emoratest.com") || currentHost.endsWith("emoratest.com")) {
-    API_BASE = "https://api.emoratest.com";
-  } else {
-    // Fallback to same origin
-    API_BASE = typeof window !== "undefined" ? window.location.origin : "https://emoratest.com";
-  }
-}
 
 const REQUEST_TIMEOUT = 5_000; // 5s timeout - fail fast
 
-// Log API base in development for debugging
-if (isDevelopment) {
-  console.log("[API] Using backend:", API_BASE);
+// API_BASE: Use environment variable or fall back to empty string (same-origin)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+// Log for debugging
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  console.log("[API] Using backend:", API_BASE || "(same-origin)");
 }
 
 // Export for use in components
@@ -65,7 +43,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const url = `${API_BASE}/api/v1${path}`;
+    // Build URL: use API_BASE if set, otherwise use relative path (same-origin)
+    const url = API_BASE ? `${API_BASE}/api/v1${path}` : `/api/v1${path}`;
     const res = await fetch(url, {
       ...options,
       headers,
