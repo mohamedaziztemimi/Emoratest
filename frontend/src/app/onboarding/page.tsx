@@ -99,20 +99,23 @@ export default function OnboardingPage() {
               </p>
               <div className="rounded-xl bg-gray-900 p-4">
                 <pre className="overflow-x-auto text-xs text-green-400">
-{`<script src="https://cdn.emoratest.com/sdk.js"></script>
+{`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({
     sdkKey: "${sdkKey ? sdkKey.slice(0, 12) + "..." : "YOUR_SDK_KEY"}",
-    trackClicks: true,
-    trackScroll: true,
-    trackMouse: true,
+    apiUrl: "https://emoratest.com"
   });
 </script>`}
                 </pre>
               </div>
               <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                Or install via npm: <code className="rounded bg-[hsl(var(--secondary))] px-1.5 py-0.5 font-mono">npm install @emoratest/sdk</code>
+                The script loads from our CDN and automatically tracks user behavior, emotions, and conversions.
               </p>
+              <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+                <p className="text-xs text-blue-700">
+                  <strong>Next.js 14?</strong> Use the EmoraTestScript component pattern shown in the documentation to avoid CSP issues.
+                </p>
+              </div>
             </div>
           )}
 

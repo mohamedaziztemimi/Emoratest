@@ -71,8 +71,8 @@ export default function DocsPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ height: "64px" }}>
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-          <Link href="/dashboard" className="text-sm font-medium text-[#007BFF] hover:underline">
-            ← Back to Dashboard
+          <Link href="/" className="text-sm font-medium text-[#007BFF] hover:underline">
+            ← Back to Home
           </Link>
           <h1 className="text-lg font-semibold text-gray-900">EmoraTest Documentation</h1>
         </div>
@@ -123,8 +123,8 @@ export default function DocsPage() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <p className="text-sm text-blue-800 font-medium mb-2">What you&apos;ll need:</p>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Your <strong>SDK Key</strong> — found in Settings → SDK & Integration</li>
-                  <li>• Your <strong>Server URL</strong> — e.g., <code>https://your-emoratest-server.com</code></li>
+                  <li>• Your <strong>SDK Key</strong> — found in Settings → SDK after signing up</li>
+                  <li>• Access to edit your website&apos;s HTML or JavaScript files</li>
                 </ul>
               </div>
             </section>
@@ -135,27 +135,144 @@ export default function DocsPage() {
             <section id="installation" className="mb-12 scroll-mt-20">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Installation</h2>
               <p className="text-gray-600 mb-4">
-                Add this script tag before the closing <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">&lt;/body&gt;</code> tag on every page you want to track:
+                Choose your platform below. The SDK loads from our CDN and initializes automatically.
               </p>
 
-              <CodeBlock
-                id="install-script"
-                language="html"
-                code={`<script src="https://YOUR_SERVER/static/sdk/emoratest.umd.js"></script>
+              {/* HTML Installation */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">HTML (Any Website)</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Add this before the closing <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">&lt;/head&gt;</code> tag:
+                </p>
+                <CodeBlock
+                  id="install-html"
+                  language="html"
+                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({
     sdkKey: "YOUR_SDK_KEY",
-    apiUrl: "https://YOUR_SERVER"
+    apiUrl: "https://emoratest.com"
   });
 </script>`}
-                copiedId={copiedCode}
-                onCopy={copyToClipboard}
-              />
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
+
+              {/* Next.js Installation */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Next.js 14 (App Router)</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Create a Client Component and add it to your root layout:
+                </p>
+                <CodeBlock
+                  id="install-nextjs"
+                  language="tsx"
+                  code={`// src/components/EmoraTestScript.tsx
+"use client";
+
+import { useEffect } from "react";
+
+export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
+  useEffect(() => {
+    if (!sdkKey) return;
+
+    // Prevent duplicate script
+    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey,
+          apiUrl: "https://emoratest.com"
+        });
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
+    script.async = true;
+
+    script.onload = () => {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey,
+          apiUrl: "https://emoratest.com"
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+  }, [sdkKey]);
+
+  return null;
+}
+
+// Then in app/layout.tsx:
+import EmoraTestScript from "@/components/EmoraTestScript";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <EmoraTestScript sdkKey={process.env.NEXT_PUBLIC_EMORATEST_KEY} />
+      </body>
+    </html>
+  );
+}`}
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
+
+              {/* React Installation */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">React (Vite, Create React App)</h3>
+                <CodeBlock
+                  id="install-react"
+                  language="tsx"
+                  code={`// In your root App component (App.tsx or index.tsx)
+import { useEffect } from 'react';
+
+function App() {
+  useEffect(() => {
+    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey: "YOUR_SDK_KEY",
+          apiUrl: "https://emoratest.com"
+        });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
+    script.async = true;
+
+    script.onload = () => {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey: "YOUR_SDK_KEY",
+          apiUrl: "https://emoratest.com"
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+  }, []);
+
+  return <YourApp />;
+}`}
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
 
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Replace <code>YOUR_SDK_KEY</code> with the key from your Settings page.
-                  Replace <code>YOUR_SERVER</code> with your EmoraTest server URL.
+                  <strong>Important:</strong> Replace <code>YOUR_SDK_KEY</code> with your actual SDK key from the dashboard.
+                  The <code>apiUrl</code> parameter is optional and defaults to <code>https://emoratest.com</code>.
                 </p>
               </div>
               <p className="text-gray-600 mt-4 text-sm">
@@ -174,14 +291,14 @@ export default function DocsPage() {
 
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 {[
-                  { icon: "🖱️", title: "Mouse movements", desc: "Every cursor movement tracked" },
-                  { icon: "👆", title: "Clicks", desc: "All clicks with element IDs" },
-                  { icon: "📜", title: "Scroll behavior", desc: "Scroll depth and patterns" },
-                  { icon: "😤", title: "Rage clicks", desc: "Rapid clicking = frustration" },
-                  { icon: "🚪", title: "Exit intent", desc: "Cursor to close button" },
-                  { icon: "↕️", title: "Scroll retreats", desc: "Back-and-forth scrolling" },
-                  { icon: "⏱️", title: "Session duration", desc: "Time spent on page" },
-                  { icon: "📄", title: "Page URLs", desc: "Navigation tracking" },
+                  { icon: "🖱️", title: "Mouse movements", desc: "Every cursor movement tracked for emotion analysis" },
+                  { icon: "👆", title: "Clicks", desc: "All clicks with element targets and timestamps" },
+                  { icon: "📜", title: "Scroll behavior", desc: "Scroll depth, velocity, and patterns" },
+                  { icon: "😤", title: "Rage clicks", desc: "Rapid clicking indicates frustration" },
+                  { icon: "🚪", title: "Exit intent", desc: "Cursor moving toward close button" },
+                  { icon: "↕️", title: "Scroll retreats", desc: "Back-and-forth scrolling shows confusion" },
+                  { icon: "⏱️", title: "Session duration", desc: "Time spent on each page" },
+                  { icon: "📄", title: "Page URLs", desc: "Navigation tracking across pages" },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
                     <span className="text-2xl">{item.icon}</span>
@@ -195,7 +312,7 @@ export default function DocsPage() {
 
               <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                 <p className="text-sm text-green-800">
-                  <strong>No extra code needed!</strong> Just install and the dashboard will start showing session data, emotion predictions, and behavior signals.
+                  <strong>No extra code needed!</strong> Just install and the dashboard will start showing session data, emotion predictions, and behavior signals within seconds.
                 </p>
               </div>
             </section>
@@ -213,27 +330,39 @@ export default function DocsPage() {
                 id="conversion-tracking"
                 language="javascript"
                 code={`// Call this when a user completes your goal action
-// For example, after a purchase:
+
+// Example 1: After a purchase button click
 document.getElementById('buy-button').addEventListener('click', function() {
-  EmoraTest.track('purchase', { value: 49.99 });
+  EmoraTest.track('purchase', { value: 49.99, currency: 'USD' });
 });
 
-// For a signup:
+// Example 2: After form submission
 document.getElementById('signup-form').addEventListener('submit', function() {
-  EmoraTest.track('signup');
+  EmoraTest.track('signup', { plan: 'premium' });
 });
 
-// Custom conversion:
+// Example 3: Custom conversion event
 document.getElementById('contact-form').addEventListener('submit', function() {
-  EmoraTest.track('contact', { plan: 'premium' });
-});`}
+  EmoraTest.track('contact', { source: 'landing_page' });
+});
+
+// Example 4: In React/Next.js
+const handlePurchase = () => {
+  // Your purchase logic
+  completeOrder();
+
+  // Track conversion
+  if (window.EmoraTest) {
+    window.EmoraTest.track('purchase', { value: orderTotal });
+  }
+};`}
                 copiedId={copiedCode}
                 onCopy={copyToClipboard}
               />
 
               <p className="text-gray-600 mt-4 text-sm">
-                The first argument is the event name. Use <code className="bg-gray-100 px-1 rounded">&apos;purchase&apos;</code> for e-commerce conversions.
-                You can use any name for custom goals.
+                The first argument is the event name. Common events: <code className="bg-gray-100 px-1 rounded">&apos;purchase&apos;</code>, <code className="bg-gray-100 px-1 rounded">&apos;signup&apos;</code>, <code className="bg-gray-100 px-1 rounded">&apos;lead&apos;</code>.
+                You can use any name for custom goals and include additional properties as an optional second argument.
               </p>
             </section>
 
@@ -281,7 +410,26 @@ async function setupABTest() {
   }
 }
 
-setupABTest();`}
+setupABTest();
+
+// In React/Next.js:
+import { useEffect, useState } from 'react';
+
+function Headline() {
+  const [headline, setHeadline] = useState('Loading...');
+
+  useEffect(() => {
+    EmoraTest.evaluateFlag('hero-headline').then(result => {
+      if (result.variant === 'control') {
+        setHeadline('Welcome to Our Store');
+      } else {
+        setHeadline('Shop the Best Deals Today');
+      }
+    });
+  }, []);
+
+  return <h1>{headline}</h1>;
+}`}
                     copiedId={copiedCode}
                     onCopy={copyToClipboard}
                   />
@@ -307,7 +455,7 @@ setupABTest();`}
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mt-6">
                 <p className="text-sm text-purple-800">
                   <strong>How it works:</strong> Each visitor automatically gets assigned one variant and always sees the same one.
-                  The SDK handles this deterministically — you don&apos;t need to manage user assignments.
+                  The SDK handles this deterministically using stable hashing — you don&apos;t need to manage user assignments.
                 </p>
               </div>
             </section>
@@ -328,7 +476,12 @@ setupABTest();`}
                     code={`const result = await EmoraTest.evaluateFlag('cta-button-color');
 const button = document.getElementById('cta-button');
 
-if (result.variant === 'variant_b') {
+if (result.variant === 'control') {
+  // Original: Blue button
+  button.style.backgroundColor = '#007BFF';
+  button.textContent = 'Buy Now';
+} else {
+  // Variant: Orange with urgency
   button.style.backgroundColor = '#FF6B00';
   button.textContent = 'Buy Now — Free Shipping';
 }`}
@@ -400,7 +553,7 @@ switch (result.variant) {
                 {[
                   {
                     title: "Sessions",
-                    desc: "Every user visit. Shows emotion detected, friction score, abandonment risk, and user intent.",
+                    desc: "Every user visit. Shows emotion detected, friction score, abandonment risk, and user intent. Real-time updates.",
                     color: "blue",
                   },
                   {
@@ -410,17 +563,17 @@ switch (result.variant) {
                   },
                   {
                     title: "Heatmap",
-                    desc: "Visual display of where users click, scroll, and move. Shows dominant emotion per page element.",
+                    desc: "Visual display of where users click, scroll, and move. Shows dominant emotion per page element with color gradients.",
                     color: "green",
                   },
                   {
                     title: "Feature Flags",
-                    desc: "Your A/B tests. Create flags, assign variants, track which version performs better.",
+                    desc: "Your A/B tests. Create flags, assign variants, track which version performs better with statistical significance.",
                     color: "orange",
                   },
                   {
                     title: "Emotion Analysis",
-                    desc: "Each session gets an emotion prediction (frustration, delight, confusion, anxiety, etc.) based on mouse behavior patterns. 86%+ accuracy.",
+                    desc: "Each session gets an emotion prediction (frustration, delight, confusion, anxiety, boredom, focus) based on mouse behavior patterns. 86%+ accuracy.",
                     color: "red",
                   },
                 ].map((item) => (
@@ -464,7 +617,7 @@ switch (result.variant) {
                     {[
                       {
                         method: "EmoraTest.init({ sdkKey, apiUrl })",
-                        desc: "Initialize the SDK. Call once per page load.",
+                        desc: "Initialize the SDK. Call once per page load. apiUrl defaults to https://emoratest.com.",
                       },
                       {
                         method: "await EmoraTest.evaluateFlag(flagKey)",
@@ -472,15 +625,19 @@ switch (result.variant) {
                       },
                       {
                         method: "EmoraTest.track(eventName, properties?)",
-                        desc: "Track a custom event like purchase, signup, etc.",
+                        desc: "Track a custom event like purchase, signup, etc. Optional properties object for metadata.",
                       },
                       {
                         method: "EmoraTest.getSessionId()",
-                        desc: "Get the current session ID.",
+                        desc: "Get the current session ID (changes on each page visit).",
                       },
                       {
                         method: "EmoraTest.getVisitorId()",
-                        desc: "Get the persistent visitor ID.",
+                        desc: "Get the persistent visitor ID (same across sessions for the same browser).",
+                      },
+                      {
+                        method: "EmoraTest.destroy()",
+                        desc: "Clean up the SDK instance. Useful for single-page apps.",
                       },
                     ].map((item) => (
                       <tr key={item.method}>
@@ -507,24 +664,28 @@ switch (result.variant) {
               <div className="space-y-4">
                 {[
                   {
-                    q: "SDK not loading",
-                    a: "Check that the script src URL is correct and your server is running. Open browser DevTools Console to see error messages.",
+                    q: "SDK not loading / window.EmoraTest is undefined",
+                    a: "Check that the script src URL is correct: https://emoratest.com/static/sdk/emoratest.umd.js. Open browser DevTools Console to see error messages. For Next.js, make sure your component has 'use client' directive.",
                   },
                   {
-                    q: "401 errors in console",
-                    a: "Your SDK key is invalid. Go to Settings → SDK & Integration and copy the current key.",
+                    q: "401 Unauthorized errors in console",
+                    a: "Your SDK key is invalid. Go to Settings → SDK in the dashboard and copy the current key. Make sure you didn't accidentally include extra spaces.",
                   },
                   {
                     q: "Sessions not appearing in dashboard",
-                    a: "Check browser console for errors. Make sure apiUrl points to your EmoraTest server (e.g., http://localhost:8000 for local testing).",
+                    a: "Verify the SDK is loaded by typing window.EmoraTest in the browser console. Check that apiUrl points to https://emoratest.com. If using localhost, ensure your backend is running.",
                   },
                   {
                     q: "A/B test always shows the same variant",
-                    a: "This is correct! Each visitor always gets the same variant for consistency. Open an incognito window to see the other variant.",
+                    a: "This is correct! Each visitor always gets the same variant for consistency. Open an incognito window to see the other variant. The SDK uses stable hashing based on visitor ID.",
                   },
                   {
                     q: "Emotion showing as 'Analyzing...'",
-                    a: "The emotion model runs when the session ends. Wait for the user to leave the page or close the tab. Results appear within 30 seconds.",
+                    a: "The emotion model runs when the session ends or after sufficient data is collected. Wait for the user to leave the page or spend more time on the page. Results appear within 30 seconds.",
+                  },
+                  {
+                    q: "Content Security Policy (CSP) errors",
+                    a: "Add https://emoratest.com to your CSP script-src directive. For Next.js, update next.config.js headers() to include 'https://emoratest.com' in script-src.",
                   },
                 ].map((item, i) => (
                   <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">

@@ -16,7 +16,7 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
   const [sdkCopied, setSdkCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("html");
+  const [activeTab, setActiveTab] = useState<TabType>("nextjs");
   const [signalReceived, setSignalReceived] = useState(false);
   const [polling, setPolling] = useState(true);
 
@@ -45,7 +45,7 @@ export default function WelcomePage() {
           credentials: "include",
         });
       } catch (err) {
-        console.error("Failed to mark onboarding complete:", err);
+        // Silently fail - user can continue
       } finally {
         setLoading(false);
       }
@@ -107,39 +107,92 @@ export default function WelcomePage() {
     );
   }
 
-  // Code snippets with actual SDK key
+  // Code snippets with actual SDK key - UPDATED URLs
   const codeSnippets: Record<TabType, string> = {
-    html: `<script>
-  (function(w,d,s,k){
-    w.EmoraTest=w.EmoraTest||{};
-    w.EmoraTest.key=k;
-    var e=d.createElement(s);
-    e.async=true;
-    e.src='https://cdn.emoratest.com/sdk.js';
-    d.head.appendChild(e);
-  })(window,document,'script','${sdkKey}');
+    html: `<!-- Add before closing </head> tag -->
+<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+<script>
+  window.EmoraTest.init({
+    sdkKey: "${sdkKey}",
+    apiUrl: "https://emoratest.com"
+  });
 </script>`,
-    nextjs: `// In app/layout.tsx or pages/_app.tsx
-import Script from 'next/script'
+    nextjs: `// Create: src/components/EmoraTestScript.tsx
+"use client";
 
-<Script
-  src="https://cdn.emoratest.com/sdk.js"
-  data-sdk-key="${sdkKey}"
-  strategy="afterInteractive"
-/>`,
-    react: `// In your root App component
-useEffect(() => {
-  window.EmoraTest = { key: '${sdkKey}' };
-  const script = document.createElement('script');
-  script.src = 'https://cdn.emoratest.com/sdk.js';
-  script.async = true;
-  document.head.appendChild(script);
-}, []);`,
+import { useEffect } from "react";
+
+export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
+  useEffect(() => {
+    if (!sdkKey) return;
+
+    // Prevent duplicate script
+    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({ sdkKey, apiUrl: "https://emoratest.com" });
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
+    script.async = true;
+
+    script.onload = () => {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({ sdkKey, apiUrl: "https://emoratest.com" });
+      }
+    };
+
+    document.body.appendChild(script);
+  }, [sdkKey]);
+
+  return null;
+}
+
+// Then in app/layout.tsx:
+import EmoraTestScript from "@/components/EmoraTestScript";
+
+<EmoraTestScript sdkKey="${sdkKey}" />`,
+    react: `// In your root App component (index.tsx or App.tsx)
+import { useEffect } from 'react';
+
+function App() {
+  useEffect(() => {
+    // Prevent duplicate script
+    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
+      if (window.EmoraTest) {
+        window.EmoraTest.init({
+          sdkKey: "${sdkKey}",
+          apiUrl: "https://emoratest.com"
+        });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
+    script.async = true;
+
+    script.onload = () => {
+      if (window.EmoraTest) {
+        window.EmoraTest.init({
+          sdkKey: "${sdkKey}",
+          apiUrl: "https://emoratest.com"
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+  }, []);
+
+  return <YourApp />;
+}`,
   };
 
   const tabs = [
-    { id: "html" as TabType, label: "HTML" },
-    { id: "nextjs" as TabType, label: "Next.js" },
+    { id: "html" as TabType, label: "HTML (Any Site)" },
+    { id: "nextjs" as TabType, label: "Next.js 14" },
     { id: "react" as TabType, label: "React" },
   ];
 
@@ -154,7 +207,7 @@ useEffect(() => {
         alignItems: "center",
       }}
     >
-      <div style={{ width: "100%", maxWidth: "680px" }}>
+      <div style={{ width: "100%", maxWidth: "700px" }}>
 
         {/* STEP 1 — Welcome Header */}
         <div
@@ -211,11 +264,11 @@ useEffect(() => {
               margin: 0,
             }}
           >
-            Your account is ready. Complete setup in 2 minutes.
+            Your account is ready. Install the SDK to start tracking emotions.
           </p>
         </div>
 
-        {/* ENHANCEMENT 1: Warning Banner */}
+        {/* Warning Banner */}
         <div
           style={{
             background: "#FFFBEB",
@@ -251,12 +304,22 @@ useEffect(() => {
               lineHeight: "1.4",
             }}
           >
-            Save your SDK key now — it will never be shown again for security reasons.
+            <strong>Save your SDK key now</strong> — it will never be shown again for security reasons. You can always find it in Settings → SDK.
           </p>
         </div>
 
-        {/* ENHANCEMENT 2: SDK Key Display */}
+        {/* SDK Key Display */}
         <div style={{ marginBottom: "24px" }}>
+          <p
+            style={{
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "8px",
+            }}
+          >
+            Your SDK Key
+          </p>
           <div
             style={{
               position: "relative",
@@ -271,7 +334,7 @@ useEffect(() => {
             <code
               style={{
                 fontFamily: "monospace",
-                fontSize: "16px",
+                fontSize: "14px",
                 color: "#10B981",
                 letterSpacing: "0.5px",
                 wordBreak: "break-all",
@@ -304,20 +367,30 @@ useEffect(() => {
               {sdkCopied ? "✓ Copied!" : "Copy Key"}
             </button>
           </div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "#9CA3AF",
-              marginTop: "10px",
-              textAlign: "center",
-            }}
-          >
-            Your SDK Key: saved securely in your account. Retrieve it anytime from Settings → SDK.
-          </p>
         </div>
 
-        {/* ENHANCEMENT 3: Installation Tabs */}
+        {/* Installation Tabs */}
         <div style={{ marginBottom: "24px" }}>
+          <p
+            style={{
+              fontSize: "15px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "12px",
+            }}
+          >
+            Install the SDK
+          </p>
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#6B7280",
+              marginBottom: "16px",
+            }}
+          >
+            Choose your platform and add the code to your site:
+          </p>
+
           <div
             style={{
               display: "flex",
@@ -361,7 +434,7 @@ useEffect(() => {
               style={{
                 margin: 0,
                 fontFamily: "monospace",
-                fontSize: "13px",
+                fontSize: "12px",
                 color: "#E2E8F0",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
@@ -401,21 +474,24 @@ useEffect(() => {
             </button>
           </div>
 
-          <p
+          <div
             style={{
-              fontSize: "13px",
+              fontSize: "12px",
               color: "#6B7280",
               marginTop: "12px",
-              lineHeight: "1.4",
+              padding: "12px",
+              background: "#F9FAFB",
+              borderRadius: "8px",
+              border: "1px solid #E5E7EB",
             }}
           >
-            {activeTab === "html" && "Paste before &lt;/head&gt; on every page."}
-            {activeTab === "nextjs" && "Add to your root layout file."}
-            {activeTab === "react" && "Add to your root App component."}
-          </p>
+            <p style={{ margin: 0, lineHeight: "1.5" }}>
+              <strong>Tip:</strong> After installing, visit your website and check back here. We&apos;ll automatically detect when the first session is recorded.
+            </p>
+          </div>
         </div>
 
-        {/* ENHANCEMENT 4: Verification Status Card */}
+        {/* Verification Status Card */}
         <div
           style={{
             background: "white",
@@ -469,7 +545,7 @@ useEffect(() => {
                     margin: 0,
                   }}
                 >
-                  Install the snippet and visit your website. We&apos;ll detect it automatically.
+                  Install the SDK and visit your website. We&apos;ll detect it automatically.
                 </p>
               </div>
             </>
@@ -510,7 +586,7 @@ useEffect(() => {
                     margin: "0 0 4px 0",
                   }}
                 >
-                  First signal received!
+                  SDK is working!
                 </p>
                 <p
                   style={{
@@ -549,7 +625,7 @@ useEffect(() => {
           )}
         </div>
 
-        {/* ENHANCEMENT 5: Bottom CTA */}
+        {/* Bottom CTA */}
         <div
           style={{
             display: "flex",
@@ -585,14 +661,14 @@ useEffect(() => {
             Go to Dashboard →
           </a>
           <a
-            href="/dashboard"
+            href="/docs"
             style={{
               fontSize: "13px",
               color: "#9CA3AF",
               textDecoration: "none",
             }}
           >
-            Skip for now, I&apos;ll install later
+            Read the full documentation
           </a>
         </div>
 

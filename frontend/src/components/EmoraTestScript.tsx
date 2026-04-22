@@ -1,22 +1,41 @@
 "use client";
 
-import Script from "next/script";
+import { useEffect } from "react";
 
 export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
-  if (!sdkKey) return null;
+  useEffect(() => {
+    if (!sdkKey) return;
 
-  return (
-    <Script
-      src="https://emoratest.com/static/sdk/emoratest.umd.js"
-      strategy="afterInteractive"
-      onLoad={() => {
-        if (typeof window !== "undefined" && (window as any).EmoraTest) {
-          (window as any).EmoraTest.init({
-            sdkKey,
-            apiUrl: "https://emoratest.com",
-          });
-        }
-      }}
-    />
-  );
+    // Prevent duplicate script
+    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey,
+          apiUrl: "https://emoratest.com",
+        });
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
+    script.async = true;
+
+    script.onload = () => {
+      if ((window as any).EmoraTest) {
+        (window as any).EmoraTest.init({
+          sdkKey,
+          apiUrl: "https://emoratest.com",
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      // optional cleanup (keep script if you want persistence)
+    };
+  }, [sdkKey]);
+
+  return null;
 }
