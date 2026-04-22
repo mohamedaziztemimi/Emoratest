@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -121,92 +122,27 @@ elif not cors_origins:
 else:
     default_origins = []
 
-def is_local_network(origin: str) -> bool:
-    """Check if origin is from local network."""
-    if not origin:
-        return False
-    # Allow localhost variants
-    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
-        return True
-    # Allow local network IPs (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
-    for prefix in ["http://10.", "http://192.168.", "http://172.16.", "http://172.17.",
-                   "http://172.18.", "http://172.19.", "http://172.20.", "http://172.21.",
-                   "http://172.22.", "http://172.23.", "http://172.24.", "http://172.25.",
-                   "http://172.26.", "http://172.27.", "http://172.28.", "http://172.29.",
-                   "http://172.30.", "http://172.31."]:
-        if origin.startswith(prefix):
-            return True
-    return False
-
-
-def is_production_domain(origin: str) -> bool:
-    """Check if origin is from the production domain (emoratest.com)."""
-    if not origin:
-        return False
-    # Allow any subdomain of emoratest.com
-    allowed_domains = [
-        "emoratest.com",
-        "www.emoratest.com",
-        "api.emoratest.com",
-        "dashboard.emoratest.com",
-    ]
-    for domain in allowed_domains:
-        if origin == f"https://{domain}" or origin.endswith(f".{domain}"):
-            return True
-    return False
-
-# In development mode, dynamically allow local network origins
-# In production, also allow any subdomain of emoratest.com
-if os.getenv("ENVIRONMENT") != "production":
-
-    class DynamicCORSMiddleware(CORSMiddleware):
-        """CORS middleware that dynamically allows local network origins in development."""
-
-        async def preflight_handler(self, request: Request, call_next):
-            origin = request.headers.get("origin")
-            if origin and (is_local_network(origin) or is_production_domain(origin)):
-                # Add origin to allow_origins temporarily
-                if origin not in self.allow_origins:
-                    self.allow_origins.append(origin)
-            return await super().preflight_handler(request, call_next)
-
-        async def simple_response(self, request: Request, call_next, response):
-            origin = request.headers.get("origin")
-            if origin and (is_local_network(origin) or is_production_domain(origin)):
-                if origin not in self.allow_origins:
-                    self.allow_origins.append(origin)
-            return await super().simple_response(request, call_next, response)
-
+# Use standard CORSMiddleware - wildcard for development, specific domains for production
+# The allow_origin_regex parameter handles dynamic subdomain matching
+if os.getenv("ENVIRONMENT") == "production":
+    # Production: allow all emoratest.com subdomains via regex
+    allow_origin_regex = r"https://([a-z0-9-]+\.)*emoratest\.com"
     app.add_middleware(
-        DynamicCORSMiddleware,
+        CORSMiddleware,
         allow_origins=default_origins + cors_origins,
+        allow_origin_regex=allow_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"],
     )
 else:
-    # Production: also use dynamic middleware for subdomain support
-    class ProductionCORSMiddleware(CORSMiddleware):
-        """CORS middleware that dynamically allows production subdomains."""
-
-        async def preflight_handler(self, request: Request, call_next):
-            origin = request.headers.get("origin")
-            if origin and is_production_domain(origin):
-                if origin not in self.allow_origins:
-                    self.allow_origins.append(origin)
-            return await super().preflight_handler(request, call_next)
-
-        async def simple_response(self, request: Request, call_next, response):
-            origin = request.headers.get("origin")
-            if origin and is_production_domain(origin):
-                if origin not in self.allow_origins:
-                    self.allow_origins.append(origin)
-            return await super().simple_response(request, call_next, response)
-
+    # Development: allow localhost and local network via regex
+    allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)"
     app.add_middleware(
-        ProductionCORSMiddleware,
+        CORSMiddleware,
         allow_origins=default_origins + cors_origins,
+        allow_origin_regex=allow_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
