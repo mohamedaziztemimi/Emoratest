@@ -311,6 +311,11 @@ async def ingest_events(
             velocity=e.velocity,
             element_id=e.element_id,
             metadata_=e.metadata,
+            # Semantic enrichment fields
+            label=getattr(e, "label", None),
+            element_type=getattr(e, "element_type", None),
+            section=getattr(e, "section", None),
+            selector=getattr(e, "selector", None),
         )
         for e in body.events
     ]

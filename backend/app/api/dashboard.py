@@ -244,6 +244,11 @@ async def get_session_detail(
                 velocity=e.velocity,
                 element_id=e.element_id,
                 metadata=e.metadata_,
+                # Semantic enrichment fields
+                label=e.label,
+                element_type=e.element_type,
+                section=e.section,
+                selector=e.selector,
             )
             for e in events
         ],

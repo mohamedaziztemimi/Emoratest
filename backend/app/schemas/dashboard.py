@@ -41,6 +41,11 @@ class EventOut(BaseModel):
     velocity: float | None = None
     element_id: str | None = None
     metadata: dict | None = None
+    # Semantic enrichment fields (business-readable)
+    label: str | None = None
+    element_type: str | None = None
+    section: str | None = None
+    selector: str | None = None
 
 
 class SessionFeaturesOut(BaseModel):

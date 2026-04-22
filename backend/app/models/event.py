@@ -12,7 +12,7 @@ class Event(Base):
     __tablename__ = "events"
     __table_args__ = (
         CheckConstraint(
-            "type IN ('mouse_move','click','scroll','exit_intent','visibility')",
+            "type IN ('mouse_move','click','scroll','exit_intent','visibility','mouse_summary')",
             name="ck_events_type",
         ),
     )
@@ -30,3 +30,9 @@ class Event(Base):
     velocity: Mapped[float | None] = mapped_column(Float)
     element_id: Mapped[str | None] = mapped_column(String(128))
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
+
+    # Semantic event enrichment (business-readable fields)
+    label: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    element_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    section: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    selector: Mapped[str | None] = mapped_column(String(512), nullable=True)

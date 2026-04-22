@@ -29,7 +29,7 @@ class SessionOutcomeRequest(BaseModel):
 
 class EventItem(BaseModel):
     type: str = Field(
-        ..., pattern=r"^(mouse_move|click|scroll|exit_intent|visibility)$"
+        ..., pattern=r"^(mouse_move|click|scroll|exit_intent|visibility|mouse_summary)$"
     )
     ts: datetime
     x: float | None = None
@@ -37,6 +37,11 @@ class EventItem(BaseModel):
     velocity: float | None = None
     element_id: str | None = Field(None, max_length=128)
     metadata: dict | None = None
+    # Semantic enrichment fields (business-readable)
+    label: str | None = Field(None, max_length=256)
+    element_type: str | None = Field(None, max_length=32)
+    section: str | None = Field(None, max_length=64)
+    selector: str | None = Field(None, max_length=512)
 
 
 class EventBatchRequest(BaseModel):

@@ -33,6 +33,9 @@ from app.core.errors import (
 )
 from app.core.security import SecurityHeadersMiddleware
 
+# Import emotion model bootstrap for ML pipeline initialization
+from app.services.emotion_model_bootstrap import bootstrap_emotion_model
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -40,6 +43,16 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_PREFIX}/docs",
     redoc_url=f"{settings.API_V1_PREFIX}/redoc",
 )
+
+
+# ── Startup events ────────────────────────────────────────────────────
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize ML models on startup."""
+    # Bootstrap emotion model if artifacts don't exist
+    bootstrap_emotion_model()
 
 # ── Static files (SDK and test page) ─────────────────────────────
 static_dir = Path(__file__).parent.parent / "static"
