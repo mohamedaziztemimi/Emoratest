@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "next-themes";
+
+export interface SidebarProps {
+  onClose?: () => void;
+}
 
 // ── Navigation Structure ─────────────────────────────────────────────
 const NAV_GROUPS = [
@@ -15,7 +20,8 @@ const NAV_GROUPS = [
   {
     label: "EXPERIMENTS",
     items: [
-      { href: "/dashboard/flags", label: "A/B Tests", icon: FlaskIcon },
+      { href: "/dashboard/experiments", label: "A/B Tests", icon: FlaskIcon },
+      { href: "/dashboard/flags", label: "Feature Flags", icon: FlagIcon },
       { href: "/dashboard/bandits", label: "Bandits", icon: TargetIcon },
     ],
   },
@@ -31,8 +37,8 @@ const NAV_GROUPS = [
     label: "INSIGHTS",
     items: [
       { href: "/dashboard/segments", label: "Segments", icon: UsersIcon },
-      { href: "/dashboard/integrations", label: "Integrations", icon: PlugIcon },
       { href: "/dashboard/interventions", label: "Recovery Actions", icon: ShieldIcon },
+      { href: "/dashboard/integrations", label: "Integrations", icon: PlugIcon },
     ],
   },
   {
@@ -43,32 +49,43 @@ const NAV_GROUPS = [
   },
 ];
 
-export default function Sidebar({ onClose }: { onClose?: () => void }) {
+export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
 
+  const handleNavClick = () => {
+    // Close sidebar on mobile after navigation
+    if (onClose) onClose();
+  };
+
   return (
-    <aside className="dashboard-sidebar">
+    <aside className="flex h-full w-64 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))]">
       {/* Header */}
-      <div className="sidebar-header">
-        <Link href="/" className="sidebar-logo">
-          <img src="/logo2.png" alt="EmoraTest" style={{ height: "32px", width: "auto" }} />
-          <span className="sidebar-logo-text">EmoraTest</span>
+      <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] p-4">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[hsl(var(--primary))] to-[#7C3AED]">
+            <span className="text-sm font-bold text-white">E</span>
+          </div>
+          <span className="text-lg font-semibold text-[hsl(var(--foreground))]">EmoraTest</span>
         </Link>
-        <p className="sidebar-subtitle">Emotion ML Platform</p>
       </div>
 
       {/* Navigation */}
-      <nav className="sidebar-nav">
+      <nav className="flex-1 overflow-y-auto p-3">
         {NAV_GROUPS.map((group, groupIndex) => (
-          <div key={groupIndex}>
-            {group.label && <div className="nav-group-label">{group.label}</div>}
+          <div key={groupIndex} className="mb-4">
+            {group.label && (
+              <div className="mb-2 px-3 text-xs font-semibold text-[hsl(var(--muted-foreground))]">
+                {group.label}
+              </div>
+            )}
             {group.items.map((item) => {
               const isActive =
                 item.href === "/dashboard"
@@ -79,10 +96,14 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={onClose}
-                  className={`nav-item ${isActive ? "active" : ""}`}
+                  onClick={handleNavClick}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-[hsl(var(--primary))] text-white"
+                      : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                  }`}
                 >
-                  <item.icon />
+                  <div className="h-4 w-4">{<item.icon />}</div>
                   <span>{item.label}</span>
                 </Link>
               );
@@ -92,15 +113,30 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <p className="sidebar-user-email">{user?.email || "merchant@emoratest.com"}</p>
-          <span className="sidebar-user-plan">{user?.plan || "Trial"} Plan</span>
+      <div className="border-t border-[hsl(var(--border))] p-3">
+        <div className="mb-2 rounded-lg bg-[hsl(var(--secondary))] p-3">
+          <p className="truncate text-xs font-medium text-[hsl(var(--foreground))]">
+            {user?.email || "merchant@emoratest.com"}
+          </p>
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">
+            {user?.plan || "Trial"} Plan
+          </span>
         </div>
-        <button onClick={handleLogout} className="sidebar-signout">
-          <LogoutIcon />
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
+          >
+            <div className="h-4 w-4">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</div>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
+          >
+            <div className="h-4 w-4"><LogoutIcon /></div>
+            Sign out
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -201,6 +237,22 @@ function ShieldIcon() {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
     </svg>
   );
 }

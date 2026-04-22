@@ -5,7 +5,7 @@
  * unload scenarios (sendBeacon is fire-and-forget but reliable during unload).
  */
 
-import type { BatchPayload, SessionCreatePayload, SessionCreateResponse } from "./types";
+import type { BatchPayload, SessionCreatePayload, SessionCreateResponse, OutcomeType } from "./types";
 
 export class Transport {
   private readonly baseUrl: string;
@@ -88,6 +88,38 @@ export class Transport {
       this.handleAuthError(res);
       throw new Error(`Session end failed: ${res.status} ${res.statusText}`);
     }
+  }
+
+  /** PUT /api/v1/sessions/:id/outcome — report an outcome. */
+  async reportOutcome(sessionId: string, outcome: OutcomeType): Promise<void> {
+    if (this.disabled) {
+      return; // Silent fail
+    }
+
+    const res = await fetch(
+      `${this.baseUrl}/api/v1/sessions/${sessionId}/outcome`,
+      {
+        method: "PUT",
+        headers: this.headers,
+        body: JSON.stringify({ outcome }),
+      },
+    );
+
+    if (!res.ok) {
+      this.handleAuthError(res);
+      throw new Error(`Outcome report failed: ${res.status} ${res.statusText}`);
+    }
+  }
+
+  /** Combined: end session WITH outcome. */
+  async endSessionWithOutcome(sessionId: string, outcome: OutcomeType): Promise<void> {
+    if (this.disabled) {
+      return; // Silent fail
+    }
+
+    // First report outcome, then end session
+    await this.reportOutcome(sessionId, outcome);
+    await this.endSession(sessionId);
   }
 
   /**

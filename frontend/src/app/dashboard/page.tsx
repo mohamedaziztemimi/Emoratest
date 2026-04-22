@@ -167,20 +167,20 @@ export default function OverviewPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">Overview</h1>
-        <p className="page-subtitle">Your emotion intelligence command center</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Overview</h1>
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">Your emotion intelligence command center</p>
       </div>
 
       {/* Loading State - Skeleton Cards */}
       {stats.loading && (
         <>
-          <div className="stat-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[1, 2, 3, 4].map((i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-          <div className="content-grid content-grid-2-1">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SkeletonCard height="300px" />
             <SkeletonCard height="300px" />
           </div>
@@ -198,89 +198,33 @@ export default function OverviewPage() {
 
       {/* No Data State - Onboarding Banner */}
       {!stats.loading && !stats.hasData && (
-        <div
-          style={{
-            background: "white",
-            border: "1.5px solid #E5E7EB",
-            borderRadius: "16px",
-            padding: "24px 32px",
-            display: "flex",
-            alignItems: "center",
-            gap: "24px",
-            marginBottom: "32px",
-          }}
-        >
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 sm:p-6 mb-6 bg-white border border-[hsl(var(--border))] rounded-2xl">
           {/* Rocket emoji in blue circle */}
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "50%",
-              background: "#DBEAFE",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "24px",
-              flexShrink: 0,
-            }}
-          >
+          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl flex-shrink-0">
             🚀
           </div>
 
           {/* Middle content */}
-          <div style={{ flex: 1 }}>
-            <h3
-              style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                color: "#111318",
-                margin: "0 0 4px 0",
-              }}
-            >
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-lg font-bold text-[hsl(var(--foreground))] mb-1">
               Install the SDK to see your real data
             </h3>
-            <p
-              style={{
-                fontSize: "14px",
-                color: "#6B7280",
-                margin: 0,
-              }}
-            >
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
               You&apos;re seeing demo data. Add one line of code to your website to start detecting emotions.
             </p>
           </div>
 
           {/* Right buttons */}
-          <div style={{ display: "flex", gap: "12px" }}>
+          <div className="flex gap-3 w-full sm:w-auto">
             <a
               href="/dashboard/welcome"
-              style={{
-                background: "linear-gradient(135deg, #007BFF, #7C3AED)",
-                color: "white",
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                fontWeight: "600",
-                fontSize: "14px",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-                display: "inline-block",
-              }}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-[#007BFF] to-[#7C3AED] text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
             >
               Install SDK →
             </a>
             <a
               href="/docs"
-              style={{
-                background: "white",
-                color: "#007BFF",
-                border: "1px solid #E5E7EB",
-                borderRadius: "10px",
-                padding: "12px 24px",
-                fontSize: "14px",
-                fontWeight: "500",
-                textDecoration: "none",
-                display: "inline-block",
-              }}
+              className="flex-1 sm:flex-none bg-white text-[#007BFF] border border-[hsl(var(--border))] rounded-lg px-6 py-3 text-sm font-medium hover:bg-[hsl(var(--accent))] transition-colors"
             >
               View docs
             </a>
@@ -290,7 +234,7 @@ export default function OverviewPage() {
 
       {/* Row 1: Stat Cards */}
       {!stats.loading && (
-        <div className="stat-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Active Experiments"
             value={stats.hasData ? String(stats.activeExperiments) : "3"}
@@ -328,21 +272,21 @@ export default function OverviewPage() {
 
       {/* Row 2: Emotion Trends + Top Confusion Pages */}
       {!stats.loading && (
-        <div className="content-grid content-grid-2-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Emotion Trends Chart */}
           <Card>
-            <div className="card-header">
-              <h2 className="card-title" style={{ color: "#111318" }}>Emotion Trends — Last 7 Days</h2>
-              <p className="card-subtitle">Confusion, frustration and delight over time</p>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Emotion Trends — Last 7 Days</h2>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">Confusion, frustration and delight over time</p>
             </div>
             <EmotionTrendsChart hasData={stats.hasData} />
           </Card>
 
           {/* Top Confusion Pages */}
           <Card>
-            <div className="card-header">
-              <h2 className="card-title" style={{ color: "#111318" }}>Top Confusion Pages</h2>
-              <p className="card-subtitle">Pages triggering most confusion signals</p>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Top Confusion Pages</h2>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">Pages triggering most confusion signals</p>
             </div>
             <ConfusionPagesList hasData={stats.hasData} />
           </Card>
@@ -351,20 +295,20 @@ export default function OverviewPage() {
 
       {/* Row 3: Active Experiments + AI Suggestions */}
       {!stats.loading && (
-        <div className="content-grid content-grid-1-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Active Experiments */}
           <Card>
-            <div className="card-header">
-              <h2 className="card-title" style={{ color: "#111318" }}>Active Experiments</h2>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Active Experiments</h2>
             </div>
             <ActiveExperimentsList hasData={stats.hasData} activeCount={stats.activeExperiments} />
           </Card>
 
           {/* AI Suggestions */}
           <Card>
-            <div className="card-header">
-              <h2 className="card-title" style={{ color: "#111318" }}>AI Suggestions</h2>
-              <p className="card-subtitle">Based on emotion patterns detected</p>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">AI Suggestions</h2>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">Based on emotion patterns detected</p>
             </div>
             <AISuggestionsList hasData={stats.hasData} />
           </Card>
@@ -378,22 +322,11 @@ export default function OverviewPage() {
 function SkeletonCard({ height = "140px" }: { height?: string }) {
   return (
     <div
-      className="stat-card"
-      style={{
-        height,
-        background: "#F9FAFB",
-        position: "relative",
-        overflow: "hidden",
-      }}
+      className="bg-[hsl(var(--secondary))] rounded-xl relative overflow-hidden"
+      style={{ height }}
     >
       <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.5s infinite",
-        }}
+        className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--secondary))] via-[hsl(var(--muted))] to-[hsl(var(--secondary))] bg-[length:200%_100%] animate-[shimmer_1.5s_infinite]"
       />
     </div>
   );
@@ -416,71 +349,27 @@ function StatCard({
   showDemoBadge?: boolean;
 }) {
   return (
-    <div
-      style={{
-        background: "white",
-        border: "1px solid #E5E7EB",
-        borderRadius: "12px",
-        padding: "20px 24px",
-        position: "relative",
-      }}
-    >
+    <div className="relative bg-white border border-[hsl(var(--border))] rounded-xl p-5">
       {/* Demo Badge */}
       {showDemoBadge && (
-        <span
-          style={{
-            position: "absolute",
-            top: "12px",
-            right: "12px",
-            background: "#F3F4F6",
-            color: "#9CA3AF",
-            fontSize: "10px",
-            borderRadius: "4px",
-            padding: "2px 6px",
-            fontWeight: "500",
-          }}
-        >
+        <span className="absolute top-3 right-3 bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] text-[10px] rounded px-1.5 py-0.5 font-medium">
           Demo
         </span>
       )}
 
       {/* Label with colored dot */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          fontSize: "12px",
-          color: "#6B7280",
-          fontWeight: "500",
-          marginBottom: "8px",
-        }}
-      >
-        <div
-          style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: dotColor,
-          }}
-        />
+      <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] font-medium mb-2">
+        <div className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
         {label}
       </div>
 
       {/* Value */}
-      <div
-        style={{
-          fontSize: "28px",
-          fontWeight: "700",
-          color: valueColor,
-          marginBottom: "4px",
-        }}
-      >
+      <div className="text-2xl font-bold mb-1" style={{ color: valueColor }}>
         {value}
       </div>
 
       {/* Subtext */}
-      <div style={{ fontSize: "12px", color: "#9CA3AF" }}>
+      <div className="text-xs text-[hsl(var(--muted-foreground))]">
         {subtext}
       </div>
     </div>
@@ -489,7 +378,7 @@ function StatCard({
 
 // ── Card Component ───────────────────────────────────────────────────────
 function Card({ children }: { children: React.ReactNode }) {
-  return <div className="card" style={{ padding: "24px" }}>{children}</div>;
+  return <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-6">{children}</div>;
 }
 
 // ── Emotion Trends Chart Component ─────────────────────────────────────────

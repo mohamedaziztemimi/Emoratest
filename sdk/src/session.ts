@@ -13,8 +13,9 @@
  */
 
 import type { Transport } from "./transport";
-import type { OutcomeType, OutcomeWithPriority, getOutcomePriority, shouldOverrideOutcome } from "./types";
+import type { OutcomeType } from "./types";
 import { detectCountryCode, detectDeviceType, isoNow, uuid4 } from "./utils";
+import { getOutcomePriority, shouldOverrideOutcome } from "./types";
 
 const SESSION_KEY = "__emoratest_session";
 const SAMPLING_DECISION_KEY = "__emoratest_sampled";
@@ -168,8 +169,6 @@ export class SessionManager {
 
     // Check if new outcome has higher priority than current
     if (this.state.currentOutcome) {
-      // Import priority functions
-      const { getOutcomePriority, shouldOverrideOutcome } = await import("./types");
       const currentPriority = getOutcomePriority(this.state.currentOutcome);
       const incomingPriority = getOutcomePriority(outcome);
 
@@ -190,25 +189,13 @@ export class SessionManager {
     this.state.currentOutcome = outcome;
 
     try {
-      const response = await fetch(
-        `${this.transport.apiUrl}/api/v1/sessions/${this.session.sessionId}/outcome`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-SDK-Key": this.transport.sdkKey,
-          },
-          body: JSON.stringify({ outcome }),
-        },
-      );
-
-      if (response.ok) {
-        this.state.outcomeReported = true;
-        if (this.debug) {
-          console.debug(`[EmoraTest] Outcome updated: ${outcome}`);
-        }
-        return true;
+      // Use transport method instead of direct fetch
+      await this.transport.reportOutcome(this.session.sessionId, outcome);
+      this.state.outcomeReported = true;
+      if (this.debug) {
+        console.debug(`[EmoraTest] Outcome updated: ${outcome}`);
       }
+      return true;
     } catch (err) {
       if (this.debug) {
         console.error("[EmoraTest] Failed to report outcome:", err);

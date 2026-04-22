@@ -428,7 +428,6 @@ export function MiniDashboard({ persona = "growth", className }: MiniDashboardPr
           <StatCard
             label="Active Tests"
             value={3}
-            delta="2 pending"
             deltaPositive={true}
             animate={false}
           />
