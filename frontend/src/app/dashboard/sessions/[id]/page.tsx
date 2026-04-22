@@ -67,14 +67,19 @@ function formatVelocityVariance(value: number | null | undefined): string {
 }
 
 // Format event description based on type and metadata
-function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; metadata: Record<string, unknown> | null }): string {
+function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; selector: string | null; metadata: Record<string, unknown> | null }): string {
   const metadata = e.metadata as Record<string, unknown> | null;
 
   switch (e.type) {
     case "click":
-      if (metadata?.rage_click) return `Rage click: ${metadata.click_count || 3}+ rapid clicks`;
-      if (e.label) return `Clicked: "${e.label}"`;
-      if (e.element_type) return `Clicked ${e.element_type}`;
+      if (metadata?.rage_click) return `🔥 Rage click: ${metadata.click_count || 3}+ rapid clicks`;
+      if (e.label) return `Clicked "${e.label}"${e.section ? ` in ${e.section}` : ""}`;
+      if (e.element_type) return `Clicked ${e.element_type}${e.section ? ` (${e.section})` : ""}`;
+      if (e.selector) {
+        // Generate meaningful description from selector
+        const selectorDesc = describeSelector(e.selector);
+        return `Clicked ${selectorDesc}`;
+      }
       return "Click detected";
 
     case "scroll":
@@ -87,14 +92,18 @@ function formatEventDescription(e: { type: string; label: string | null; element
       return "Page scroll";
 
     case "exit_intent":
-      if (metadata?.trigger === "mouse_leave") return "Mouse left viewport (exit intent)";
-      if (metadata?.trigger === "back_button") return "Browser back button pressed";
-      if (metadata?.trigger === "tab_switch") return "User switched tabs";
-      return "Exit intent detected";
+      if (metadata?.trigger === "mouse_leave") {
+        return `🚪 Mouse left viewport${e.section ? ` near ${e.section}` : ""} (exit intent)`;
+      }
+      if (metadata?.trigger === "back_button") return "⬅️ Browser back button pressed";
+      if (metadata?.trigger === "tab_switch") return `🔄 User switched tabs${e.label ? ` away from "${e.label}"` : ""}`;
+      return "⚠️ Exit intent detected";
 
     case "visibility":
-      if (metadata?.state === "hidden") return "Tab hidden / minimized";
-      if (metadata?.state === "visible") return "Tab visible / focused";
+      if (metadata?.state === "hidden") {
+        return `👁️ Tab hidden / minimized${e.section ? ` while viewing ${e.section}` : ""}`;
+      }
+      if (metadata?.state === "visible") return "👁️ Tab visible / focused (user returned)";
       return "Visibility changed";
 
     case "mouse_move":
@@ -112,12 +121,79 @@ function formatEventDescription(e: { type: string; label: string | null; element
 
     default:
       if (e.label) return e.label;
+      if (e.selector) return describeSelector(e.selector);
       return `${e.type} event`;
   }
 }
 
+// Generate a meaningful description from a CSS selector
+function describeSelector(selector: string): string {
+  if (!selector) return "element";
+
+  // Check for common patterns
+  const lower = selector.toLowerCase();
+
+  // Button patterns
+  if (lower.includes("button") || lower.includes("btn")) {
+    if (lower.includes("submit")) return '"Submit" button';
+    if (lower.includes("close")) return '"Close" button';
+    if (lower.includes("cancel")) return '"Cancel" button';
+    return "button";
+  }
+
+  // Input patterns
+  if (lower.includes("input")) {
+    if (lower.includes("email")) return "email input field";
+    if (lower.includes("password")) return "password field";
+    if (lower.includes("name")) return "name input field";
+    return "input field";
+  }
+
+  // Link patterns
+  if (lower.startsWith("a.") || lower.startsWith("a[href")) {
+    return "link";
+  }
+
+  // Navigation
+  if (lower.includes("nav") || lower.includes("navbar") || lower.includes("header")) {
+    return "navigation element";
+  }
+
+  // Footer
+  if (lower.includes("footer")) {
+    return "footer element";
+  }
+
+  // Card/container
+  if (lower.includes("card")) {
+    return "content card";
+  }
+
+  // Image
+  if (lower.includes("img")) {
+    return "image";
+  }
+
+  // Section/location info
+  if (lower.includes("hero")) return "hero section";
+  if (lower.includes("sidebar")) return "sidebar";
+  if (lower.includes("modal") || lower.includes("dialog")) return "modal/popup";
+  if (lower.includes("dropdown") || lower.includes("menu")) return "dropdown menu";
+
+  // Extract tag name (first word before ., #, or [)
+  const tagMatch = selector.match(/^([a-z]+)/i);
+  if (tagMatch) {
+    const tag = tagMatch[1];
+    // Capitalize first letter
+    return tag.charAt(0).toUpperCase() + tag.slice(1);
+  }
+
+  // Fallback: show first 50 chars of selector
+  return selector.length > 50 ? selector.slice(0, 50) + "..." : selector;
+}
+
 // Format additional event details
-function formatEventDetails(e: { type: string; x: number | null; y: number | null; velocity: number | null; metadata: Record<string, unknown> | null; section: string | null }): string {
+function formatEventDetails(e: { type: string; x: number | null; y: number | null; velocity: number | null; metadata: Record<string, unknown> | null; section: string | null; element_id: string | null; label: string | null; element_type: string | null; selector: string | null }): string {
   const parts: string[] = [];
 
   // Position for click events
@@ -125,14 +201,28 @@ function formatEventDetails(e: { type: string; x: number | null; y: number | nul
     parts.push(`Position: (${e.x}, ${e.y})`);
   }
 
+  // Show element context for clicks
+  if (e.type === "click") {
+    if (e.label) {
+      parts.push(`Label: "${e.label}"`);
+    } else if (e.element_type) {
+      parts.push(`Type: ${e.element_type}`);
+    } else if (e.selector) {
+      const desc = describeSelector(e.selector);
+      if (desc !== "element") {
+        parts.push(`Element: ${desc}`);
+      }
+    }
+  }
+
+  // Show section when available
+  if (e.section) {
+    parts.push(`Section: ${e.section}`);
+  }
+
   // Velocity for mouse events
   if (e.velocity != null && e.velocity > 0) {
     parts.push(`Velocity: ${Math.round(e.velocity)}px/s`);
-  }
-
-  // Section info
-  if (e.section) {
-    parts.push(`Section: ${e.section}`);
   }
 
   // Scroll-specific details
@@ -144,11 +234,25 @@ function formatEventDetails(e: { type: string; x: number | null; y: number | nul
     if (metadata.is_retreat) {
       parts.push("⚠️ Retreat detected");
     }
+    if (metadata.scroll_depth_pct) {
+      parts.push(`Depth: ${Math.round(Number(metadata.scroll_depth_pct))}%`);
+    }
+  }
+
+  // Exit intent details
+  if (e.type === "exit_intent" && e.metadata) {
+    const metadata = e.metadata as Record<string, unknown>;
+    if (metadata.trigger === "mouse_leave" && metadata.exit_direction) {
+      parts.push(`Direction: ${metadata.exit_direction}`);
+    }
+    if (metadata.time_on_page) {
+      parts.push(`Time on page: ${Math.round(Number(metadata.time_on_page))}s`);
+    }
   }
 
   // Rage click details
   if (e.metadata?.rage_click) {
-    parts.push("🔥 Rage pattern");
+    parts.push("🔥 Rage pattern detected");
   }
 
   return parts.length > 0 ? parts.join(" • ") : "--";

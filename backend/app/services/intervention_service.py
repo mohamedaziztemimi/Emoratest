@@ -42,7 +42,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-001",
         name="Exit Intent Popup — Limited Offer",
         description="Display a time-limited discount when user shows exit intent",
-        trigger="exit_intent_count >= 1 AND abandonment_risk > 0.6",
+        trigger="Detected when user moves mouse toward browser tab/close button",
         psychological_basis="Loss aversion + scarcity: framing the discount as something "
         "the user will lose creates urgency to act",
         min_abandonment_risk=0.5,
@@ -55,7 +55,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-002",
         name="Social Proof Notification",
         description="Show recent purchases or live visitor count near product/checkout",
-        trigger="hesitation_score > 0.5 AND intent_label IN (browsing, comparing)",
+        trigger="Detected during price deliberation or product comparison",
         psychological_basis="Social proof: seeing others buy reduces uncertainty and "
         "validates the purchase decision",
         min_abandonment_risk=0.3,
@@ -68,7 +68,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-003",
         name="Progress Indicator — Checkout Steps",
         description="Add visual progress bar showing checkout completion steps",
-        trigger="checkout_hesitation_s > 10 AND friction_score > 0.5",
+        trigger="Detected during checkout flow when user pauses > 10 seconds",
         psychological_basis="Commitment/consistency + goal gradient: users who see progress "
         "feel invested and accelerate toward completion",
         min_abandonment_risk=0.4,
@@ -81,7 +81,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-004",
         name="Rage Click Recovery",
         description="Detect rage clicks and offer contextual help or navigation assistance",
-        trigger="rage_click_score > 0.3",
+        trigger="Detected when user repeatedly clicks same element in frustration",
         psychological_basis="Frustration recovery: acknowledging difficulty and offering help "
         "prevents abandonment from usability friction",
         min_abandonment_risk=0.2,
@@ -94,7 +94,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-005",
         name="Price Anchoring — Compare Value",
         description="Show original price, savings amount, and per-unit cost comparison",
-        trigger="price_dwell_time_s > 5 AND intent_label = comparing",
+        trigger="Detected when user dwells on pricing for > 5 seconds",
         psychological_basis="Anchoring effect: presenting a higher reference price makes "
         "the actual price feel like a better deal",
         min_abandonment_risk=0.3,
@@ -107,7 +107,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-006",
         name="Scroll Retreat — Content Simplification",
         description="Simplify page layout when user repeatedly scrolls back up",
-        trigger="scroll_retreat_count >= 3",
+        trigger="Detected when user scrolls back up 3+ times (overwhelmed signal)",
         psychological_basis="Cognitive load reduction: users retreating up the page are "
         "overwhelmed — simplifying reduces decision fatigue",
         min_abandonment_risk=0.3,
@@ -120,7 +120,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-007",
         name="Urgency Timer — Cart Reservation",
         description="Show countdown timer reserving cart items for a limited time",
-        trigger="intent_label = buying AND abandonment_risk > 0.5",
+        trigger="Detected during buying intent with high abandonment risk",
         psychological_basis="Scarcity + loss aversion: time pressure combined with "
         "potential loss of reserved items drives completion",
         min_abandonment_risk=0.4,
@@ -133,7 +133,7 @@ CATALOG: list[InterventionTemplate] = [
         intervention_id="INT-008",
         name="Trust Signal — Security Badges",
         description="Prominently display payment security badges and guarantee icons",
-        trigger="checkout_hesitation_s > 15 AND intent_label = buying",
+        trigger="Detected at checkout when user hesitates > 15 seconds",
         psychological_basis="Trust transfer: established security symbols reduce perceived "
         "risk at the critical checkout moment",
         min_abandonment_risk=0.4,

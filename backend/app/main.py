@@ -74,24 +74,105 @@ app.add_middleware(AuditLogMiddleware)
 # Security headers + request ID (CONV-45)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS - allow credentials for localhost and production
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# CORS - allow credentials for localhost, local network, and production
+# Use environment variable or allow all origins in development
+import os
+
+cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+
+if os.getenv("ENVIRONMENT") == "production":
+    # In production, use configured origins
+    default_origins = [
+        "https://emoratest.com",
+        "https://www.emoratest.com",
+    ]
+elif not cors_origins:
+    # In development, allow localhost and local network IPs
+    default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
-        "https://emoratest.com",
-        "https://www.emoratest.com",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+        # Allow common local network IP ranges (will be validated dynamically)
+        "http://10.*",
+        "http://192.168.*",
+        "http://172.16.*",
+        "http://172.17.*",
+        "http://172.18.*",
+        "http://172.19.*",
+        "http://172.20.*",
+        "http://172.21.*",
+        "http://172.22.*",
+        "http://172.23.*",
+        "http://172.24.*",
+        "http://172.25.*",
+        "http://172.26.*",
+        "http://172.27.*",
+        "http://172.28.*",
+        "http://172.29.*",
+        "http://172.30.*",
+        "http://172.31.*",
+    ]
+else:
+    default_origins = []
+
+def is_local_network(origin: str) -> bool:
+    """Check if origin is from local network."""
+    if not origin:
+        return False
+    # Allow localhost variants
+    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+        return True
+    # Allow local network IPs (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
+    for prefix in ["http://10.", "http://192.168.", "http://172.16.", "http://172.17.",
+                   "http://172.18.", "http://172.19.", "http://172.20.", "http://172.21.",
+                   "http://172.22.", "http://172.23.", "http://172.24.", "http://172.25.",
+                   "http://172.26.", "http://172.27.", "http://172.28.", "http://172.29.",
+                   "http://172.30.", "http://172.31."]:
+        if origin.startswith(prefix):
+            return True
+    return False
+
+# In development mode, dynamically allow local network origins
+if os.getenv("ENVIRONMENT") != "production":
+
+    class DynamicCORSMiddleware(CORSMiddleware):
+        """CORS middleware that dynamically allows local network origins in development."""
+
+        async def preflight_handler(self, request: Request, call_next):
+            origin = request.headers.get("origin")
+            if origin and is_local_network(origin):
+                # Add local network origin to allow_origins temporarily
+                if origin not in self.allow_origins:
+                    self.allow_origins.append(origin)
+            return await super().preflight_handler(request, call_next)
+
+        async def simple_response(self, request: Request, call_next, response):
+            origin = request.headers.get("origin")
+            if origin and is_local_network(origin):
+                if origin not in self.allow_origins:
+                    self.allow_origins.append(origin)
+            return await super().simple_response(request, call_next, response)
+
+    app.add_middleware(
+        DynamicCORSMiddleware,
+        allow_origins=default_origins + cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=default_origins + cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 
 # ── Payload size limit middleware ────────────────────────────────────
 

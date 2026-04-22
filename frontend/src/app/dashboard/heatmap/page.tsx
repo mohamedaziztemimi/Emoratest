@@ -239,9 +239,11 @@ export default function HeatmapPage() {
 
 function ElementRow({ element: el, rank }: { element: ElementEmotionItem; rank: number }) {
   const [expanded, setExpanded] = useState(false);
-  const isButton = el.element_id.startsWith("#") || el.element_id.includes("button") || el.element_id.includes("btn");
-  const isPrice = el.element_id.includes("price");
   const hasFrustration = el.rage_click_rate > 0.1 || el.dominant_emotion === "frustration";
+
+  // Use semantic label when available, fallback to element_id
+  const displayName = el.label || el.element_id;
+  const hasSemanticData = el.label || el.element_type || el.section;
 
   return (
     <div
@@ -256,12 +258,20 @@ function ElementRow({ element: el, rank }: { element: ElementEmotionItem; rank: 
 
         {/* Element info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <code className="text-[13px] font-semibold text-[hsl(var(--foreground))] bg-[hsl(var(--secondary)/0.5)] px-2 py-0.5 rounded-md">
-              {el.element_id}
-            </code>
-            {isButton && <Badge variant="outline">Button</Badge>}
-            {isPrice && <Badge variant="outline">Price</Badge>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]">
+              {displayName}
+            </span>
+            {el.element_type && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                {el.element_type}
+              </Badge>
+            )}
+            {el.section && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-[hsl(var(--muted-foreground))]">
+                {el.section}
+              </Badge>
+            )}
             {el.rage_click_count > 0 && (
               <span className="rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
                 {el.rage_click_count} rage click{el.rage_click_count !== 1 ? "s" : ""}

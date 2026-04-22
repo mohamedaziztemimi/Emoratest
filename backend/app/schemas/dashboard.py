@@ -154,6 +154,9 @@ class HeatmapResponse(BaseModel):
 
 class ElementEmotionItem(BaseModel):
     element_id: str
+    label: str | None = None  # Human-readable element label
+    element_type: str | None = None  # button, link, input, etc.
+    section: str | None = None  # header, footer, main, etc.
     event_count: int
     click_count: int
     rage_click_count: int

@@ -453,7 +453,11 @@ async def get_element_emotions(
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
-    """Get per-element interaction data with emotion breakdown."""
+    """Get per-element interaction data with emotion breakdown.
+
+    Aggregates by semantic label when available, falling back to element_id.
+    Returns human-readable element information (label, type, section).
+    """
 
     # Get merchant's session IDs
     session_query = select(Session.id).where(Session.merchant_id == merchant.id)
@@ -464,10 +468,15 @@ async def get_element_emotions(
     if date_to:
         session_query = session_query.where(Session.started_at <= date_to)
 
-    # Aggregate events by element_id
+    # Aggregate events by semantic fields: prefer label, then element_id
+    # Use COALESCE to get the first non-null value from label, element_id
     query = (
         select(
-            Event.element_id,
+            func.coalesce(Event.label, Event.element_id).label("element_key"),
+            Event.element_id.label("raw_element_id"),
+            func.max(Event.label).label("label"),
+            func.max(Event.element_type).label("element_type"),
+            func.max(Event.section).label("section"),
             func.count().label("event_count"),
             func.count(case((Event.type == "click", 1))).label("click_count"),
             func.count(case(((Event.type == "click") & (Event.metadata_.isnot(None)), 1))).label("rage_click_count"),
@@ -478,7 +487,7 @@ async def get_element_emotions(
             Event.session_id.in_(session_query),
             Event.element_id.isnot(None),
         )
-        .group_by(Event.element_id)
+        .group_by(func.coalesce(Event.label, Event.element_id), Event.element_id)
         .order_by(func.count().desc())
         .limit(limit)
     )
@@ -504,7 +513,7 @@ async def get_element_emotions(
             .where(
                 Session.id.in_(
                     select(func.distinct(Event.session_id)).where(
-                        Event.element_id == row.element_id,
+                        Event.element_id == row.raw_element_id,
                         Event.session_id.in_(session_query),
                     )
                 ),
@@ -534,7 +543,10 @@ async def get_element_emotions(
             emotion_breakdown = {k: round(v / total_emotion_sessions * 100, 1) for k, v in emotion_breakdown.items()}
 
         elements.append(ElementEmotionItem(
-            element_id=row.element_id,
+            element_id=row.element_key,  # Use semantic key as display ID
+            label=row.label,
+            element_type=row.element_type,
+            section=row.section,
             event_count=row.event_count,
             click_count=click_count,
             rage_click_count=rage_count,

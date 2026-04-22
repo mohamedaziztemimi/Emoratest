@@ -62,101 +62,10 @@ VALENCE_AROUSAL = {
 }
 
 
-# ── Rule-Based Overrides ────────────────────────────────────────────────────
-
-
-class RuleOverrides:
-    """Rule-based emotion overrides applied on top of model predictions."""
-
-    @staticmethod
-    def apply(features: np.ndarray, feature_names: list[str]) -> dict[str, float]:
-        """Apply rule-based overrides to emotion scores.
-
-        Rules:
-        - rage_click_count >= 3 → force frustration += 0.3
-        - scroll_reversal_count >= 5 + cursor_idle_ratio > 0.6 → confusion += 0.2
-        - session_duration > 300s + click_heatmap_entropy > 0.8 → delight += 0.15
-
-        Args:
-            features: Feature array.
-            feature_names: List of feature names matching array indices.
-
-        Returns:
-            Dict mapping emotion to confidence adjustment.
-        """
-        adjustments = {emotion: 0.0 for emotion in Emotion.all_emotions()}
-
-        try:
-            # Create feature dict for easy lookup
-            feature_dict = dict(zip(feature_names, features))
-
-            # Rule 1: Rage clicks indicate frustration
-            rage_click_idx = feature_names.index("click_rage_click_count")
-            rage_clicks = feature_dict["click_rage_click_count"]
-
-            if rage_clicks >= 3:
-                adjustments[Emotion.FRUSTRATION.value] += 0.3
-
-            # Rule 2: Scroll reversals + high idle ratio indicate confusion
-            scroll_reversal_idx = feature_names.index("scroll_reversal_count")
-            idle_ratio_idx = feature_names.index("mouse_cursor_idle_ratio")
-            scroll_reversals = feature_dict["scroll_reversal_count"]
-            idle_ratio = feature_dict["mouse_cursor_idle_ratio"]
-
-            if scroll_reversals >= 5 and idle_ratio > 0.6:
-                adjustments[Emotion.CONFUSION.value] += 0.2
-
-            # Rule 3: Long session + high entropy indicates delight (engagement spread)
-            duration_idx = feature_names.index("dwell_total_session_duration")
-            entropy_idx = feature_names.index("click_heatmap_entropy")
-            duration = feature_dict["dwell_total_session_duration"]
-            entropy = feature_dict["click_heatmap_entropy"]
-
-            if duration > 300 and entropy > 0.8:
-                adjustments[Emotion.DELIGHT.value] += 0.15
-
-            # Rule 4: High form abandonment + hesitation → anxiety
-            abandon_idx = feature_names.index("dwell_form_abandon_count")
-            hesitation_features = [
-                "mouse_hover_duration_on_cta",
-                "mouse_velocity_mean",
-            ]
-            if all(f in feature_names for f in hesitation_features):
-                abandons = feature_dict["dwell_form_abandon_count"]
-                hover_duration = feature_dict["mouse_hover_duration_on_cta"]
-                velocity = feature_dict["mouse_velocity_mean"]
-
-                if abandons >= 2 and (hover_duration > 2000 or velocity < 50):
-                    adjustments[Emotion.ANXIETY.value] += 0.15
-                    adjustments[Emotion.HESITATION.value] += 0.15
-
-            # Rule 5: High reading pauses + low velocity → focus
-            reading_pause_idx = feature_names.index("scroll_reading_pause_count")
-            reading_pauses = feature_dict["scroll_reading_pause_count"]
-
-            if reading_pauses >= 5 and velocity < 100:
-                adjustments[Emotion.FOCUS.value] += 0.2
-
-            # Rule 6: High dead clicks + idle → boredom
-            dead_click_idx = feature_names.index("click_dead_click_count")
-            dead_clicks = feature_dict["click_dead_click_count"]
-
-            if dead_clicks >= 3 and idle_ratio > 0.7:
-                adjustments[Emotion.BOREDOM.value] += 0.2
-
-            # Rule 7: Low double-click rate + smooth movement → satisfaction
-            double_click_idx = feature_names.index("click_double_click_rate")
-            velocity_std_idx = feature_names.index("mouse_velocity_std")
-            double_click_rate = feature_dict["click_double_click_rate"]
-            velocity_std = feature_dict["mouse_velocity_std"]
-
-            if double_click_rate < 0.05 and velocity_std < 50:
-                adjustments[Emotion.SATISFACTION.value] += 0.15
-
-        except (ValueError, KeyError):
-            pass
-
-        return adjustments
+# Rule-based overrides removed — using pure ML predictions
+# The classifier now relies entirely on the trained XGBoost/sklearn model
+# without any heuristic adjustments. Model should be trained on
+# representative data to capture these patterns directly.
 
 
 # ── Result Classes ────────────────────────────────────────────────────
@@ -299,22 +208,14 @@ class EmotionClassifier:
         if not self.is_fitted:
             raise RuntimeError("Model must be trained before prediction")
 
-        # Get prediction probabilities
+        # Get prediction probabilities from pure ML model
         if self.use_xgboost:
             probs = self.model.predict_proba(features.reshape(1, -1))[0]
         else:
             probs = self.model.predict_proba(features.reshape(1, -1))[0]
 
-        # Create score dict
+        # Create score dict directly from model probabilities
         scores = {emotion: probs[i] for i, emotion in enumerate(self.emotions)}
-
-        # Apply rule-based overrides
-        adjustments = RuleOverrides.apply(features, self.feature_names or [])
-
-        # Apply adjustments to scores
-        for emotion, adj in adjustments.items():
-            if emotion in scores:
-                scores[emotion] = np.clip(scores[emotion] + adj, 0.0, 1.0)
 
         # Find primary emotion (highest score)
         primary_emotion = max(scores, key=scores.get)
@@ -329,7 +230,7 @@ class EmotionClassifier:
             all_scores=scores,
             valence=float(valence),
             arousal=float(arousal),
-            rule_adjustments=adjustments,
+            rule_adjustments=None,
         )
 
     def predict_batch(self, features_list: list[np.ndarray]) -> list[EmotionResult]:
