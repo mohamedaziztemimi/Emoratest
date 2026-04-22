@@ -23,7 +23,7 @@ export function HeroSection({ id }: HeroSectionProps) {
   };
 
   return (
-    <section id={id} className="relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)", paddingTop: "100px", paddingBottom: "60px" }}>
+    <section id={id} className="relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #F8F0FF 100%)", paddingTop: "clamp(80px, 12vw, 140px)", paddingBottom: "60px" }}>
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         {/* Two column layout - single column on mobile, two columns on lg+ */}
         <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-10 lg:gap-16 items-center w-full">
