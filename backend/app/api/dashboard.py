@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import get_current_merchant
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.models.event import Event
+from app.models.event import Event, EventEnriched
 from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
@@ -192,11 +192,18 @@ async def get_session_detail(
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Load events
+    # Load events with enriched data if available
     events_result = await db.execute(
         select(Event).where(Event.session_id == sid).order_by(Event.ts)
     )
     events = events_result.scalars().all()
+
+    # Load enriched events for UI-friendly descriptions
+    enriched_result = await db.execute(
+        select(EventEnriched).where(EventEnriched.session_id == sid).order_by(EventEnriched.ts)
+    )
+    enriched_events = enriched_result.scalars().all()
+    enriched_map = {e.event_id: e.readable_description for e in enriched_events}
 
     # Load features
     features_result = await db.execute(
@@ -249,6 +256,8 @@ async def get_session_detail(
                 element_type=e.element_type,
                 section=e.section,
                 selector=e.selector,
+                # Enriched readable description (if available)
+                readable_description=enriched_map.get(e.id),
             )
             for e in events
         ],

@@ -328,4 +328,19 @@ async def ingest_events(
 
     enqueue_session_processing(body.session_id)
 
+    # Enrich events with human-readable descriptions (non-blocking, UI-only)
+    # This does NOT affect ML pipeline - only creates enriched records for UI
+    from app.services.event_enrichment import enrich_events
+    import asyncio
+
+    # Fire and forget - don't block event ingestion
+    async def enrich_later():
+        try:
+            async with get_db() as enrich_db:
+                await enrich_events(enrich_db, body.session_id, events)
+        except Exception:
+            pass  # Enrichment failures should not break event ingestion
+
+    asyncio.create_task(enrich_later())
+
     return {"status": "ok", "count": len(events)}

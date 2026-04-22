@@ -46,6 +46,8 @@ class EventOut(BaseModel):
     element_type: str | None = None
     section: str | None = None
     selector: str | None = None
+    # Human-readable description from enrichment service
+    readable_description: str | None = None
 
 
 class SessionFeaturesOut(BaseModel):

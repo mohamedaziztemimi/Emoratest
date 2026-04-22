@@ -67,7 +67,13 @@ function formatVelocityVariance(value: number | null | undefined): string {
 }
 
 // Format event description based on type and metadata
-function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; selector: string | null; metadata: Record<string, unknown> | null }): string {
+// Prefers backend-provided readable_description, falls back to client-side formatting
+function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; selector: string | null; metadata: Record<string, unknown> | null; readable_description: string | null }): string {
+  // Use backend enrichment if available
+  if (e.readable_description) {
+    return e.readable_description;
+  }
+
   const metadata = e.metadata as Record<string, unknown> | null;
 
   switch (e.type) {

@@ -146,6 +146,8 @@ export interface EventOut {
   element_type: string | null;
   section: string | null;
   selector: string | null;
+  // Human-readable description from enrichment service (preferred over client-side formatting)
+  readable_description: string | null;
 }
 
 export interface SessionDetail extends SessionListItem {
