@@ -15,6 +15,10 @@ RUN npm ci
 # Copy application code
 COPY . .
 
+# Inject env at build time (CRITICAL)
+ARG NEXT_PUBLIC_EMORATEST_KEY
+ENV NEXT_PUBLIC_EMORATEST_KEY=$NEXT_PUBLIC_EMORATEST_KEY
+
 # Build the application (runs ESLint too)
 RUN npm run build
 

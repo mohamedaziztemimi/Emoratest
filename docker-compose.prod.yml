@@ -63,8 +63,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        NEXT_PUBLIC_EMORATEST_KEY: ${NEXT_PUBLIC_EMORATEST_SDK_KEY}
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_EMORATEST_KEY: ${NEXT_PUBLIC_EMORATEST_SDK_KEY}
       NODE_ENV: production
     depends_on:
       - backend
