@@ -120,59 +120,65 @@ export default function WelcomePage() {
     nextjs: `// Create: src/components/EmoraTestScript.tsx
 "use client";
 
-import { useEffect } from "react";
+import Script from "next/script";
+import { useEffect, useState } from "react";
 
 export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
-  useEffect(() => {
-    if (!sdkKey) return;
+  const [shouldInit, setShouldInit] = useState(false);
 
-    // Prevent duplicate script
-    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({ sdkKey, apiUrl: "https://emoratest.com" });
-      }
+  useEffect(() => {
+    // Prevent duplicate initialization
+    if ((window as any).EmoraTest?.isInitialized?.()) {
       return;
     }
+    setShouldInit(true);
+  }, []);
 
-    const script = document.createElement("script");
-    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
-    script.async = true;
+  if (!sdkKey || !shouldInit) return null;
 
-    script.onload = () => {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({ sdkKey, apiUrl: "https://emoratest.com" });
-      }
-    };
-
-    document.body.appendChild(script);
-  }, [sdkKey]);
-
-  return null;
+  return (
+    <>
+      <Script
+        src="https://emoratest.com/static/sdk/emoratest.umd.js"
+        strategy="afterInteractive"
+        onReady={() => {
+          if ((window as any).EmoraTest) {
+            (window as any).EmoraTest.init({
+              sdkKey: "${sdkKey}",
+              apiUrl: "https://emoratest.com"
+            });
+          }
+        }}
+      />
+    </>
+  );
 }
 
 // Then in app/layout.tsx:
 import EmoraTestScript from "@/components/EmoraTestScript";
 
-<EmoraTestScript sdkKey="${sdkKey}" />`,
+<EmoraTestScript sdkKey={"${sdkKey}"} />`,
     react: `// In your root App component (index.tsx or App.tsx)
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function App() {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
   useEffect(() => {
-    // Prevent duplicate script
-    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
-      if (window.EmoraTest) {
-        window.EmoraTest.init({
-          sdkKey: "${sdkKey}",
-          apiUrl: "https://emoratest.com"
-        });
-      }
+    // Prevent duplicate script initialization
+    if (window.EmoraTest?.isInitialized?.()) {
       return;
     }
+    setShouldLoad(true);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
 
     const script = document.createElement('script');
     script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
-    script.async = true;
+    // IMPORTANT: Do NOT set async=true - it will break initialization
+    // Script must load before we try to call init()
 
     script.onload = () => {
       if (window.EmoraTest) {
@@ -183,8 +189,8 @@ function App() {
       }
     };
 
-    document.body.appendChild(script);
-  }, []);
+    document.head.appendChild(script);
+  }, [shouldLoad]);
 
   return <YourApp />;
 }`,
