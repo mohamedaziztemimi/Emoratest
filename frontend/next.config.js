@@ -86,20 +86,22 @@ const nextConfig = {
       },
     ];
   },
-  // API rewrites for development (eliminates CORS issues)
+  // API rewrites for development and production
+  // Uses BACKEND_URL env var (defaults to localhost:8000 for dev, backend:8000 for Docker)
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
     return [
       {
         source: "/api/auth/:path*",
-        destination: "http://localhost:8000/api/auth/:path*",
+        destination: `${backendUrl}/api/auth/:path*`,
       },
       {
         source: "/api/v1/:path*",
-        destination: "http://localhost:8000/api/v1/:path*",
+        destination: `${backendUrl}/api/v1/:path*`,
       },
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

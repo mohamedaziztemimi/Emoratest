@@ -69,6 +69,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_EMORATEST_KEY: ${NEXT_PUBLIC_EMORATEST_SDK_KEY}
       NODE_ENV: production
+      BACKEND_URL: http://backend:8000
     depends_on:
       - backend
     restart: unless-stopped

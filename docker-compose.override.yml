@@ -22,6 +22,8 @@ services:
 
   # ── Frontend (Next.js) ─────────────────────────────────────────
   frontend:
+    # Use dev mode command
+    command: ["npm", "run", "dev"]
     # Mount entire frontend directory for hot-reload
     volumes:
       - ./frontend:/app
