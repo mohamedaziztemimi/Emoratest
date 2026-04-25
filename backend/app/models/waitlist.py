@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Integer, String, Text, text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,5 +27,5 @@ class WaitlistEntry(Base):
         String(32), nullable=False, server_default=text("'pending'")
     )
     created_at: Mapped[datetime] = mapped_column(
-        datetime, nullable=False, server_default=text("now()")
+        DateTime, nullable=False, server_default=text("now()")
     )
