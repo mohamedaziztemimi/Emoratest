@@ -165,6 +165,7 @@ export interface SessionFilters {
   date_from?: string;
   date_to?: string;
   device_type?: string;
+  emotion?: string;
 }
 
 export function fetchSessions(filters: SessionFilters = {}): Promise<SessionListResponse> {
@@ -258,35 +259,6 @@ export function fetchCohorts(dimension: string): Promise<CohortResponse> {
 
 export function fetchRiskDistribution(buckets = 10): Promise<RiskDistributionResponse> {
   return request(`/analytics/risk-distribution?buckets=${buckets}`);
-}
-
-// ── Heatmap ─────────────────────────────────────────────────────
-
-export interface HeatmapPoint {
-  x: number;
-  y: number;
-  value: number;
-  type: string;
-}
-
-export interface HeatmapSession {
-  id: string;
-  started_at: string;
-  dominant_emotion: string | null;
-  emotion_confidence: number | null;
-}
-
-export interface HeatmapResponse {
-  points: HeatmapPoint[];
-  sessions: HeatmapSession[];
-  total_points: number;
-  page_url: string | null;
-}
-
-export function fetchHeatmapData(eventType = "click", pageUrl?: string): Promise<HeatmapResponse> {
-  const params = new URLSearchParams({ event_type: eventType });
-  if (pageUrl) params.set("page_url", pageUrl);
-  return request(`/dashboard/analytics/heatmap?${params}`);
 }
 
 export interface ElementEmotionItem {
@@ -873,6 +845,75 @@ export function updateBandit(id: string, data: UpdateBanditPayload): Promise<Ban
 
 export function deleteBandit(id: string): Promise<void> {
   return request(`/bandits/${id}`, { method: "DELETE" });
+}
+
+// ── Diagnosis — Behavioral Signal to Actionable Insight ──────
+
+export interface EvidenceItem {
+  type: string;
+  value: number | string;
+  label: string;
+  element: string | null;
+  session_ids: string[];
+}
+
+export interface RootCause {
+  primary_cause: string;
+  explanation: string;
+  contributing_factors: string[];
+}
+
+export interface ActionItem {
+  title: string;
+  description: string;
+  type: string;
+  link: string | null;
+}
+
+export interface ProblemSummary {
+  title: string;
+  page_url: string;
+  page_name: string;
+  affected_users_pct: number;
+  severity: string;
+  estimated_lost_revenue: string | null;
+}
+
+export interface DiagnosisResponse {
+  summary: ProblemSummary;
+  evidence: EvidenceItem[];
+  root_cause: RootCause;
+  actions: ActionItem[];
+  supporting_charts: Record<string, unknown>;
+  generated_at: string;
+}
+
+export interface IssueListItem {
+  id: string;
+  title: string;
+  page_url: string;
+  affected_users: number;
+  severity: string;
+}
+
+export interface IssuesListResponse {
+  issues: IssueListItem[];
+  total_issues: number;
+  high_severity_count: number;
+}
+
+export async function fetchPrimaryDiagnosis(
+  merchantId: string,
+  hours = 24
+): Promise<DiagnosisResponse> {
+  return request<DiagnosisResponse>(`/diagnosis/primary?merchant_id=${merchantId}&hours=${hours}`);
+}
+
+export async function fetchIssuesList(
+  merchantId: string,
+  hours = 24
+): Promise<IssuesListResponse> {
+  return request<IssuesListResponse>(`/diagnosis/issues?merchant_id=${merchantId}&hours=${hours}`);
 }
 
 export { ApiError };

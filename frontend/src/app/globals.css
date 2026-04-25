@@ -1,10 +1,28 @@
 @import "tailwindcss";
 @import "../styles/dashboard.css";
+@import "../styles/premium.css";
+
+/* ── Professional Font Family ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* ── Tailwind v4 Theme ───────────────────────────────────── */
 @theme {
   --color-white: #ffffff;
   --color-black: #000000;
+
+  /* Apply Inter font globally */
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Global Typography ─────────────────────────────────────── */
+* {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Primitive & Semantic Design Tokens ──────────────────── */

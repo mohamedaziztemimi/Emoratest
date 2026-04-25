@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { CopyButton } from "@/components/dashboard/CopyButton";
 
 interface Section {
   id: string;
@@ -24,7 +25,30 @@ const sections: Section[] = [
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("getting-started");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [sdkKey, setSdkKey] = useState<string | null>(null);
+  const [sdkKeyLoading, setSdkKeyLoading] = useState(true);
   const sectionRefs = useRef<Record<string, HTMLElement>>({});
+
+  // Fetch SDK key for quick start card
+  useEffect(() => {
+    const fetchSdkKey = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const res = await fetch(`${apiUrl}/api/v1/merchant/sdk-key`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSdkKey(data.sdk_key || data.key || null);
+        }
+      } catch {
+        // Silent fail - user can go to settings
+      } finally {
+        setSdkKeyLoading(false);
+      }
+    };
+    fetchSdkKey();
+  }, []);
 
   useEffect(() => {
     const observers = sections.map((section) => {
@@ -113,6 +137,31 @@ export default function DocsPage() {
               </p>
             </div>
 
+            {/* Quick Start Card */}
+            <div className="mb-10 bg-gradient-to-r from-[#007BFF] to-[#7C3AED] rounded-2xl p-6 text-white">
+              <h2 className="text-lg font-semibold mb-2">Quick Start</h2>
+              <p className="text-sm text-white/80 mb-4">
+                Your unique SDK key — copy this to get started tracking emotions.
+              </p>
+              <div className="flex items-center gap-3">
+                <code className="flex-1 bg-white/20 backdrop-blur rounded-lg px-4 py-2.5 text-sm font-mono">
+                  {sdkKeyLoading ? (
+                    <span className="text-white/60">Loading...</span>
+                  ) : sdkKey ? (
+                    sdkKey
+                  ) : (
+                    <span className="text-white/60">
+                      <Link href="/dashboard/settings" className="underline hover:text-white">
+                        Go to Settings → SDK
+                      </Link>{" "}
+                      to view
+                    </span>
+                  )}
+                </code>
+                {sdkKey && <CopyButton text={sdkKey} className="text-white hover:text-white/80" />}
+              </div>
+            </div>
+
             {/* Getting Started */}
             <section id="getting-started" className="mb-12 scroll-mt-20">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Getting Started</h2>
@@ -142,17 +191,14 @@ export default function DocsPage() {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">HTML (Any Website)</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Add this before the closing <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">&lt;/head&gt;</code> tag:
+                  Add this before the closing <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">&lt;/body&gt;</code> tag:
                 </p>
                 <CodeBlock
                   id="install-html"
                   language="html"
-                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+                  code={`<script src="https://YOUR_DOMAIN/static/sdk/emoratest.umd.js"></script>
 <script>
-  EmoraTest.init({
-    sdkKey: "YOUR_SDK_KEY",
-    apiUrl: "https://emoratest.com"
-  });
+  EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
 </script>`}
                   copiedId={copiedCode}
                   onCopy={copyToClipboard}
@@ -161,65 +207,31 @@ export default function DocsPage() {
 
               {/* Next.js Installation */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Next.js 14 (App Router)</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">React / Next.js</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Create a Client Component and add it to your root layout:
+                  Create a client component and add it to your root layout:
                 </p>
                 <CodeBlock
                   id="install-nextjs"
-                  language="tsx"
-                  code={`// src/components/EmoraTestScript.tsx
-"use client";
-
+                  language="jsx"
+                  code={`"use client";
 import { useEffect } from "react";
 
-export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
+export default function EmoraTracker() {
   useEffect(() => {
-    if (!sdkKey) return;
-
-    // Prevent duplicate script
-    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({
-          sdkKey,
-          apiUrl: "https://emoratest.com"
-        });
-      }
-      return;
-    }
-
     const script = document.createElement("script");
-    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
+    script.src = "https://YOUR_DOMAIN/static/sdk/emoratest.umd.js";
     script.async = true;
-
     script.onload = () => {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({
-          sdkKey,
-          apiUrl: "https://emoratest.com"
-        });
-      }
+      window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
-
     document.body.appendChild(script);
-  }, [sdkKey]);
-
+    return () => { document.body.removeChild(script); };
+  }, []);
   return null;
 }
 
-// Then in app/layout.tsx:
-import EmoraTestScript from "@/components/EmoraTestScript";
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        {children}
-        <EmoraTestScript sdkKey={process.env.NEXT_PUBLIC_EMORATEST_KEY} />
-      </body>
-    </html>
-  );
-}`}
+// Then add <EmoraTracker /> to your root layout.`}
                   copiedId={copiedCode}
                   onCopy={copyToClipboard}
                 />
@@ -227,43 +239,12 @@ export default function RootLayout({ children }) {
 
               {/* React Installation */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">React (Vite, Create React App)</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">NPM Package</h3>
                 <CodeBlock
-                  id="install-react"
-                  language="tsx"
-                  code={`// In your root App component (App.tsx or index.tsx)
-import { useEffect } from 'react';
-
-function App() {
-  useEffect(() => {
-    if (document.querySelector('script[src*="emoratest.umd.js"]')) {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({
-          sdkKey: "YOUR_SDK_KEY",
-          apiUrl: "https://emoratest.com"
-        });
-      }
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
-    script.async = true;
-
-    script.onload = () => {
-      if ((window as any).EmoraTest) {
-        (window as any).EmoraTest.init({
-          sdkKey: "YOUR_SDK_KEY",
-          apiUrl: "https://emoratest.com"
-        });
-      }
-    };
-
-    document.body.appendChild(script);
-  }, []);
-
-  return <YourApp />;
-}`}
+                  id="install-npm"
+                  language="bash"
+                  code={`npm install emoratest
+# Coming soon — use the script tag method for now`}
                   copiedId={copiedCode}
                   onCopy={copyToClipboard}
                 />
@@ -271,8 +252,7 @@ function App() {
 
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Important:</strong> Replace <code>YOUR_SDK_KEY</code> with your actual SDK key from the dashboard.
-                  The <code>apiUrl</code> parameter is optional and defaults to <code>https://emoratest.com</code>.
+                  <strong>Important:</strong> Replace <code>YOUR_DOMAIN</code> with your EmoraTest instance URL and <code>YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="underline font-semibold">Settings → SDK</a>.
                 </p>
               </div>
               <p className="text-gray-600 mt-4 text-sm">

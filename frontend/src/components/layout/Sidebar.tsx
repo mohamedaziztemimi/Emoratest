@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useTheme } from "next-themes";
 
 export interface SidebarProps {
   onClose?: () => void;
@@ -18,18 +18,28 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "EMOTION ML",
+    label: "MONITOR",
     items: [
-      { href: "/dashboard/heatmap", label: "Heatmaps", icon: FireIcon },
-      { href: "/dashboard/sessions", label: "Session Replay", icon: PlayIcon },
-      { href: "/dashboard/analytics", label: "Why-Analysis", icon: SearchIcon },
+      { href: "/dashboard/sessions", label: "Sessions", icon: PlayIcon },
+      { href: "/dashboard/alerts", label: "Alerts", icon: AlertIcon },
     ],
   },
   {
-    label: "INSIGHTS",
+    label: "ANALYZE",
     items: [
-      { href: "/dashboard/segments", label: "Segments", icon: UsersIcon },
-      { href: "/dashboard/interventions", label: "Recovery Actions", icon: ShieldIcon },
+      { href: "/dashboard/pages", label: "Page insights", icon: FireIcon },
+      { href: "/dashboard/diagnosis", label: "Diagnosis", icon: SearchIcon },
+    ],
+  },
+  {
+    label: "ACT",
+    items: [
+      { href: "/dashboard/experiments", label: "Experiments", icon: FlaskIcon },
+    ],
+  },
+  {
+    label: "CONNECT",
+    items: [
       { href: "/dashboard/integrations", label: "Integrations", icon: PlugIcon },
     ],
   },
@@ -45,7 +55,29 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const [unresolvedCount, setUnresolvedCount] = useState(0);
+
+  // Fetch unresolved alert count every 60 seconds
+  useEffect(() => {
+    const fetchUnresolvedCount = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const res = await fetch(`${apiUrl}/api/v1/alerts/unresolved-count`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnresolvedCount(data.count || 0);
+        }
+      } catch {
+        // Silent fail - badge just won't show
+      }
+    };
+
+    fetchUnresolvedCount();
+    const interval = setInterval(fetchUnresolvedCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -62,9 +94,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] p-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[hsl(var(--primary))] to-[#7C3AED]">
-            <span className="text-sm font-bold text-white">E</span>
-          </div>
+          <img src="/logo2.png" alt="EmoraTest" className="h-10 w-auto" />
           <span className="text-lg font-semibold text-[hsl(var(--foreground))]">EmoraTest</span>
         </Link>
       </div>
@@ -84,6 +114,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   ? pathname === "/dashboard"
                   : pathname.startsWith(item.href);
 
+              // Show badge for Alerts if there are unresolved alerts
+              const showBadge = item.href === "/dashboard/alerts" && unresolvedCount > 0;
+
               return (
                 <Link
                   key={item.href}
@@ -96,7 +129,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   }`}
                 >
                   <div className="h-4 w-4">{<item.icon />}</div>
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {showBadge && (
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                      {unresolvedCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -114,21 +152,13 @@ export default function Sidebar({ onClose }: SidebarProps) {
             {user?.plan || "Trial"} Plan
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
-          >
-            <div className="h-4 w-4">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</div>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
-          >
-            <div className="h-4 w-4"><LogoutIcon /></div>
-            Sign out
-          </button>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
+        >
+          <div className="h-4 w-4"><LogoutIcon /></div>
+          Sign out
+        </button>
       </div>
     </aside>
   );
@@ -147,14 +177,6 @@ function FlaskIcon() {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M5 14.5l-1.456 7.28a.75.75 0 00.736.893h15.44a.75.75 0 00.736-.893L19 14.5M5 14.5h14" />
-    </svg>
-  );
-}
-
-function FlagIcon() {
-  return (
-    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
     </svg>
   );
 }
@@ -233,18 +255,11 @@ function ShieldIcon() {
   );
 }
 
-function SunIcon() {
+function AlertIcon() {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 018.835-2.535m0 14.857a23.848 23.848 0 01-8.835-2.535m8.835.069c.296-1.468.59-3.007.59-4.59 0-1.586-.205-3.124-.59-4.59m0 9.18a23.848 23.848 0 01-2.679-5.18M20.25 7.5a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0zM12 9a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
 }
 
-function MoonIcon() {
-  return (
-    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
-    </svg>
-  );
-}

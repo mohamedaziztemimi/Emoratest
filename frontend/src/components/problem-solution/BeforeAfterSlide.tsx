@@ -17,7 +17,6 @@ export interface SlideContent {
 type PersonaType = "growth" | "pm" | "ux" | "cro";
 
 interface BeforeAfterSlideProps {
-  persona: PersonaType;
   before: SlideContent;
   after: SlideContent;
   className?: string;
@@ -105,7 +104,6 @@ function AfterMockup() {
 }
 
 export function BeforeAfterSlide({
-  persona,
   before,
   after,
   className,

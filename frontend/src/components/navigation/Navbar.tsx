@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { GradientButton } from "../ui";
 import { API_BASE } from "@/lib/api";
 

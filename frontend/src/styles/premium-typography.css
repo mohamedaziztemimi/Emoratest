@@ -1,0 +1,19 @@
+/* Premium Typography */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --premium-display: "Outfit", system-ui, sans-serif;
+  --premium-body: "Inter", system-ui, sans-serif;
+  --premium-bg: #F8FAFC;
+  --premium-card: #FFFFFF;
+  --premium-border: #E2E8F0;
+  --premium-text: #0F172A;
+  --premium-text-sec: #64748B;
+  --premium-text-muted: #94A3B8;
+  --premium-blue: #007BFF;
+  --premium-purple: #7C3AED;
+  --premium-green: #10B981;
+  --premium-red: #EF4444;
+  --premium-amber: #F59E0B;
+  --premium-gradient-primary: linear-gradient(135deg, #007BFF 0%, #7C3AED 100%);
+  --premium-shadow-sm: 0 1px 

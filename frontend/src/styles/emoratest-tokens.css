@@ -97,8 +97,8 @@
   --scrollbar-track: var(--et-bg-800);
   --scrollbar-thumb: var(--et-bg-700);
 
-  /* Typography */
-  --et-font: 'Inter', 'Figtree', system-ui, sans-serif;
+  /* Typography — Inter with premium weight scale */
+  --et-font: 'Inter', system-ui, -apple-system, sans-serif;
   --et-hero: clamp(36px, 6vw, 72px);
   --et-h2: clamp(24px, 4vw, 48px);
   --et-h3: 24px;

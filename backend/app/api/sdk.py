@@ -52,7 +52,13 @@ async def get_merchant_from_sdk_key(
             detail="X-SDK-Key header is required",
         )
 
-    key_hash = hashlib.sha256(sdk_key.encode()).hexdigest()
+    sdk_key_hash = hashlib.sha256(sdk_key.encode()).hexdigest()
+    result = await db.execute(
+        select(Merchant).where(
+            Merchant.sdk_key_hash == sdk_key_hash,
+            Merchant.is_active.is_(True),
+        )
+    )
     result = await db.execute(
         select(Merchant).where(
             Merchant.sdk_key_hash == key_hash,
@@ -60,11 +66,6 @@ async def get_merchant_from_sdk_key(
         )
     )
     merchant = result.scalar_one_or_none()
-
-    if merchant:
-        print(f"[DEBUG] Found merchant: id={merchant.id}")
-    else:
-        print(f"[DEBUG] No merchant found for sdk_key_hash={key_hash}")
 
     if not merchant:
         raise HTTPException(status_code=401, detail="Invalid SDK key")
@@ -99,9 +100,6 @@ async def create_session(
 
     session_id = uuid.uuid4()
     now = datetime.now(UTC)
-
-    # DEBUG: Log session creation
-    print(f"[DEBUG] Creating session: id={session_id}, merchant_id={merchant.id}, sdk_key_header={request.headers.get('X-SDK-Key', 'missing')}")
 
     session = Session(
         id=session_id,
@@ -259,9 +257,6 @@ async def ingest_events(
     Auto-creates session if it doesn't exist (defensive fallback).
     """
 
-    # DEBUG: Log what we're looking for
-    print(f"[DEBUG] Events/batch: session_id={body.session_id}, merchant_id={merchant.id}")
-
     # Verify session belongs to this merchant
     try:
         sid = uuid.UUID(body.session_id)
@@ -277,7 +272,6 @@ async def ingest_events(
 
     # Auto-create session if not found (defensive programming)
     if session is None:
-        print(f"[DEBUG] Session {sid} not found — auto-creating for merchant {merchant.id}")
         now = datetime.now(UTC)
         new_session = Session(
             id=sid,
@@ -291,13 +285,10 @@ async def ingest_events(
         )
         db.add(new_session)
         await db.commit()
-        print(f"[DEBUG] Auto-created session {sid} for merchant {merchant.id}")
     else:
         session_merchant_id = session[1]
-        print(f"[DEBUG] Session found: merchant_id={session_merchant_id}, expected={merchant.id}")
 
         if session_merchant_id != merchant.id:
-            print(f"[DEBUG] Merchant mismatch! session={session_merchant_id}, auth={merchant.id}")
             raise HTTPException(status_code=404, detail="Session not found")
 
     # Bulk insert events

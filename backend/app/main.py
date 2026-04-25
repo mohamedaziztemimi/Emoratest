@@ -12,15 +12,18 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.bandits import router as bandits_router
 from app.api.dashboard import router as dashboard_router
+from app.api.diagnosis import router as diagnosis_router
 from app.api.emotion import router as emotion_router
 from app.api.experiments import router as experiments_router
 from app.api.feature_flags import router as feature_flags_router
 from app.api.interventions import router as interventions_router
 from app.api.merchants import router as merchants_router
+from app.api.pages import router as pages_router
 from app.api.sdk import router as sdk_router
 from app.api.segments import router as segments_router
 from app.api.webhook import router as webhook_router
@@ -205,11 +208,20 @@ app.include_router(interventions_router, prefix=settings.API_V1_PREFIX)
 # Cohort & segment analytics (CONV-40)
 app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
 
+# Diagnosis — behavioral signal to actionable insight conversion
+app.include_router(diagnosis_router, prefix=settings.API_V1_PREFIX)
+
 # Merchant profile & key management (CONV-43)
 app.include_router(merchants_router, prefix=settings.API_V1_PREFIX)
 
 # WebSocket real-time scoring (CONV-42)
 app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
+
+# Alerts — emotion spike notifications (retention feature)
+app.include_router(alerts_router, prefix=settings.API_V1_PREFIX)
+
+# Pages — page-level emotion insights
+app.include_router(pages_router)
 
 
 # ── Health check ──────────────────────────────────────────────────

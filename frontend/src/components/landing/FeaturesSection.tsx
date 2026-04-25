@@ -10,33 +10,33 @@ import { FadeInOnScroll } from "./FadeInOnScroll";
 const FEATURES = [
   {
     icon: "🔥",
-    title: "Emotion Heatmaps",
-    description: "See where users feel confused, frustrated, or delighted on any page. Color-coded overlays update in real-time.",
+    title: "Page Insights",
+    description: "See which pages cause frustration, confusion, or delight. Every page ranked by emotional friction with actionable breakdowns.",
   },
   {
     icon: "🧠",
     title: "8-Emotion ML Classifier",
-    description: "Our ML detects confusion, frustration, delight, anxiety, hesitation, focus, boredom, and satisfaction with 85-95% accuracy.",
+    description: "Our XGBoost model detects confusion, frustration, delight, anxiety, hesitation, focus, boredom, and satisfaction from mouse behavior with 80%+ accuracy. No cameras. No surveys. Just behavior.",
   },
   {
     icon: "🔍",
-    title: "Why-Analysis",
-    description: "Automatically links emotions to revenue. See exactly which confusion event caused a 34% drop-off — and what to fix.",
+    title: "Automatic Diagnosis",
+    description: "EmoraTest automatically detects issues — rage clicks, hesitation spikes, high drop-offs — and tells you exactly why users struggle and what to fix.",
   },
   {
     icon: "🎯",
-    title: "Session Replay",
-    description: "Watch exactly how users interact with your site. See clicks, scrolls, and rage clicks in context with emotional responses.",
+    title: "Session Explorer",
+    description: "Browse every user session with emotion labels. Filter by frustrated, confused, or satisfied sessions. Click into any session to see the full emotion breakdown and behavior signals.",
   },
   {
     icon: "📊",
-    title: "Funnel Analytics",
-    description: "Identify exactly where users drop off in your conversion funnel with emotion-based insights at each step.",
+    title: "Emotion Alerts",
+    description: "Get notified when frustration spikes on any page. Set thresholds, choose your channel (email or Slack), and never miss a conversion-killing issue.",
   },
   {
     icon: "⚡",
     title: "Real-time Alerts",
-    description: "Get notified instantly when frustration spikes or users encounter problems. Respond before they churn.",
+    description: "Configure alerts for any emotion on any page. Set thresholds like 'email me when frustration exceeds 30% on checkout.' Works with email and Slack.",
   },
 ];
 

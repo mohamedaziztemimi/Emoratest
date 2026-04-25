@@ -3,7 +3,7 @@
    ──────────────────────────────────────────────────────── */
 
 import { clsx } from "clsx";
-import { EMOTION_CONFIG, getEmotionConfig } from "@/lib/theme";
+import { getEmotionConfig } from "@/lib/theme";
 
 export type EmotionType =
   | "confusion"

@@ -4,8 +4,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { PulsingDot } from "../ui";
+import { useEffect, useRef } from "react";
 
 // Emotion types with colors
 const EMOTIONS = [
@@ -54,12 +53,6 @@ export function HeroHeatmap() {
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
 
-  const [stats, setStats] = useState({
-    sessions: 127,
-    spikes: 3,
-    tests: 1,
-  });
-
   const createDot = (): Dot => ({
     x: Math.random() * 600,
     y: Math.random() * 360,
@@ -90,12 +83,6 @@ export function HeroHeatmap() {
       label: labels[Math.floor(Math.random() * labels.length)],
       startTime: Date.now(),
     };
-
-    setStats((prev) => ({
-      sessions: prev.sessions + Math.floor(Math.random() * 3),
-      spikes: prev.spikes + (Math.random() > 0.7 ? 1 : 0),
-      tests: prev.tests,
-    }));
 
     setTimeout(() => {
       emotionEventRef.current = null;
@@ -239,10 +226,6 @@ export function HeroHeatmap() {
 
   return (
     <div className="relative">
-      <div className="absolute top-2 right-2 z-10">
-        <PulsingDot color="#10B981" size={6} label="LIVE" />
-      </div>
-
       <canvas
         ref={canvasRef}
         width={600}
@@ -253,18 +236,18 @@ export function HeroHeatmap() {
 
       <div className="mt-3 flex items-center justify-center gap-4 text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#007BFF]" />
-          {stats.sessions} sessions analyzed
-        </span>
-        <span className="w-1 h-1 bg-gray-300 rounded-full" />
-        <span className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-          {stats.spikes} frustration spikes
+          Frustration
         </span>
         <span className="w-1 h-1 bg-gray-300 rounded-full" />
         <span className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#7C3AED]" />
-          {stats.tests} test running
+          <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+          Confusion
+        </span>
+        <span className="w-1 h-1 bg-gray-300 rounded-full" />
+        <span className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+          Delight
         </span>
       </div>
     </div>

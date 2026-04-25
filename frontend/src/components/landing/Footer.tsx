@@ -14,18 +14,14 @@ const FOOTER_LINKS = {
   ],
   resources: [
     { label: "Documentation", href: "/docs" },
-    { label: "Blog", href: "/blog" },
-    { label: "Help Center", href: "/help" },
   ],
   company: [
     { label: "About", href: "/about" },
-    { label: "Careers", href: "/careers" },
     { label: "Contact", href: "/contact" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
-    { label: "Security", href: "/security" },
   ],
 };
 
@@ -97,7 +93,7 @@ export function Footer() {
           )}
 
           <p className="text-xs text-[#9CA3AF]">
-            Join 2,400+ growth teams. No spam ever.
+            Built for growth teams who care about user experience. No spam ever.
           </p>
         </div>
       </div>
@@ -204,8 +200,6 @@ export function Footer() {
             </span>
             <span>•</span>
             <span>🔒 GDPR Compliant</span>
-            <span>•</span>
-            <span>🇺🇸/🇪🇺 SOC 2 Ready</span>
           </div>
         </div>
       </div>

@@ -12,9 +12,9 @@ interface HeroSectionProps {
 }
 
 const STATS = [
-  { label: "Less Churn", value: "40%", delta: "vs baseline" },
-  { label: "Emotion Accuracy", value: "85-95%", delta: "ML-powered" },
-  { label: "Faster Winners", value: "2x", delta: "via A/B tests" },
+  { label: "Detect 8 Emotions", value: "Real-Time", delta: "From mouse behavior patterns" },
+  { label: "80%+ Accuracy", value: "XGBoost", delta: "ML classifier" },
+  { label: "Works Everywhere", value: "One Tag", delta: "Any website" },
 ];
 
 export function HeroSection({ id }: HeroSectionProps) {
@@ -31,37 +31,34 @@ export function HeroSection({ id }: HeroSectionProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* H1 */}
             <h1 style={{ fontSize: "clamp(32px, 3.5vw, 52px)", fontWeight: 700, lineHeight: 1.05, margin: 0 }}>
-              <span style={{ color: "#111318" }}>Know Exactly Why </span>
+              <span style={{ color: "#111318" }}>See What Your Users </span>
               <span style={{
                 background: "linear-gradient(135deg, #007BFF, #7C3AED)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-              }}>Users Leave.</span>
+              }}>Actually Feel.</span>
             </h1>
 
             {/* Subtext */}
             <p style={{ fontSize: "18px", color: "#4B5563", maxWidth: "480px", lineHeight: 1.7, margin: 0, marginBottom: 0 }}>
-              EmoraTest detects confusion and frustration in real-time. Most teams find their conversion killer within 2 hours.
+              EmoraTest detects 8 emotions from mouse behavior — frustration, confusion, delight, and more. Find your conversion killer in hours, not weeks.
             </p>
 
             {/* CTA Buttons */}
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
               <GradientButton variant="primary" size="lg" glow href="/signup">
-                See Your Emotion Heatmap →
+                Start Free — No Credit Card
               </GradientButton>
               <GradientButton variant="outline" size="lg" onClick={handleWatchDemo}>
-                Watch 2-min Demo
+                See How It Works
               </GradientButton>
             </div>
 
-            {/* Social proof */}
+            {/* Social proof - honest */}
             <div style={{ marginTop: "4px" }}>
-              <p className="text-[14px] text-[#4B5563] font-medium" style={{ marginBottom: "4px" }}>
-                2,400+ growth teams trust EmoraTest
-              </p>
-              <p className="text-[12px] text-[#9CA3AF]">
-                847 teams joined this month
+              <p className="text-[14px] text-[#4B5563] font-medium">
+                Built for growth teams, PMs, and CRO leads at SaaS & e-commerce companies
               </p>
             </div>
           </div>
@@ -71,11 +68,11 @@ export function HeroSection({ id }: HeroSectionProps) {
             {/* Hero Heatmap */}
             <HeroHeatmap />
 
-            {/* Floating +32% card */}
+            {/* Floating feature highlight card */}
             <div className="absolute -top-3 -left-3 bg-white rounded-2xl p-4 shadow-lg max-w-[180px] z-10 border border-gray-100">
-              <div className="text-[#10B981] text-[32px] font-bold leading-none">+32%</div>
+              <div className="text-[#007BFF] text-[28px] font-bold leading-none">8 Emotions</div>
               <div className="text-xs text-[#6B7280] mt-1 leading-tight">
-                Conversions after fixing CTA confusion
+                Detected from mouse behavior
               </div>
             </div>
           </div>

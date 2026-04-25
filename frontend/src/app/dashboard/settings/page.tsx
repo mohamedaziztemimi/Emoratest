@@ -124,6 +124,8 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.new_sdk_key) {
         setSdkKey(data.new_sdk_key);
+        // Store to localStorage for docs page access
+        localStorage.setItem("emoratest_sdk_key", data.new_sdk_key);
         setSdkKeyMasked(false); // show it immediately after regeneration
         setShowRegenModal(false);
         setRegenSuccess(true);
@@ -138,6 +140,7 @@ export default function SettingsPage() {
         revealTimerRef.current = setTimeout(() => {
           setSdkKeyMasked(true);
           setSdkKey("");
+          localStorage.removeItem("emoratest_sdk_key");
         }, 30000);
       }
     } catch (err) {
@@ -278,6 +281,7 @@ export default function SettingsPage() {
                     onClick={() => {
                       setSdkKeyMasked(true);
                       setSdkKey("");
+                      localStorage.removeItem("emoratest_sdk_key");
                     }}
                     style={{
                       background: "white",

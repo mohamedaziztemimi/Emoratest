@@ -3,567 +3,717 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@/lib/hooks";
 import {
-  fetchWhyAnalysisSummary,
-  fetchEmotionConversion,
-  fetchDropOffReasons,
-  fetchEmotionTrend,
-  WhyAnalysisSummary,
-  EmotionConversionResponse,
-  DropOffReasonsResponse,
-  EmotionTrendResponse,
+  fetchPrimaryDiagnosis,
+  fetchIssuesList,
+  DiagnosisResponse,
+  IssueListItem,
+  ProblemSummary,
+  EvidenceItem,
+  RootCause,
+  ActionItem,
 } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
-const EMOTION_COLORS: Record<string, string> = {
-  confusion: "#F59E0B",
-  frustration: "#EF4444",
-  delight: "#10B981",
-  focus: "#3B82F6",
-  anxiety: "#F97316",
-  boredom: "#6B7280",
-  hesitation: "#8B5CF6",
-  satisfaction: "#059669",
+// ── Severity Config ────────────────────────────────────────────
+
+const SEVERITY_CONFIG = {
+  high: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    badge: "bg-red-100 text-red-700",
+    icon: "🔴",
+  },
+  medium: {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    badge: "bg-amber-100 text-amber-700",
+    icon: "🟠",
+  },
+  low: {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    badge: "bg-blue-100 text-blue-700",
+    icon: "🔵",
+  },
 };
 
-function getEmotionColor(emotion: string): string {
-  return EMOTION_COLORS[emotion.toLowerCase()] || "#6B7280";
-}
+// ── DEMO DATA (for instant value when no real data exists) ──────
 
-function formatPct(value: number | null | undefined): string {
-  if (value == null) return "—";
-  return `${(value * 100).toFixed(1)}%`;
-}
+const DEMO_DIAGNOSIS: DiagnosisResponse = {
+  summary: {
+    title: "Users are clicking furiously on broken elements",
+    page_url: "https://example.com/checkout",
+    page_name: "Checkout",
+    affected_users_pct: 23,
+    severity: "high",
+    estimated_lost_revenue: "~$1,200/week",
+  },
+  evidence: [
+    {
+      type: "rage_clicks",
+      value: "23%",
+      label: "23% of clicks show rage patterns",
+      element: "#checkout-button",
+      session_ids: [],
+    },
+    {
+      type: "hesitation",
+      value: "45%",
+      label: "45% hesitation score before checkout",
+      element: null,
+      session_ids: [],
+    },
+    {
+      type: "drop_off",
+      value: "38%",
+      label: "38% abandon at checkout step",
+      element: null,
+      session_ids: [],
+    },
+  ],
+  root_cause: {
+    primary_cause: "Checkout button appears unresponsive",
+    explanation: "Users are rapidly clicking the checkout button because they expect an action that isn't happening. The button may have no click handler, be blocked by an overlay, or respond too slowly.",
+    contributing_factors: [
+      "Possible invisible overlay blocking clicks",
+      "Button may have no click handler attached",
+      "Response time > 2 seconds causing double-clicks",
+      "No visual feedback on click",
+    ],
+  },
+  actions: [
+    {
+      title: "Test the checkout button",
+      description: "Click on the checkout button to verify it responds correctly",
+      type: "edit_element",
+      link: "/dashboard/editor",
+    },
+    {
+      title: "Create A/B test to fix",
+      description: "Test a version with faster response or clearer visual feedback",
+      type: "ab_test",
+      link: "/dashboard/experiments?template=fix-checkout",
+    },
+    {
+      title: "Add loading indicator",
+      description: "Show visual feedback when checkout is processing",
+      type: "edit_element",
+      link: "/dashboard/editor",
+    },
+  ],
+  supporting_charts: {
+    page_stats: {
+      total_sessions: 127,
+      avg_friction: 42,
+      top_emotion: "frustration",
+    },
+  },
+  generated_at: new Date().toISOString(),
+};
 
-/* ── Low data banner ────────────────────────────────────── */
-function LowDataBanner({ sessions, withEmotion }: { sessions: number; withEmotion: number }) {
-  if (withEmotion >= 20) return null;
+// ── Components ─────────────────────────────────────────────────
+
+function PageHeader({
+  onTimeRangeChange,
+  timeRange,
+  showDemoToggle,
+  isDemoMode,
+  onToggleDemo
+}: {
+  onTimeRangeChange: (v: string) => void;
+  timeRange: string;
+  showDemoToggle?: boolean;
+  isDemoMode?: boolean;
+  onToggleDemo?: () => void;
+}) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-      <span className="text-amber-500 text-lg leading-none mt-0.5">⚠</span>
+    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
       <div>
-        <p className="text-sm font-medium text-amber-800">Limited emotion data</p>
-        <p className="text-xs text-amber-600 mt-0.5">
-          Only {withEmotion} of {sessions} sessions have emotion predictions.
-          Insights become reliable with 20+ emotion-tagged sessions.
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Diagnosis</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Turn user behavior into actionable fixes — no charts required
         </p>
       </div>
-    </div>
-  );
-}
-
-/* ── Stat card ──────────────────────────────────────────── */
-function StatCard({
-  label,
-  value,
-  sub,
-  accent,
-  emotion,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: string;
-  emotion?: string | null;
-}) {
-  const color = emotion ? getEmotionColor(emotion) : undefined;
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 hover:shadow-sm transition-shadow">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{label}</p>
-      <div className="flex items-center gap-2">
-        {color && <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />}
-        <p className={`text-2xl font-bold ${accent || "text-gray-900"}`} style={color ? { color } : undefined}>
-          {value}
-        </p>
-      </div>
-      {sub && <p className="text-xs text-gray-400 mt-1.5">{sub}</p>}
-    </div>
-  );
-}
-
-/* ── Friction comparison ───────────────────────────────── */
-function FrictionComparison({ summary }: { summary: WhyAnalysisSummary }) {
-  const abandoned = summary.avg_friction_abandoned;
-  const converted = summary.avg_friction_converted;
-  if (abandoned == null || converted == null) return null;
-
-  const diff = Math.abs(abandoned - converted) * 100;
-  const higher = abandoned > converted ? "abandoned" : "converted";
-
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">Friction Comparison</p>
-      <div className="flex items-end gap-8">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Abandoned Users</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-red-500">{(abandoned * 100).toFixed(0)}%</span>
-            <span className="text-xs text-gray-400">friction</span>
-          </div>
-        </div>
-        <div className="pb-1 text-gray-300 text-lg">vs</div>
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Converted Users</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-green-500">{(converted * 100).toFixed(0)}%</span>
-            <span className="text-xs text-gray-400">friction</span>
-          </div>
-        </div>
-      </div>
-      {diff > 1 && (
-        <p className="text-sm text-gray-500 mt-3 pt-3 border-t border-gray-100">
-          {higher === "abandoned"
-            ? `Users who abandon experience ${diff.toFixed(0)}% more friction — reducing friction could improve conversions.`
-            : "Friction levels are similar between both groups."}
-        </p>
-      )}
-      {diff <= 1 && (
-        <p className="text-sm text-gray-500 mt-3 pt-3 border-t border-gray-100">
-          Friction levels are similar — drop-offs may be driven by emotional factors rather than UX friction.
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── Emotion Trend Chart ──────────────────────────────── */
-function EmotionTrendChart({ data }: { data: EmotionTrendResponse }) {
-  if (data.days.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Emotion Trends</p>
-        <p className="text-gray-400 text-sm py-8 text-center">No trend data yet.</p>
-      </div>
-    );
-  }
-
-  const maxTotal = Math.max(...data.days.map((d) => d.total), 1);
-  const daysToShow = data.days.slice(-30); // Show last 30 days max
-
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-      <div className="mb-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Emotion Trends</p>
-        <p className="text-sm text-gray-500">Daily emotion breakdown over time</p>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        {data.emotions_seen.map((emotion) => (
-          <div key={emotion} className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getEmotionColor(emotion) }} />
-            <span className="text-xs capitalize text-gray-600">{emotion}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Chart */}
-      <div className="flex gap-0.5 items-end h-32">
-        {daysToShow.map((day) => {
-          if (day.total === 0) {
-            return (
-              <div key={day.date} className="flex-1 bg-gray-50 rounded-sm" style={{ minHeight: "4px" }} />
-            );
-          }
-
-          const parts: Array<{ emotion: string; count: number; color: string }> = [];
-          for (const [emotion, count] of Object.entries(day.emotions)) {
-            parts.push({ emotion, count: count as number, color: getEmotionColor(emotion) });
-          }
-          parts.sort((a, b) => b.count - a.count);
-
-          return (
-            <div
-              key={day.date}
-              className="flex-1 flex flex-col justify-end rounded-sm overflow-hidden relative group"
-              style={{ height: `${Math.max((day.total / maxTotal) * 100, 4)}%` }}
-            >
-              {parts.map((part) => (
-                <div
-                  key={part.emotion}
-                  className="w-full hover:opacity-80 transition-opacity"
-                  style={{
-                    backgroundColor: part.color,
-                    height: `${(part.count / day.total) * 100}%`,
-                    minHeight: "2px",
-                  }}
-                  title={`${part.emotion}: ${part.count}`}
-                />
-              ))}
-              <div className="absolute bottom-0 left-0 right-0 bg-gray-900/80 text-white text-[9px] py-0.5 px-1 text-center opacity-0 group-hover:opacity-100 transition-opacity truncate">
-                {new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* X-axis labels */}
-      <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-        <span>{new Date(daysToShow[0]?.date || "").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-        <span>{new Date(daysToShow[daysToShow.length - 1]?.date || "").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Emotion → Conversion chart ────────────────────────── */
-function EmotionConversionChart({ data }: { data: EmotionConversionResponse }) {
-  if (data.items.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Emotion → Conversion</p>
-        <p className="text-gray-400 text-sm py-8 text-center">No emotion data yet. Sessions need emotion predictions to appear here.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-      <div className="mb-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Emotion → Conversion</p>
-        <p className="text-sm text-gray-500">How each detected emotion correlates with conversion rate</p>
-      </div>
-      <div className="space-y-3">
-        {data.items.map((item) => {
-          const color = getEmotionColor(item.emotion);
-          const convPct = item.conversion_rate * 100;
-          return (
-            <div key={item.emotion} className="group">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                  <span className="text-sm font-medium text-gray-700 capitalize">{item.emotion}</span>
-                  {item.total_sessions < 5 && (
-                    <span className="text-[10px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">low sample</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400">{item.total_sessions} sessions</span>
-                  <span className="text-sm font-semibold text-gray-800">{convPct.toFixed(1)}%</span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.max(convPct, 2)}%`, backgroundColor: color }}
-                />
-              </div>
-              <div className="flex justify-between mt-1 text-[11px] text-gray-400">
-                <span>{item.converted} converted · {item.abandoned} abandoned</span>
-                {item.avg_friction != null && <span>Friction: {(item.avg_friction * 100).toFixed(0)}%</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
-        <span className="text-xs text-gray-400">Overall conversion (emotion-tagged sessions only)</span>
-        <span className="text-sm font-bold text-gray-900">{formatPct(data.overall_conversion_rate)}</span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Drop-off reasons table ────────────────────────────── */
-function DropOffTable({ data }: { data: DropOffReasonsResponse }) {
-  if (data.reasons.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Top Drop-Off Patterns</p>
-        <p className="text-gray-400 text-sm py-8 text-center">No drop-off patterns detected yet. Need more abandoned sessions with emotion data.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-      <div className="mb-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Top Drop-Off Patterns</p>
-        <p className="text-sm text-gray-500">Page + emotion combinations causing the most abandonment</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2.5 pr-4 text-xs font-medium text-gray-400 uppercase tracking-wide">Page</th>
-              <th className="text-left py-2.5 px-4 text-xs font-medium text-gray-400 uppercase tracking-wide">Emotion</th>
-              <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-400 uppercase tracking-wide">Sessions</th>
-              <th className="text-right py-2.5 px-4 text-xs font-medium text-gray-400 uppercase tracking-wide">Drop-off %</th>
-              <th className="text-right py-2.5 pl-4 text-xs font-medium text-gray-400 uppercase tracking-wide">Friction</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.reasons.map((r, i) => {
-              const color = getEmotionColor(r.emotion);
-              let displayUrl = r.page_url;
-              try { displayUrl = new URL(r.page_url).pathname; } catch { /* keep */ }
-              return (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="py-3 pr-4 font-mono text-xs text-gray-600 max-w-[280px] truncate" title={r.page_url}>
-                    {displayUrl}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium capitalize" style={{ color }}>
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                      {r.emotion}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right text-gray-700 font-medium">{r.sessions}</td>
-                  <td className="py-3 px-4 text-right text-gray-700">{formatPct(r.drop_off_rate)}</td>
-                  <td className="py-3 pl-4 text-right text-gray-700">
-                    {r.avg_friction != null ? `${(r.avg_friction * 100).toFixed(0)}%` : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* ── Insights ───────────────────────────────────────────── */
-type Insight = {
-  emoji: string;
-  text: string;
-  priority: "High" | "Medium" | "Low";
-};
-
-function Insights({
-  summary,
-  emotionConversion,
-  dropOff,
-}: {
-  summary: WhyAnalysisSummary | null;
-  emotionConversion: EmotionConversionResponse | null;
-  dropOff: DropOffReasonsResponse | null;
-}) {
-  const insights: Insight[] = [];
-
-  // Low sample size
-  if (summary && summary.sessions_with_emotion < 20) {
-    insights.push({
-      emoji: "⚠",
-      text: "Collect more emotion data for reliable insights. Current sample size is too small for confident recommendations.",
-      priority: "Medium",
-    });
-  }
-
-  // High converting emotions
-  if (emotionConversion) {
-    for (const item of emotionConversion.items) {
-      if (item.total_sessions >= 3 && item.conversion_rate > 0.6) {
-        insights.push({
-          emoji: "💡",
-          text: `Users feeling ${item.emotion} convert well (${(item.conversion_rate * 100).toFixed(0)}%). Consider amplifying triggers for this emotional state.`,
-          priority: "High",
-        });
-      }
-    }
-  }
-
-  // Low converting emotions
-  if (emotionConversion) {
-    for (const item of emotionConversion.items) {
-      if (item.total_sessions >= 3 && item.conversion_rate < 0.2) {
-        insights.push({
-          emoji: "🔍",
-          text: `${item.emotion.charAt(0).toUpperCase() + item.emotion.slice(1)} correlates with low conversion (${(item.conversion_rate * 100).toFixed(0)}%). Investigate UX friction on pages where this emotion dominates.`,
-          priority: "High",
-        });
-      }
-    }
-  }
-
-  // Friction comparison
-  if (summary && summary.avg_friction_abandoned !== null && summary.avg_friction_converted !== null) {
-    const diff = (summary.avg_friction_abandoned - summary.avg_friction_converted) * 100;
-    if (diff > 5) {
-      insights.push({
-        emoji: "⚡",
-        text: `Abandoned users experience ${diff.toFixed(0)}% more friction. Reducing page friction could directly improve conversions.`,
-        priority: "High",
-      });
-    } else if (diff <= 1) {
-      insights.push({
-        emoji: "💭",
-        text: "Friction is similar for both groups — drop-offs may be emotional, not UX-related. Focus on messaging and trust signals.",
-        priority: "Medium",
-      });
-    }
-  }
-
-  // Top drop-off pattern
-  if (dropOff && dropOff.reasons.length === 1) {
-    const top = dropOff.reasons[0];
-    let displayUrl = top.page_url;
-    try { displayUrl = new URL(top.page_url).pathname; } catch { /* keep */ }
-    insights.push({
-      emoji: "🎯",
-      text: `Most abandonment happens on ${displayUrl} with ${top.emotion}. This is your #1 optimization target.`,
-      priority: "High",
-    });
-  }
-
-  if (insights.length === 0) {
-    return null;
-  }
-
-  const priorityColors: Record<string, string> = {
-    High: "bg-red-100 text-red-700",
-    Medium: "bg-amber-100 text-amber-700",
-    Low: "bg-blue-100 text-blue-700",
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-      <div className="mb-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Insights</p>
-        <p className="text-sm text-gray-500">Actionable recommendations based on your data</p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {insights.map((insight, i) => (
-          <div key={i} className="bg-gray-50 rounded-lg p-4 flex gap-3">
-            <span className="text-xl flex-shrink-0">{insight.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-700">{insight.text}</p>
-              <span className={`inline-block mt-2 text-[10px] font-medium px-2 py-0.5 rounded-full ${priorityColors[insight.priority]}`}>
-                {insight.priority} Priority
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── Main page ─────────────────────────────────────────── */
-export default function WhyAnalysisPage() {
-  const [range, setRange] = useState<string>("30d");
-
-  const dateRange = useMemo(() => {
-    if (range === "all") return { from: undefined, to: undefined };
-    const now = new Date();
-    const to = now.toISOString();
-    const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
-    const from = new Date(now.getTime() - days * 86400000).toISOString();
-    return { from, to };
-  }, [range]);
-
-  const { data: summary, loading: loadingSummary } = useQuery<WhyAnalysisSummary>(
-    () => fetchWhyAnalysisSummary(dateRange.from, dateRange.to),
-    [range],
-    `why-summary-${range}`
-  );
-  const { data: emotionConversion, loading: loadingEC } = useQuery<EmotionConversionResponse>(
-    () => fetchEmotionConversion(dateRange.from, dateRange.to),
-    [range],
-    `why-emotion-conversion-${range}`
-  );
-  const { data: dropOff, loading: loadingDO } = useQuery<DropOffReasonsResponse>(
-    () => fetchDropOffReasons(dateRange.from, dateRange.to),
-    [range],
-    `why-drop-off-${range}`
-  );
-  const { data: emotionTrend, loading: loadingTrend } = useQuery<EmotionTrendResponse>(
-    () => fetchEmotionTrend(dateRange.from, dateRange.to),
-    [range],
-    `why-trend-${range}`
-  );
-
-  const isLoading = loadingSummary || loadingEC || loadingDO || loadingTrend;
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Why-Analysis</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Connect user emotions to conversion outcomes — understand <em>why</em> users drop off
-          </p>
-        </div>
+      <div className="flex items-center gap-3">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {[
-            { key: "7d", label: "7 days" },
-            { key: "30d", label: "30 days" },
-            { key: "90d", label: "90 days" },
-            { key: "all", label: "All time" },
-          ].map((opt) => (
+            { key: "24h", label: "24h", hours: 24 },
+            { key: "7d", label: "7 days", hours: 168 },
+            { key: "30d", label: "30 days", hours: 720 },
+          ].map(({ key, label, hours }) => (
             <button
-              key={opt.key}
-              onClick={() => setRange(opt.key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                range === opt.key
+              key={key}
+              onClick={() => onTimeRangeChange(String(hours))}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                timeRange === String(hours)
                   ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              {opt.label}
+              {label}
             </button>
           ))}
         </div>
+        {showDemoToggle && (
+          <button
+            onClick={onToggleDemo}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+              isDemoMode
+                ? "bg-purple-100 text-purple-700"
+                : "bg-gray-100 text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            {isDemoMode ? "Demo Mode" : "View Demo"}
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007BFF]" />
+// ── 1. PROBLEM SUMMARY SECTION ────────────────────────────────
+
+function ProblemSummarySection({ summary, isDemo }: { summary: ProblemSummary; isDemo?: boolean }) {
+  const config = SEVERITY_CONFIG[summary.severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG.low;
+
+  return (
+    <section className={`rounded-2xl border ${config.border} ${config.bg} p-6 sm:p-8`}>
+      {isDemo && (
+        <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+          <span>🎭</span>
+          <span>Demo Mode — sample data</span>
         </div>
-      ) : (
-        <>
-          {/* Low data warning */}
-          {summary && (
-            <LowDataBanner sessions={summary.total_sessions} withEmotion={summary.sessions_with_emotion} />
+      )}
+      <div className="flex items-start gap-4">
+        <span className="text-3xl">{config.icon}</span>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{summary.title}</h2>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${config.badge}`}>
+              {summary.severity.toUpperCase()}
+            </span>
+          </div>
+          <p className="text-gray-600 mb-4">
+            <span className="font-semibold text-gray-900">{summary.affected_users_pct}%</span> of users are
+            affected on{" "}
+            <span className="text-[#007BFF] font-medium">
+              {summary.page_name}
+            </span>
+          </p>
+          {summary.estimated_lost_revenue && (
+            <p className="text-sm text-gray-500">
+              Estimated impact: {summary.estimated_lost_revenue}
+            </p>
           )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Sessions"
-              value={summary?.total_sessions?.toString() || "0"}
-              sub={`${summary?.sessions_with_emotion || 0} with emotion data`}
-            />
-            <StatCard
-              label="Conversion Rate"
-              value={formatPct(summary?.overall_conversion_rate)}
-              accent={
-                summary?.overall_conversion_rate != null
-                  ? summary.overall_conversion_rate >= 0.1
-                    ? "text-green-600"
-                    : "text-gray-900"
-                  : undefined
-              }
-            />
-            <StatCard
-              label="Best Converting Emotion"
-              value={summary?.top_converting_emotion ? summary.top_converting_emotion.charAt(0).toUpperCase() + summary.top_converting_emotion.slice(1) : "—"}
-              sub={summary?.top_converting_emotion_rate != null ? `${(summary.top_converting_emotion_rate * 100).toFixed(0)}% conversion rate` : undefined}
-              emotion={summary?.top_converting_emotion}
-            />
-            <StatCard
-              label="Worst Converting Emotion"
-              value={summary?.top_drop_off_emotion ? summary.top_drop_off_emotion.charAt(0).toUpperCase() + summary.top_drop_off_emotion.slice(1) : "—"}
-              sub={summary?.top_drop_off_emotion_rate != null ? `${(summary.top_drop_off_emotion_rate * 100).toFixed(0)}% conversion rate` : undefined}
-              emotion={summary?.top_drop_off_emotion}
+// ── 2. EVIDENCE SECTION ────────────────────────────────────────
+
+function EvidenceSection({ evidence, severity, isDemo }: { evidence: EvidenceItem[]; severity: string; isDemo?: boolean }) {
+  if (evidence.length === 0) return null;
+
+  const config = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG.low;
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case "rage_clicks": return "👆";
+      case "hesitation": return "⏸️";
+      case "drop_off": return "🚪";
+      case "session_pattern": return "📊";
+      default: return "📈";
+    }
+  };
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Evidence</h3>
+        {isDemo && (
+          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Sample data</span>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {evidence.map((item, idx) => (
+          <div
+            key={idx}
+            className={`rounded-lg border ${config.border} ${config.bg} p-4`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{getIconForType(item.type)}</span>
+              <span className="text-xs font-medium text-gray-500 uppercase">{item.type.replace("_", " ")}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{item.value}</p>
+            <p className="text-sm text-gray-600 mt-1">{item.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── 3. WHY SECTION ─────────────────────────────────────────────
+
+function WhySection({ rootCause, isDemo }: { rootCause: RootCause; isDemo?: boolean }) {
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Why This Happens</h3>
+        {isDemo && (
+          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Sample data</span>
+        )}
+      </div>
+      <div className="space-y-4">
+        <div>
+          <p className="text-lg font-semibold text-gray-900 mb-2">{rootCause.primary_cause}</p>
+          <p className="text-gray-600">{rootCause.explanation}</p>
+        </div>
+        {rootCause.contributing_factors.length > 0 && (
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Contributing Factors
+            </p>
+            <ul className="space-y-2">
+              {rootCause.contributing_factors.map((factor, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className="text-[#007BFF] mt-0.5">•</span>
+                  <span>{factor}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── 4. WHAT TO FIX SECTION ────────────────────────────────────
+
+function ActionsSection({ actions, isDemo }: { actions: ActionItem[]; isDemo?: boolean }) {
+  const router = useRouter();
+
+  const handleAction = (action: ActionItem) => {
+    if (isDemo) return; // Don't navigate in demo mode
+    if (action.link) {
+      router.push(action.link);
+    }
+  };
+
+  if (actions.length === 0) return null;
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">What To Fix</h3>
+        {isDemo && (
+          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Sample data</span>
+        )}
+      </div>
+      <div className="space-y-3">
+        {actions.map((action, idx) => (
+          <div
+            key={idx}
+            className={`group flex items-start gap-4 p-4 rounded-lg border transition-all ${
+              isDemo
+                ? "border-gray-200 bg-gray-50 cursor-default"
+                : "border-gray-200 hover:border-[#007BFF] hover:bg-blue-50/30 cursor-pointer"
+            }`}
+            onClick={() => handleAction(action)}
+          >
+            <div className="flex-1">
+              <h4 className={`font-semibold transition-colors ${
+                isDemo ? "text-gray-900" : "text-gray-900 group-hover:text-[#007BFF]"
+              }`}>
+                {action.title}
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">{action.description}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-400 uppercase">{action.type}</span>
+              {!isDemo && (
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-[#007BFF] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── 5. CTA SECTION ─────────────────────────────────────────────
+
+function CTASection({ actions, summary, isDemo }: { actions: ActionItem[]; summary: ProblemSummary; isDemo?: boolean }) {
+  const router = useRouter();
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const hasProblem = summary.affected_users_pct > 0;
+
+  if (!hasProblem || isDemo) return null;
+
+  return (
+    <section className="sticky bottom-6 z-10">
+      <div className="bg-gradient-to-r from-[#007BFF] to-[#7C3AED] rounded-xl p-1 shadow-lg">
+        <div className="bg-white rounded-lg p-4 flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <p className="font-semibold text-gray-900">Ready to fix this issue?</p>
+            <p className="text-sm text-gray-500">
+              {actions.length} action{actions.length !== 1 ? "s" : ""} available
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => actions[0]?.link && router.push(actions[0].link)}
+              className="px-4 py-2 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors text-sm"
+            >
+              Fix Now
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowDropdown(false)}
+                  />
+                  <div className="absolute right-0 bottom-full mb-2 w-64 bg-white rounded-lg border border-gray-200 shadow-xl z-20">
+                    <div className="p-2">
+                      {actions.map((action, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            action.link && router.push(action.link);
+                            setShowDropdown(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                        >
+                          <p className="font-medium text-gray-900">{action.title}</p>
+                          <p className="text-xs text-gray-500">{action.type}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── 6. DE-EMPHASIZED CHARTS ───────────────────────────────────
+
+function SupportingCharts({ data, isDemo }: { data: DiagnosisResponse; isDemo?: boolean }) {
+  const charts = data.supporting_charts;
+  if (!charts || Object.keys(charts).length === 0) return null;
+
+  const pageStats = charts.page_stats as Record<string, unknown> | undefined;
+  const totalSessions = pageStats?.total_sessions;
+  const avgFriction = pageStats?.avg_friction;
+  const topEmotion = pageStats?.top_emotion;
+
+  return (
+    <section className="border-t border-gray-200 pt-6 mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+          Supporting Data
+        </p>
+        {isDemo && (
+          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Sample data</span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Total Sessions</p>
+          <p className="text-lg font-semibold text-gray-900">
+            {typeof totalSessions === "number" ? totalSessions : "—"}
+          </p>
+        </div>
+        {typeof avgFriction === "number" && (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Avg Friction</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {avgFriction}%
+            </p>
+          </div>
+        )}
+        {typeof topEmotion === "string" && (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Top Emotion</p>
+            <p className="text-lg font-semibold text-gray-900 capitalize">
+              {topEmotion}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── 7. ISSUE LIST ─────────────────────────────────────────────
+
+function IssuesList({ issues, isDemo }: { issues: IssueListItem[]; isDemo?: boolean }) {
+  const router = useRouter();
+
+  if (issues.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+          Other Issues Detected
+        </h3>
+        {isDemo && (
+          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Sample data</span>
+        )}
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {issues.map((issue, idx) => {
+          const config = SEVERITY_CONFIG[issue.severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG.low;
+          const pageName = issue.page_url.split("/").filter(Boolean).pop() || "Page";
+
+          return (
+            <div
+              key={issue.id}
+              className={`flex items-center gap-4 p-4 ${idx !== issues.length - 1 ? "border-b border-gray-100" : ""} ${
+                isDemo ? "cursor-default" : "hover:bg-gray-50 transition-colors cursor-pointer"
+              }`}
+              onClick={() => !isDemo && router.push(`/dashboard/diagnosis`)}
+            >
+              <span className="text-lg">{config.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 truncate">{issue.title}</p>
+                <p className="text-sm text-gray-500 truncate">{pageName}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-gray-900">{issue.affected_users}</p>
+                <p className="text-xs text-gray-500">users</p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.badge}`}>
+                {issue.severity}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── NO DATA STATE (graceful, not error) ───────────────────────
+
+function NoDataState({ sessionCount, onTryDemo }: { sessionCount: number; onTryDemo: () => void }) {
+  const threshold = 20;
+  const remaining = threshold - sessionCount;
+
+  return (
+    <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-8 text-center">
+      <span className="text-4xl mb-4 block">📊</span>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">
+        {sessionCount === 0 ? "Start collecting user data" : "Almost there..."}
+      </h2>
+      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+        {sessionCount === 0
+          ? "Add the EmoraTest tracking script to your website to start analyzing user behavior and detecting issues."
+          : `We need ${remaining} more session${remaining !== 1 ? "s" : ""} to detect reliable patterns. Current: ${sessionCount} sessions.`}
+      </p>
+      <div className="flex items-center justify-center gap-3 flex-wrap">
+        <a
+          href="/dashboard/settings"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors"
+        >
+          View Setup Guide
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+        <button
+          onClick={onTryDemo}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors"
+        >
+          <span>🎭</span>
+          Try Demo Mode
+        </button>
+      </div>
+      {sessionCount > 0 && sessionCount < threshold && (
+        <div className="mt-6 max-w-sm mx-auto">
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-[#007BFF] h-2 rounded-full transition-all"
+              style={{ width: `${(sessionCount / threshold) * 100}%` }}
             />
           </div>
+          <p className="text-xs text-gray-500 mt-2">{sessionCount} of {threshold} sessions collected</p>
+        </div>
+      )}
+    </section>
+  );
+}
 
-          {/* Friction Comparison */}
-          {summary && <FrictionComparison summary={summary} />}
+// ── LOADING STATE ─────────────────────────────────────────────
 
-          {/* Emotion Trend Chart */}
-          {emotionTrend && <EmotionTrendChart data={emotionTrend} />}
+function DiagnosisSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="bg-gray-100 rounded-2xl h-32 animate-pulse" />
+      <div className="bg-gray-100 rounded-xl h-24 animate-pulse" />
+      <div className="bg-gray-100 rounded-xl h-32 animate-pulse" />
+      <div className="bg-gray-100 rounded-xl h-40 animate-pulse" />
+    </div>
+  );
+}
 
-          {/* Emotion → Conversion Chart */}
-          {emotionConversion && <EmotionConversionChart data={emotionConversion} />}
+// ── MAIN PAGE ─────────────────────────────────────────────────
 
-          {/* Drop-off Reasons */}
-          {dropOff && <DropOffTable data={dropOff} />}
+export default function DiagnosisPage() {
+  const [timeRange, setTimeRange] = useState("24");
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [errorState, setErrorState] = useState<string | null>(null);
+  const hours = parseInt(timeRange, 10);
 
-          {/* Insights */}
-          <Insights summary={summary} emotionConversion={emotionConversion} dropOff={dropOff} />
-        </>
+  // Get merchant ID from localStorage (set during login)
+  const merchantId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const me = localStorage.getItem("auth_me");
+      if (me) {
+        const data = JSON.parse(me);
+        return data.id || "";
+      }
+    } catch { }
+    return "";
+  }, []);
+
+  // Fetch real data
+  const { data: diagnosis, loading, error } = useQuery(
+    () => fetchPrimaryDiagnosis(merchantId, hours),
+    [merchantId, hours],
+    `diagnosis-${hours}`
+  );
+
+  const { data: issues } = useQuery(
+    () => fetchIssuesList(merchantId, hours),
+    [merchantId, hours],
+    `issues-${hours}`
+  );
+
+  // Handle errors gracefully - never show raw error
+  if (error && !isDemoMode) {
+    // Store error but show demo mode instead
+    if (!errorState) setErrorState("data-unavailable");
+  }
+
+  // Show loading state
+  if (loading && !isDemoMode) return (
+    <div className="max-w-5xl mx-auto">
+      <PageHeader
+        onTimeRangeChange={setTimeRange}
+        timeRange={timeRange}
+        showDemoToggle={!loading}
+        isDemoMode={isDemoMode}
+        onToggleDemo={() => setIsDemoMode(true)}
+      />
+      <DiagnosisSkeleton />
+    </div>
+  );
+
+  // Determine what to show
+  const showDemo = isDemoMode || error || !diagnosis;
+  const displayDiagnosis = showDemo ? DEMO_DIAGNOSIS : diagnosis;
+  const displayIssues = showDemo ? {
+    issues: [
+      {
+        id: "1",
+        title: "Users hesitating on pricing page",
+        page_url: "https://example.com/pricing",
+        affected_users: 45,
+        severity: "medium",
+      },
+      {
+        id: "2",
+        title: "High drop-off at sign up form",
+        page_url: "https://example.com/signup",
+        affected_users: 32,
+        severity: "medium",
+      },
+    ],
+    total_issues: 2,
+    high_severity_count: 0,
+  } : issues;
+
+  // No real data and not in demo mode - show "collect more data" state
+  if (!isDemoMode && diagnosis && diagnosis.summary.affected_users_pct === 0) {
+    const pageStats = diagnosis.supporting_charts?.page_stats as Record<string, unknown> | undefined;
+    const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
+    return (
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          onTimeRangeChange={setTimeRange}
+          timeRange={timeRange}
+          showDemoToggle
+          isDemoMode={false}
+          onToggleDemo={() => setIsDemoMode(true)}
+        />
+        <NoDataState sessionCount={sessionCount} onTryDemo={() => setIsDemoMode(true)} />
+      </div>
+    );
+  }
+
+  // Main diagnosis view (real or demo)
+  return (
+    <div className="max-w-5xl mx-auto pb-24">
+      <PageHeader
+        onTimeRangeChange={setTimeRange}
+        timeRange={timeRange}
+        showDemoToggle={!isDemoMode}
+        isDemoMode={isDemoMode}
+        onToggleDemo={() => setIsDemoMode(!isDemoMode)}
+      />
+
+      {/* 1. PROBLEM SUMMARY — TOP PRIORITY */}
+      <ProblemSummarySection summary={displayDiagnosis.summary} isDemo={isDemoMode} />
+
+      {/* 2. EVIDENCE — SUPPORTING DATA */}
+      <EvidenceSection
+        evidence={displayDiagnosis.evidence}
+        severity={displayDiagnosis.summary.severity}
+        isDemo={isDemoMode}
+      />
+
+      {/* 3. WHY — ROOT CAUSE */}
+      <WhySection rootCause={displayDiagnosis.root_cause} isDemo={isDemoMode} />
+
+      {/* 4. WHAT TO FIX — ACTION ITEMS */}
+      <ActionsSection actions={displayDiagnosis.actions} isDemo={isDemoMode} />
+
+      {/* 5. CTA — STICKY BOTTOM (only in real mode) */}
+      <CTASection
+        actions={displayDiagnosis.actions}
+        summary={displayDiagnosis.summary}
+        isDemo={isDemoMode}
+      />
+
+      {/* 6. DE-EMPHASIZED CHARTS */}
+      <SupportingCharts data={displayDiagnosis} isDemo={isDemoMode} />
+
+      {/* 7. OTHER ISSUES LIST */}
+      {displayIssues && displayIssues.issues.length > 0 && (
+        <IssuesList issues={displayIssues.issues} isDemo={isDemoMode} />
       )}
     </div>
   );

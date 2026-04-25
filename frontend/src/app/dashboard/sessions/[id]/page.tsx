@@ -66,6 +66,29 @@ function formatVelocityVariance(value: number | null | undefined): string {
   return "High";
 }
 
+// ── Helper Functions (Prompt 21) ─────────────────────────────────────────────
+
+function formatPageUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname || url;
+  } catch {
+    return url;
+  }
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function getEmotionVariant(emotion: string): "success" | "danger" | "warning" | "default" {
+  const positive = ["delight", "satisfaction", "focus"];
+  const negative = ["frustration", "confusion", "anxiety"];
+  if (positive.includes(emotion)) return "success";
+  if (negative.includes(emotion)) return "danger";
+  return "default";
+}
+
 // Format event description based on type and metadata
 // Prefers backend-provided readable_description, falls back to client-side formatting
 function formatEventDescription(e: { type: string; label: string | null; element_type: string | null; section: string | null; selector: string | null; metadata: Record<string, unknown> | null; readable_description: string | null }): string {
@@ -302,12 +325,12 @@ export default function SessionDetailPage() {
         <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome}</Badge>
       </div>
 
-      {/* Metric boxes */}
+      {/* Top Stat Cards — Prompt 21 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricBox label="Abandonment Risk" value={formatRisk(s.abandonment_risk)} variant={riskVariant(s.abandonment_risk)} />
-        <MetricBox label="Friction Score" value={formatPercent(s.friction_score)} />
-        <MetricBox label="User Intent" value={INTENT_LABELS[s.intent_label as keyof typeof INTENT_LABELS] || s.intent_label || "--"} />
-        <MetricBox label="Device" value={DEVICE_LABELS[s.device_type as keyof typeof DEVICE_LABELS] || s.device_type || "--"} />
+        <MetricBox label="Page URL" value={formatPageUrl(s.page_url)} />
+        <MetricBox label="Duration" value={formatDuration(s.ended_at ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null)} />
+        <MetricBox label="Primary Emotion" value={s.primary_emotion ? capitalize(s.primary_emotion) : "--"} variant={s.primary_emotion ? getEmotionVariant(s.primary_emotion) : undefined} />
+        <MetricBox label="Outcome" value={OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome} variant={outcomeVariant(s.outcome)} />
       </div>
 
       {s.primary_emotion && (
@@ -404,19 +427,15 @@ export default function SessionDetailPage() {
           </CardBody>
         </Card>
 
-        {/* Interventions */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
-              Intervention Recommendations
-            </h2>
-          </CardHeader>
-          <CardBody>
-            {interventions.loading ? (
-              <Spinner />
-            ) : interventions.error ? (
-              <ErrorBox message={interventions.error} onRetry={interventions.refetch} />
-            ) : interventions.data && interventions.data.recommendations.length > 0 ? (
+        {/* Interventions — Prompt 21: Only show if recommendations exist */}
+        {!interventions.loading && !interventions.error && interventions.data && interventions.data.recommendations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
+                Intervention Recommendations
+              </h2>
+            </CardHeader>
+            <CardBody>
               <ul className="space-y-3">
                 {interventions.data.recommendations.map((rec) => (
                   <li
@@ -434,11 +453,9 @@ export default function SessionDetailPage() {
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-[13px] text-[hsl(var(--muted-foreground))]">No recommendations available.</p>
-            )}
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        )}
       </div>
 
       {/* Event timeline */}
@@ -498,6 +515,19 @@ export default function SessionDetailPage() {
           )}
         </CardBody>
       </Card>
+
+      {/* Similar sessions — Prompt 21 */}
+      <div className="text-center py-4">
+        <Link
+          href={`/dashboard/sessions?page=${encodeURIComponent(s.page_url)}&emotion=${s.primary_emotion || ''}`}
+          className="inline-flex items-center gap-2 text-[13px] font-medium text-[hsl(var(--primary))] hover:underline"
+        >
+          View {s.primary_emotion ? `other ${s.primary_emotion} sessions` : 'other sessions'} on this page
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </Link>
+      </div>
     </div>
   );
 }

@@ -131,7 +131,8 @@ export default function EditorPage() {
   const handlePublish = useCallback(async () => {
     setSaving(true);
     try {
-      // TODO: Call API to save experiment
+      // Feature pending: Call API to save and publish experiment
+      // Backend endpoint: POST /api/v1/experiments/{id}/publish
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setShowPublishDialog(false);
       router.push("/dashboard/experiments");

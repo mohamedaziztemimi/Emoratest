@@ -87,8 +87,14 @@ async def get_current_merchant(
     merchant = result.scalar_one_or_none()
     if merchant is None:
         raise HTTPException(status_code=401, detail="Merchant not found or inactive")
-
     return merchant
+
+
+async def get_merchant_id(
+    merchant: Merchant = Depends(get_current_merchant),
+) -> str:
+    """FastAPI dependency: return merchant ID as string for use in endpoints."""
+    return merchant.id
 
 
 async def get_merchant_flexible(

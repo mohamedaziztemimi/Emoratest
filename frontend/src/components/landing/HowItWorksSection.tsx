@@ -11,41 +11,44 @@ const STEPS = [
   {
     number: "01",
     title: "Install the Snippet",
-    description: "Add one line of JavaScript to your site. No engineering required. Works with any stack.",
+    description: "Add one script tag to your site. Works with HTML, React, Next.js, Vue, or any JavaScript framework. Takes 2 minutes.",
     tag: "2 min setup",
   },
   {
     number: "02",
-    title: "Emotion ML Activates",
-    description: "Our ML immediately starts reading mouse patterns, rage-clicks, scroll hesitation, and dwell time to classify emotions in real-time.",
-    tag: "Instant, automatic",
+    title: "Behavior Tracking Starts",
+    description: "The SDK automatically tracks mouse movements, clicks, scroll patterns, rage clicks, and exit intent. No configuration needed.",
+    tag: "Zero config",
   },
   {
     number: "03",
-    title: "See the Why",
-    description: "Your dashboard shows exactly which pages trigger confusion or frustration, with revenue impact attached to every insight.",
-    tag: "Live dashboard",
+    title: "Emotions Are Detected",
+    description: "Our XGBoost model analyzes behavior patterns and classifies each session into one of 8 emotions. Results appear on your dashboard within seconds of the session ending.",
+    tag: "8 emotions detected",
   },
   {
     number: "04",
-    title: "Test and Win",
-    description: "Launch AI-suggested variants targeting confused segments. Watch conversion lift happen in days, not months.",
-    tag: "30-50% faster winners",
+    title: "Take Action",
+    description: "See which pages cause frustration, get automated diagnosis of issues, set up alerts, and create A/B tests — all from one dashboard.",
+    tag: "Detect → Diagnose → Fix",
   },
 ];
 
-const QUOTES = [
+const USE_CASES = [
   {
-    text: "EmoraTest found that 73% of our checkout abandonment was confusion-driven. Fixed it in one sprint.",
-    name: "Sarah K.",
-    role: "Head of Growth @ Series B SaaS",
-    result: "$2.1M revenue recovered",
+    title: "Growth Teams",
+    description: "Find the pages killing your conversion rate and fix them with data, not guesswork.",
+    icon: "📈",
   },
   {
-    text: "Finally a tool that tells me WHY users leave. Our UX team cut research time by 60%.",
-    name: "Marcus T.",
-    role: "Senior PM @ E-commerce Platform",
-    result: "40% faster shipping",
+    title: "Product Managers",
+    description: "Understand why users drop off at every step of your funnel with emotion-level detail.",
+    icon: "🎯",
+  },
+  {
+    title: "UX Researchers",
+    description: "Replace hours of user interviews with automated emotion detection on every session.",
+    icon: "🔍",
   },
 ];
 
@@ -108,26 +111,28 @@ export function HowItWorksSection({ id }: HowItWorksSectionProps) {
           ))}
         </div>
 
-        {/* Customer quotes */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {QUOTES.map((quote, index) => (
+        {/* Use case cards */}
+        <div className="text-center mb-8">
+          <h3 className="text-2xl font-bold text-[#111318] mb-2">
+            Built for teams who care about user experience
+          </h3>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {USE_CASES.map((useCase, index) => (
             <FadeInOnScroll key={index} delay={600 + index * 150}>
-              <GlassCard padding="lg" className="bg-white border-gray-200">
-                {/* Quote */}
-                <p className="text-base text-[#374151] italic leading-relaxed mb-4">
-                  &ldquo;{quote.text}&rdquo;
-                </p>
+              <GlassCard padding="lg" className="bg-white border-gray-200 text-center">
+                {/* Icon */}
+                <div className="text-4xl mb-4">{useCase.icon}</div>
 
-                {/* Attribution */}
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-[#111318]">{quote.name}</p>
-                    <p className="text-sm text-[#6B7280]">{quote.role}</p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold text-[#10B981] bg-green-100 whitespace-nowrap">
-                    {quote.result}
-                  </span>
-                </div>
+                {/* Title */}
+                <h4 className="text-lg font-bold text-[#111318] mb-3">
+                  {useCase.title}
+                </h4>
+
+                {/* Description */}
+                <p className="text-sm text-[#4B5563] leading-relaxed">
+                  {useCase.description}
+                </p>
               </GlassCard>
             </FadeInOnScroll>
           ))}

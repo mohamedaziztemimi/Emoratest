@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import clsx from "clsx";
+import Link from "next/link";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("emoratest_theme");
@@ -61,14 +64,31 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             </button>
 
             {/* Search */}
-            <div className="hidden items-center gap-2 rounded-xl bg-[hsl(var(--secondary))] px-4 py-2 sm:flex">
+            <div className={`hidden items-center gap-2 rounded-xl border transition-all sm:flex ${
+              searchFocused ? 'border-[hsl(var(--primary))] bg-[hsl(var(--card))]' : 'border-transparent bg-[hsl(var(--secondary))]'
+            } px-3 py-2`}>
               <svg className="h-4 w-4 text-[hsl(var(--muted-foreground))]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
-              <span className="text-[13px] text-[hsl(var(--muted-foreground))]">Search...</span>
-              <kbd className="ml-8 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">
-                Ctrl K
-              </kbd>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                className="flex-1 bg-transparent border-none outline-none text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
@@ -95,13 +115,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[hsl(var(--destructive))]" />
             </button>
 
-            {/* Avatar */}
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[hsl(var(--primary))] to-[#4CAF50] flex items-center justify-center text-[11px] font-semibold text-white">
+            {/* Avatar - clickable, goes to settings */}
+            <Link href="/dashboard/settings" className="h-7 w-7 rounded-lg bg-gradient-to-br from-[hsl(var(--primary))] to-[#4CAF50] flex items-center justify-center text-[11px] font-semibold text-white hover:opacity-80 transition-opacity">
               M
-            </div>
+            </Link>
           </div>
         </header>
 

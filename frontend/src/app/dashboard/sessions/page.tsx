@@ -1,10 +1,9 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
 import { fetchSessions, type SessionFilters } from "@/lib/api";
-import { formatDate, formatRisk, riskVariant, outcomeVariant } from "@/lib/format";
 import { Card, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
@@ -13,16 +12,66 @@ import EmptyState from "@/components/ui/EmptyState";
 
 const PAGE_SIZE = 20;
 
+// ── Helper Functions (Prompt 20) ─────────────────────────────────────────────
+
+function formatPageUrl(url: string): string {
+  // Strip http://localhost:8000 or other domains, show only path
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname || url;
+  } catch {
+    return url;
+  }
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "--";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}m ${secs}s`;
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
+function outcomeVariant(outcome: string): "default" | "success" | "warning" | "destructive" | "outline" {
+  return OUTCOME_VARIANT[outcome] || "outline";
+}
+
 const OUTCOME_DISPLAY: Record<string, string> = {
   purchase: "Converted",
-  abandon: "Left",
-  unknown: "Active",
-  browse: "Browsing",
+  abandon: "Abandoned",
+  unknown: "Bounced",
+  browse: "Left",
   signup: "Signed Up",
   trial_started: "Trial Started",
   lead_generated: "Lead",
   demo_booked: "Demo Booked",
   checkout_completed: "Checkout Done",
+};
+
+const OUTCOME_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "outline"> = {
+  purchase: "success",
+  abandon: "destructive",
+  unknown: "outline",
+  browse: "outline",
+  signup: "success",
+  trial_started: "success",
+  lead_generated: "success",
+  demo_booked: "success",
+  checkout_completed: "success",
 };
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -37,21 +86,35 @@ const EMOTION_COLORS: Record<string, string> = {
 };
 
 const EMOTION_DISPLAY: Record<string, string> = {
-  confusion: "Confusion",
-  frustration: "Frustration",
-  delight: "Delight",
-  anxiety: "Anxiety",
-  hesitation: "Hesitation",
-  focus: "Focus",
-  boredom: "Boredom",
-  satisfaction: "Satisfaction",
+  confusion: "Confused",
+  frustration: "Frustrated",
+  delight: "Delighted",
+  anxiety: "Anxious",
+  hesitation: "Hesitating",
+  focus: "Focused",
+  boredom: "Bored",
+  satisfaction: "Satisfied",
 };
+
+// Prompt 19: Emotion filter options
+const EMOTION_FILTERS = [
+  { value: null, label: "All", color: "#6B7280" },
+  { value: "frustration", label: "Frustrated", color: "#EF4444" },
+  { value: "confusion", label: "Confused", color: "#F59E0B" },
+  { value: "anxiety", label: "Anxious", color: "#F97316" },
+  { value: "hesitation", label: "Hesitating", color: "#8B5CF6" },
+  { value: "satisfaction", label: "Satisfied", color: "#059669" },
+  { value: "delight", label: "Delighted", color: "#10B981" },
+  { value: "boredom", label: "Bored", color: "#6B7280" },
+  { value: "focus", label: "Focused", color: "#3B82F6" },
+];
 
 export default function SessionsPage() {
   const [filters, setFilters] = useState<SessionFilters>({
     page: 1,
     page_size: PAGE_SIZE,
   });
+  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
   const fetcher = useCallback(() => fetchSessions(filters), [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -61,15 +124,42 @@ export default function SessionsPage() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   }, []);
 
+  // Prompt 19: Handle emotion filter selection
+  const handleEmotionSelect = useCallback((emotion: string | null) => {
+    setSelectedEmotion(emotion);
+    setFilter("emotion", emotion || undefined);
+  }, [setFilter]);
+
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">Sessions</h1>
-        <p className="mt-1 text-[14px] text-[hsl(var(--muted-foreground))]">
-          Every visit to your site, and what happened
-        </p>
+        <h1 className="type-page-title">Sessions</h1>
+        <p className="text-sm text-secondary">Every visit to your site, and what happened</p>
+      </div>
+
+      {/* Prompt 19: Emotion Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {EMOTION_FILTERS.map((filter) => (
+          <button
+            key={filter.value ?? "all"}
+            onClick={() => handleEmotionSelect(filter.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              selectedEmotion === filter.value
+                ? "text-white shadow-md"
+                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+            }`}
+            style={{
+              ...(selectedEmotion === filter.value && {
+                background: filter.color,
+                borderColor: filter.color,
+              }),
+            }}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -86,13 +176,6 @@ export default function SessionsPage() {
             value={filters.device_type || ""}
             onChange={(v) => setFilter("device_type", v || undefined)}
             options={DEVICE_OPTIONS}
-          />
-          <FilterInput
-            label="Min leave risk"
-            type="number"
-            value={filters.risk_min ?? ""}
-            onChange={(v) => setFilter("risk_min", v ? Number(v) : undefined)}
-            className="w-24"
           />
           <FilterInput
             label="From"
@@ -122,7 +205,7 @@ export default function SessionsPage() {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)]">
                 <tr>
-                  {["Visitor", "Page Visited", "Started", "Result", "Leave Risk", "Emotion", "Device"].map((h) => (
+                  {["Visitor", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -136,21 +219,48 @@ export default function SessionsPage() {
                 {data.sessions.map((s) => (
                   <tr
                     key={s.id}
-                    className="transition-colors hover:bg-[hsl(var(--accent)/0.5)]"
+                    className="transition-colors hover:bg-[hsl(var(--accent)/0.5)] cursor-pointer"
+                    onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
                   >
                     <td className="px-5 py-3.5">
-                      <Link
-                        href={`/dashboard/sessions/${s.id}`}
-                        className="font-medium text-[hsl(var(--primary))] hover:underline"
-                      >
+                      <span className="font-mono text-[13px] text-[hsl(var(--primary))]">
                         {s.id.slice(0, 8)}...
-                      </Link>
+                      </span>
                     </td>
-                    <td className="max-w-[200px] truncate px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                      {s.page_url}
+                    <td className="max-w-[200px] truncate px-5 py-3.5 text-[hsl(var(--foreground))]">
+                      {formatPageUrl(s.page_url)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {s.primary_emotion ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: EMOTION_COLORS[s.primary_emotion] || "#9CA3AF" }}
+                          />
+                          <span className="text-[13px] font-medium text-[hsl(var(--foreground))]">
+                            {EMOTION_DISPLAY[s.primary_emotion] || s.primary_emotion}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {s.emotion_confidence !== null ? (
+                        <span className="text-[13px] text-[hsl(var(--muted-foreground))]">
+                          {s.emotion_confidence}%
+                        </span>
+                      ) : (
+                        <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                      {formatDate(s.started_at)}
+                      {formatDuration(
+                        // Calculate duration from started_at to ended_at, or use a reasonable default
+                        s.ended_at
+                          ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000
+                          : null
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <Badge variant={outcomeVariant(s.outcome)}>
@@ -163,53 +273,8 @@ export default function SessionsPage() {
                         })()}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <Badge variant={riskVariant(s.abandonment_risk)}>
-                        {formatRisk(s.abandonment_risk)}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {(() => {
-                        const sessionAge = s.ended_at
-                          ? (Date.now() - new Date(s.ended_at).getTime()) / 1000
-                          : null;
-
-                        if (s.primary_emotion) {
-                          return (
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: EMOTION_COLORS[s.primary_emotion] || "#9CA3AF" }}
-                              />
-                              <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">
-                                {EMOTION_DISPLAY[s.primary_emotion] || s.primary_emotion}
-                              </span>
-                              {s.emotion_confidence && (
-                                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                                  {s.emotion_confidence}%
-                                </span>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        // No emotion data yet
-                        const isAnalyzing = sessionAge === null || sessionAge < 30;
-
-                        return (
-                          <div className="flex items-center gap-2">
-                            {isAnalyzing && (
-                              <span className="h-2 w-2 rounded-full bg-[hsl(var(--muted-foreground))] animate-pulse" />
-                            )}
-                            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                              {isAnalyzing ? "Analyzing..." : "No data"}
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </td>
                     <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
-                      {s.device_type || "--"}
+                      {formatTimeAgo(s.started_at)}
                     </td>
                   </tr>
                 ))}

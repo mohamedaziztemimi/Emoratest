@@ -180,7 +180,6 @@ export function ProblemSolutionSection() {
                 `}
               >
                 <BeforeAfterSlide
-                  persona={persona.id as any}
                   before={SLIDE_CONTENT[persona.id].before}
                   after={SLIDE_CONTENT[persona.id].after}
                 />
