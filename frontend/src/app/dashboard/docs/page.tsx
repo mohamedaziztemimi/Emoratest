@@ -195,7 +195,7 @@ export default function EmoraTracker() {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
     document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
+    // No cleanup — let SDK persist across route changes
   }, []);
   return null;
 }`}
@@ -211,7 +211,7 @@ export default function EmoraTracker() {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
     document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
+    // No cleanup — let SDK persist across route changes
   }, []);
   return null;
 }`, "install-react")}
@@ -221,13 +221,12 @@ export default function EmoraTracker() {
                   Then add <code className="bg-[hsl(var(--secondary))] px-1 rounded">&lt;EmoraTracker /&gt;</code> to your root layout.
                 </p>
 
-                <h3 className="text-lg font-semibold mb-3 mt-6">NPM Package (coming soon)</h3>
-                <CodeBlock
-                  code={`npm install emoratest
-# Coming soon — use the script tag method for now`}
-                  onCopy={() => copyToClipboard(`npm install emoratest`, "install-npm")}
-                  copied={copiedCode === "install-npm"}
-                />
+                <h3 className="text-lg font-semibold mb-3 mt-6">NPM Package</h3>
+                <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))]">
+                  <p className="text-[hsl(var(--muted-foreground))]">
+                    NPM package coming soon. Use the script tag method for now.
+                  </p>
+                </div>
 
                 <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))] mt-4">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
@@ -439,8 +438,8 @@ if (result.variant === 'control') {
                     solution="Verify SDK loads: type window.EmoraTest in console."
                   />
                   <TroubleshootItem
-                    problem="Emotion shows 'Analyzing...'?"
-                    solution="Emotions are predicted after the session ends. Wait for the user to leave."
+                    problem="Emotion not showing yet?"
+                    solution="Emotions are predicted after the session ends (when the user closes the tab or navigates away). If a session shows 'No data', it means not enough behavioral signals were collected. Sessions under 5 seconds typically don't generate enough data for prediction."
                   />
                   <TroubleshootItem
                     problem="A/B test shows same variant?"
