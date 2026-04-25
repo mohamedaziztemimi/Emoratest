@@ -39,13 +39,17 @@ jobs:
             echo "🐳 Rebuilding containers..."
             docker compose -f docker-compose.prod.yml --env-file .env build backend frontend
 
-            # Run database migrations
-            echo "🗄️ Running database migrations..."
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T backend alembic upgrade head
-
             # Restart all services
             echo "🔄 Restarting services..."
             docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate --remove-orphans
+
+            # Wait for backend to be healthy
+            echo "⏳ Waiting for backend to be ready..."
+            timeout 60 bash -c 'until docker compose -f docker-compose.prod.yml --env-file .env exec -T backend python -c "import sys; sys.exit(0)" 2>/dev/null; do sleep 2; done' || echo "⚠️ Backend not fully ready, continuing anyway..."
+
+            # Run database migrations (using --rm for one-off container)
+            echo "🗄️ Running database migrations..."
+            docker compose -f docker-compose.prod.yml --env-file .env run --rm backend alembic upgrade head
 
             # Cleanup old images (optional)
             echo "🧹 Cleaning up old images..."
