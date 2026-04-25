@@ -45,6 +45,7 @@ export class SessionManager {
   private readonly debug: boolean;
   private readonly maxEvents: number;
   private readonly maxDuration: number;
+  private limitReached: boolean = false;
 
   constructor(
     transport: Transport,
@@ -105,6 +106,11 @@ export class SessionManager {
         });
         sessionId = response.session_id;
       } catch (err) {
+        // Check if this is a limit reached error
+        if (this.transport.limitReached || (err as Error).message.includes("429")) {
+          this.limitReached = true;
+          console.warn("[EmoraTest] Session limit reached. Tracking paused for this month.");
+        }
         if (this.debug) {
           console.error("[EmoraTest] Session creation failed:", err);
         }
@@ -261,6 +267,11 @@ export class SessionManager {
   /** Get sampling decision for this session. */
   isSampledIn(): boolean {
     return this.session?.sampledIn ?? false;
+  }
+
+  /** Check if the session limit has been reached. */
+  isSessionLimitReached(): boolean {
+    return this.limitReached || this.transport.limitReached;
   }
 
   /** End session via beacon (for page unload). */

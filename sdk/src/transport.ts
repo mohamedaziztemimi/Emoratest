@@ -11,6 +11,7 @@ export class Transport {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
   public disabled = false;
+  public limitReached = false;
 
   constructor(apiUrl: string, sdkKeyHash: string) {
     this.baseUrl = apiUrl.replace(/\/+$/, "");
@@ -30,12 +31,20 @@ export class Transport {
     }
   }
 
+  /** Check if response is 429 (session limit reached). */
+  private handleLimitReached(res: Response): void {
+    if (res.status === 429 && !this.limitReached) {
+      this.limitReached = true;
+      console.warn("[EmoraTest] Monthly session limit reached. Tracking has been paused.");
+    }
+  }
+
   /** POST /api/v1/sessions — create a new session. */
   async createSession(
     payload: SessionCreatePayload,
   ): Promise<SessionCreateResponse> {
-    if (this.disabled) {
-      throw new Error("SDK disabled due to invalid API key");
+    if (this.disabled || this.limitReached) {
+      throw new Error("SDK disabled due to invalid API key or session limit reached");
     }
 
     const res = await fetch(`${this.baseUrl}/api/v1/sessions`, {
@@ -46,6 +55,7 @@ export class Transport {
 
     if (!res.ok) {
       this.handleAuthError(res);
+      this.handleLimitReached(res);
       throw new Error(`Session create failed: ${res.status} ${res.statusText}`);
     }
 

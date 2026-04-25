@@ -74,7 +74,7 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Your SDK Key</h2>
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                This key authenticates your website with EmoraTest. Copy it — you&apos;ll need it in the next step.
+                This key authenticates your website with EmoraTest. Copy it .  you&apos;ll need it in the next step.
               </p>
               <div className="rounded-xl bg-[hsl(var(--secondary))] p-4">
                 <code className="block break-all font-mono text-xs text-[hsl(var(--foreground))]">

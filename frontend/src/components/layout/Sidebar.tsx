@@ -95,7 +95,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] p-4">
         <Link href="/" className="flex items-center gap-2">
           <img src="/logo2.png" alt="EmoraTest" className="h-10 w-auto" />
-          <span className="text-lg font-semibold text-[hsl(var(--foreground))]">EmoraTest</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold text-[hsl(var(--foreground))]">EmoraTest</span>
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#E0E7FF] text-[#3730A3]">
+              Beta
+            </span>
+          </div>
         </Link>
       </div>
 

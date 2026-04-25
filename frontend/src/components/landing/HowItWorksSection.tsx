@@ -29,7 +29,7 @@ const STEPS = [
   {
     number: "04",
     title: "Take Action",
-    description: "See which pages cause frustration, get automated diagnosis of issues, set up alerts, and create A/B tests — all from one dashboard.",
+    description: "See which pages cause frustration, get automated diagnosis of issues, set up alerts, and create A/B tests .  all from one dashboard.",
     tag: "Detect → Diagnose → Fix",
   },
 ];
@@ -67,10 +67,10 @@ export function HowItWorksSection({ id }: HowItWorksSectionProps) {
               How It Works
             </p>
             <h2 className="text-[clamp(32px,4vw,40px)] font-bold text-[#111318] mb-4">
-              From Confusion to Conversion in 4 Steps
+              How It Works
             </h2>
             <p className="text-lg text-[#4B5563]">
-              Set up in 2 minutes. Insights in hours. Revenue lift in days.
+              Set up in 2 minutes. Get insights in hours.
             </p>
           </div>
         </FadeInOnScroll>

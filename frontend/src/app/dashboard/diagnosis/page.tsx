@@ -131,7 +131,7 @@ function PageHeader({
       <div>
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Diagnosis</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Turn user behavior into actionable fixes — no charts required
+          Turn user behavior into actionable fixes .  no charts required
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -181,7 +181,7 @@ function ProblemSummarySection({ summary, isDemo }: { summary: ProblemSummary; i
       {isDemo && (
         <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
           <span>🎭</span>
-          <span>Demo Mode — sample data</span>
+          <span>Demo Mode .  sample data</span>
         </div>
       )}
       <div className="flex items-start gap-4">
@@ -372,7 +372,7 @@ function SupportingCharts({ data, isDemo }: { data: DiagnosisResponse; isDemo?: 
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">Total Sessions</p>
           <p className="text-lg font-semibold text-gray-900">
-            {typeof totalSessions === "number" ? totalSessions : "—"}
+            {typeof totalSessions === "number" ? totalSessions : ". "}
           </p>
         </div>
         {typeof avgFriction === "number" && (
@@ -616,23 +616,23 @@ export default function DiagnosisPage() {
         onToggleDemo={() => setIsDemoMode(!isDemoMode)}
       />
 
-      {/* 1. PROBLEM SUMMARY — TOP PRIORITY */}
+      {/* 1. PROBLEM SUMMARY .  TOP PRIORITY */}
       <ProblemSummarySection summary={displayDiagnosis.summary} isDemo={isDemoMode} />
 
-      {/* 2. EVIDENCE — SUPPORTING DATA */}
+      {/* 2. EVIDENCE .  SUPPORTING DATA */}
       <EvidenceSection
         evidence={displayDiagnosis.evidence}
         severity={displayDiagnosis.summary.severity}
         isDemo={isDemoMode}
       />
 
-      {/* 3. WHY — ROOT CAUSE */}
+      {/* 3. WHY .  ROOT CAUSE */}
       <WhySection rootCause={displayDiagnosis.root_cause} isDemo={isDemoMode} />
 
-      {/* 4. RECOMMENDED ACTIONS — Prompt 28 */}
+      {/* 4. RECOMMENDED ACTIONS .  Prompt 28 */}
       <ActionsSection actions={displayDiagnosis.actions} isDemo={isDemoMode} />
 
-      {/* 5. SUPPORTING DATA — Prompt 28 */}
+      {/* 5. SUPPORTING DATA .  Prompt 28 */}
       <SupportingCharts data={displayDiagnosis} isDemo={isDemoMode} />
 
       {/* 7. OTHER ISSUES LIST */}

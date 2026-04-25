@@ -74,7 +74,7 @@ export function StickyAuditBar() {
               </span>
             ) : (
               <span className="text-white text-sm">
-                Get Your Free Emotion Audit — See What&apos;s Killing Your Conversions
+                Get Your Free Emotion Audit .  See What&apos;s Killing Your Conversions
               </span>
             )}
           </div>

@@ -41,7 +41,7 @@ const SLIDE_CONTENT: Record<PersonaId, { before: SlideContent; after: SlideConte
     },
     after: {
       title: "Instant emotion session replay",
-      description: "EmoraTest captures emotions in real-time. Watch confusion spike on a specific form field, iterate, and validate—all in the same session.",
+      description: "EmoraTest captures emotions in real-time. Watch confusion spike on a specific form field, iterate, and validate. all in the same session.",
       stats: ["Zero setup, instant data", "Live emotion tracking", "Same-day iteration cycle"],
     },
   },
@@ -139,7 +139,7 @@ export function ProblemSolutionSection() {
             Stop Guessing. Start Feeling.
           </h2>
           <p className="text-[16px] text-[var(--et-text-muted)] leading-relaxed">
-            Traditional analytics show what happened. EmoraTest shows why — with ML
+            Traditional analytics show what happened. EmoraTest shows why .  with ML
             that reads confusion, frustration, and delight in real-time.
           </p>
         </div>

@@ -847,7 +847,7 @@ export function deleteBandit(id: string): Promise<void> {
   return request(`/bandits/${id}`, { method: "DELETE" });
 }
 
-// ── Diagnosis — Behavioral Signal to Actionable Insight ──────
+// ── Diagnosis .  Behavioral Signal to Actionable Insight ──────
 
 export interface EvidenceItem {
   type: string;

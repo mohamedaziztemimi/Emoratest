@@ -120,7 +120,12 @@ export function Navbar() {
                 width="44"
                 height="44"
               />
-              <span className="text-xl font-bold text-gray-900">EmoraTest</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-gray-900">EmoraTest</span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#E0E7FF] text-[#3730A3]">
+                  Beta
+                </span>
+              </div>
             </a>
 
             {/* Desktop nav links */}

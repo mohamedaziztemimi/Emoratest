@@ -5,6 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
+import { WaitlistModal } from "@/components/WaitlistModal";
 import { API_BASE } from "@/lib/api";
 
 interface MerchantProfile {
@@ -16,11 +17,23 @@ interface MerchantProfile {
   created_at: string;
 }
 
+interface UsageData {
+  plan: string;
+  sessions_used: number;
+  sessions_limit: number;
+  reset_date: string;
+}
+
 export default function SettingsPage() {
   // Profile state
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Usage state
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [usageError, setUsageError] = useState<string | null>(null);
 
   // SDK Key state
   const [sdkKey, setSdkKey] = useState("");
@@ -32,6 +45,7 @@ export default function SettingsPage() {
   const [showRegenModal, setShowRegenModal] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
   const [regenSuccess, setRegenSuccess] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +83,34 @@ export default function SettingsPage() {
     };
 
     fetchProfile();
+  }, []);
+
+  // Fetch usage on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      setUsageLoading(true);
+      setUsageError(null);
+
+      try {
+        const apiUrl = API_BASE;
+        const res = await fetch(`${apiUrl}/api/v1/auth/usage`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch usage");
+        }
+
+        const data = await res.json();
+        setUsage(data);
+      } catch (err) {
+        setUsageError(err instanceof Error ? err.message : "Failed to load usage");
+      } finally {
+        setUsageLoading(false);
+      }
+    };
+
+    fetchUsage();
   }, []);
 
   // Clear timer on unmount
@@ -176,6 +218,146 @@ export default function SettingsPage() {
             Manage your account and integration settings
           </p>
         </div>
+
+        {/* Usage Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--accent))]">
+                <svg className="h-4 w-4 text-[hsl(var(--accent-foreground))]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605c0 2.526-1.11 4.898-3 6.5" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">Usage</h2>
+                <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                  Your monthly session usage and limits
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardBody>
+            {usageLoading ? (
+              <Spinner />
+            ) : usageError ? (
+              <ErrorBox message={usageError} onRetry={() => window.location.reload()} />
+            ) : usage ? (
+              <div
+                style={{
+                  background: "white",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "24px",
+                }}
+              >
+                {/* Plan Badge */}
+                <div style={{ marginBottom: "20px" }}>
+                  <Badge variant="success">
+                    {usage.plan === "free" ? "Free Beta" : capitalizePlan(usage.plan)}
+                  </Badge>
+                </div>
+
+                {/* Session Usage Bar */}
+                <div style={{ marginBottom: "16px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        color: "#111318",
+                      }}
+                    >
+                      {usage.sessions_used} / {usage.sessions_limit} sessions this month
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "#6B7280",
+                      }}
+                    >
+                      {Math.round((usage.sessions_used / usage.sessions_limit) * 100)}%
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "8px",
+                      background: "#E5E7EB",
+                      borderRadius: "4px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min((usage.sessions_used / usage.sessions_limit) * 100, 100)}%`,
+                        background:
+                          usage.sessions_used >= usage.sessions_limit
+                            ? "#EF4444"
+                            : usage.sessions_used >= usage.sessions_limit * 0.8
+                            ? "#F59E0B"
+                            : "#007BFF",
+                        borderRadius: "4px",
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </div>
+
+                  {/* Limit Reached Message */}
+                  {usage.sessions_used >= usage.sessions_limit && (
+                    <p
+                      style={{
+                        fontSize: "12px",
+                        color: "#EF4444",
+                        marginTop: "8px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Limit reached. New sessions are not being tracked.
+                    </p>
+                  )}
+                </div>
+
+                {/* Reset Date */}
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#6B7280",
+                    marginBottom: "16px",
+                  }}
+                >
+                  Resets on {new Date(usage.reset_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                </p>
+
+                {/* Need More Sessions Link */}
+                <button
+                  onClick={() => setShowWaitlist(true)}
+                  style={{
+                    fontSize: "13px",
+                    color: "#007BFF",
+                    textDecoration: "none",
+                    fontWeight: "500",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                  }}
+                >
+                  Need more sessions? →
+                </button>
+              </div>
+            ) : null}
+          </CardBody>
+        </Card>
 
         {/* SDK & Integration Section */}
         <Card>
@@ -756,6 +938,13 @@ export default function SettingsPage() {
           SDK key regenerated successfully
         </div>
       )}
+
+      {/* Waitlist Modal */}
+      <WaitlistModal
+        isOpen={showWaitlist}
+        onClose={() => setShowWaitlist(false)}
+        prefillEmail={profile?.email}
+      />
 
       {/* Add animations */}
       <style jsx>{`

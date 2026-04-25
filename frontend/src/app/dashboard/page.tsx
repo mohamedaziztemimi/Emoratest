@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
+import { WaitlistModal } from "@/components/WaitlistModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,13 @@ interface ProblemSession {
   duration_seconds: number | null;
 }
 
+interface UsageData {
+  plan: string;
+  sessions_used: number;
+  sessions_limit: number;
+  reset_date: string;
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
@@ -55,6 +63,9 @@ export default function OverviewPage() {
   const [topIssue, setTopIssue] = useState<TopIssue | null>(null);
   const [pagesAttention, setPagesAttention] = useState<PageAttention[]>([]);
   const [problemSessions, setProblemSessions] = useState<ProblemSession[]>([]);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [dismissedUsageBanner, setDismissedUsageBanner] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -77,11 +88,12 @@ export default function OverviewPage() {
           setHasData(hasRealData);
 
           // Fetch all dashboard data in parallel
-          const [pulseRes, issueRes, pagesRes, sessionsListRes] = await Promise.all([
+          const [pulseRes, issueRes, pagesRes, sessionsListRes, usageRes] = await Promise.all([
             fetch(`${apiUrl}/api/v1/dashboard/emotion-pulse`, { credentials: "include" }),
             fetch(`${apiUrl}/api/v1/dashboard/top-issue`, { credentials: "include" }),
             fetch(`${apiUrl}/api/v1/dashboard/pages-attention?limit=3`, { credentials: "include" }),
             fetch(`${apiUrl}/api/v1/dashboard/problem-sessions?limit=5`, { credentials: "include" }),
+            fetch(`${apiUrl}/api/v1/auth/usage`, { credentials: "include" }),
           ]);
 
           if (pulseRes.ok) {
@@ -102,6 +114,11 @@ export default function OverviewPage() {
           if (sessionsListRes.ok) {
             const sessionsListData = await sessionsListRes.json();
             setProblemSessions(sessionsListData);
+          }
+
+          if (usageRes.ok) {
+            const usageData = await usageRes.json();
+            setUsage(usageData);
           }
         }
       } catch (err) {
@@ -127,7 +144,7 @@ export default function OverviewPage() {
 
   // Format duration
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "—";
+    if (!seconds) return ". ";
     if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -197,6 +214,70 @@ export default function OverviewPage() {
             >
               View docs
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Session Limit Warning Banner - Prompt 13 */}
+      {!loading && usage && !dismissedUsageBanner && (
+        <div
+          className="mb-6 rounded-xl p-4 flex items-center justify-between"
+          style={{
+            background: usage.sessions_used >= usage.sessions_limit
+              ? "#FEF2F2"
+              : usage.sessions_used >= usage.sessions_limit * 0.8
+              ? "#FFFBEB"
+              : "#F0FDF4",
+            border: `1px solid ${
+              usage.sessions_used >= usage.sessions_limit
+                ? "#FECACA"
+                : usage.sessions_used >= usage.sessions_limit * 0.8
+                ? "#FDE68A"
+                : "#BBF7D0"
+            }`,
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span style={{ fontSize: "20px" }}>
+              {usage.sessions_used >= usage.sessions_limit ? "🚫" : usage.sessions_used >= usage.sessions_limit * 0.8 ? "⚠️" : "✓"}
+            </span>
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{
+                  color:
+                    usage.sessions_used >= usage.sessions_limit
+                      ? "#DC2626"
+                      : usage.sessions_used >= usage.sessions_limit * 0.8
+                      ? "#D97706"
+                      : "#059669",
+                }}
+              >
+                {usage.sessions_used >= usage.sessions_limit
+                  ? `You've reached your monthly session limit (${usage.sessions_limit} sessions)`
+                  : `You've used ${usage.sessions_used} of ${usage.sessions_limit} sessions this month`}
+              </p>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                {usage.sessions_used >= usage.sessions_limit
+                  ? "New sessions are not being tracked."
+                  : `Resets on ${new Date(usage.reset_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWaitlist(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+              style={{ background: "#007BFF" }}
+            >
+              {usage.sessions_used >= usage.sessions_limit ? "Join Waiting List" : "Need More?"}
+            </button>
+            <button
+              onClick={() => setDismissedUsageBanner(true)}
+              className="p-1 rounded hover:bg-black/5 text-[#6B7280]"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -280,6 +361,9 @@ export default function OverviewPage() {
           </SupportingCard>
         </SupportingInsights>
       )}
+
+      {/* Waitlist Modal */}
+      <WaitlistModal isOpen={showWaitlist} onClose={() => setShowWaitlist(false)} />
     </div>
   );
 }
@@ -537,7 +621,7 @@ function ProblemSessionsCard({
           <h2 className="card-title">Sessions needing attention</h2>
         </div>
         <p className="type-body" style={{ textAlign: "center", padding: "20px 0", color: "#059669" }}>
-          ✓ No frustrated sessions detected — your users are happy!
+          ✓ No frustrated sessions detected .  your users are happy!
         </p>
       </div>
     );

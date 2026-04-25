@@ -42,13 +42,13 @@ export function HeroSection({ id }: HeroSectionProps) {
 
             {/* Subtext */}
             <p style={{ fontSize: "18px", color: "#4B5563", maxWidth: "480px", lineHeight: 1.7, margin: 0, marginBottom: 0 }}>
-              EmoraTest detects 8 emotions from mouse behavior — frustration, confusion, delight, and more. Find your conversion killer in hours, not weeks.
+              EmoraTest detects 8 emotions from mouse behavior including frustration, confusion, delight, and more. Find your conversion killer in hours, not weeks.
             </p>
 
             {/* CTA Buttons */}
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
               <GradientButton variant="primary" size="lg" glow href="/signup">
-                Start Free — No Credit Card
+                Start Free. No Credit Card
               </GradientButton>
               <GradientButton variant="outline" size="lg" onClick={handleWatchDemo}>
                 See How It Works
@@ -58,7 +58,10 @@ export function HeroSection({ id }: HeroSectionProps) {
             {/* Social proof - honest */}
             <div style={{ marginTop: "4px" }}>
               <p className="text-[14px] text-[#4B5563] font-medium">
-                Built for growth teams, PMs, and CRO leads at SaaS & e-commerce companies
+                Built for growth teams, PMs, and CRO leads at SaaS and e-commerce companies
+              </p>
+              <p className="text-[12px] text-[#6B7280] mt-1">
+                Currently in free beta. No credit card required.
               </p>
             </div>
           </div>

@@ -12,6 +12,7 @@ const sections: Section[] = [
   { id: "getting-started", title: "Getting Started" },
   { id: "installation", title: "Installation" },
   { id: "auto-tracking", title: "What Gets Tracked Automatically" },
+  { id: "gdpr-consent", title: "GDPR Consent (Required for EU)" },
   { id: "conversions", title: "Tracking Conversions" },
   { id: "ab-testing", title: "Running A/B Tests" },
   { id: "sdk-reference", title: "SDK Reference" },
@@ -147,7 +148,7 @@ export default function DocsPage() {
               <section id="getting-started" className="mb-16 scroll-mt-8">
                 <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
                 <p className="text-[hsl(var(--muted-foreground))] mb-4">
-                  EmoraTest detects 8 emotions from user behavior — frustration, confusion, delight,
+                  EmoraTest detects 8 emotions from user behavior .  frustration, confusion, delight,
                   anxiety, hesitation, focus, boredom, and satisfaction. Install the SDK to start
                   tracking sessions and get emotion insights.
                 </p>
@@ -195,7 +196,7 @@ export default function EmoraTracker() {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
     document.body.appendChild(script);
-    // No cleanup — let SDK persist across route changes
+    // No cleanup .  let SDK persist across route changes
   }, []);
   return null;
 }`}
@@ -211,7 +212,7 @@ export default function EmoraTracker() {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
     document.body.appendChild(script);
-    // No cleanup — let SDK persist across route changes
+    // No cleanup .  let SDK persist across route changes
   }, []);
   return null;
 }`, "install-react")}
@@ -259,8 +260,83 @@ export default function EmoraTracker() {
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mt-6">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
                     <strong className="text-[hsl(var(--primary))]">Privacy-first:</strong> All tracking is cookieless and GDPR-friendly.
-                    No personal data is collected — only behavioral patterns.
+                    No personal data is collected. Only behavioral patterns.
                   </p>
+                </div>
+              </section>
+
+              <hr className="border-[hsl(var(--border))] mb-16" />
+
+              {/* GDPR Consent */}
+              <section id="gdpr-consent" className="mb-16 scroll-mt-8">
+                <h2 className="text-2xl font-bold mb-4">GDPR Consent (Required for EU)</h2>
+                <p className="text-[hsl(var(--muted-foreground))] mb-6">
+                  If your website serves users in the EU, you must get consent before EmoraTest starts tracking.
+                  The SDK checks for a consent cookie before collecting any data.
+                </p>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Option 1: Use our built-in consent check</h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                      The SDK automatically looks for a cookie named <code className="bg-[hsl(var(--secondary))] px-1 rounded">emoratest_consent</code>.
+                      If the value is <code className="bg-[hsl(var(--secondary))] px-1 rounded">accepted</code>, tracking starts.
+                      If <code className="bg-[hsl(var(--secondary))] px-1 rounded">rejected</code> or missing, no data is collected.
+                    </p>
+                    <CodeBlock
+                      code={`// When user accepts tracking in your consent banner
+document.cookie = 'emoratest_consent=accepted; max-age=31536000; path=/';
+
+// Optionally, start tracking immediately without page reload
+if (window.EmoraTest) {
+  window.EmoraTest.enableTracking();
+}`}
+                      onCopy={() => copyToClipboard(`document.cookie = 'emoratest_consent=accepted; max-age=31536000; path=/';
+if (window.EmoraTest) {
+  window.EmoraTest.enableTracking();
+}`, "gdpr-opt1")}
+                      copied={copiedCode === "gdpr-opt1"}
+                    />
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Option 2: Integrate with your existing consent tool</h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                      If you use a consent management platform (Cookiebot, OneTrust, Usercentrics, etc.),
+                      load the EmoraTest SDK only after consent is granted.
+                    </p>
+                    <CodeBlock
+                      code={`// Example with a generic consent callback
+onConsentGranted('analytics', function() {
+  const script = document.createElement('script');
+  script.src = 'https://YOUR_DOMAIN/static/sdk/emoratest.umd.js';
+  script.onload = function() {
+    EmoraTest.init({ sdkKey: 'YOUR_SDK_KEY' });
+  };
+  document.body.appendChild(script);
+});`}
+                      onCopy={() => copyToClipboard(`onConsentGranted('analytics', function() {
+  const script = document.createElement('script');
+  script.src = 'https://YOUR_DOMAIN/static/sdk/emoratest.umd.js';
+  script.onload = function() {
+    EmoraTest.init({ sdkKey: 'YOUR_SDK_KEY' });
+  };
+  document.body.appendChild(script);
+});`, "gdpr-opt2")}
+                      copied={copiedCode === "gdpr-opt2"}
+                    />
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                    <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">What data we collect</h4>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      <strong>Collected:</strong> Mouse movements, clicks, scroll patterns, and page URLs.
+                    </p>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                      <strong>NOT collected:</strong> Names, emails, IP addresses (hashed immediately),
+                      keystrokes, form inputs, screenshots, or passwords.
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -395,7 +471,7 @@ if (result.variant === 'control') {
                       </tr>
                       <tr className="border-b border-[hsl(var(--border))]">
                         <td className="py-3 px-4"><code className="text-[hsl(var(--primary))]">EmoraTest.getVariant(key)</code></td>
-                        <td className="py-3 px-4 text-[hsl(var(--muted-foreground))]">Shorthand — returns variant string or null.</td>
+                        <td className="py-3 px-4 text-[hsl(var(--muted-foreground))]">Shorthand .  returns variant string or null.</td>
                       </tr>
                       <tr className="border-b border-[hsl(var(--border))]">
                         <td className="py-3 px-4"><code className="text-[hsl(var(--primary))]">EmoraTest.getSessionId()</code></td>
@@ -487,7 +563,7 @@ function TrackingItem({ title, description }: { title: string; description: stri
       <span className="text-[hsl(var(--primary))] text-lg">✓</span>
       <div>
         <span className="text-[hsl(var(--foreground))] font-medium">{title}</span>
-        <span className="text-[hsl(var(--muted-foreground))] text-sm ml-2">— {description}</span>
+        <span className="text-[hsl(var(--muted-foreground))] text-sm ml-2">.  {description}</span>
       </div>
     </div>
   );

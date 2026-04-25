@@ -4,8 +4,10 @@
 
 "use client";
 
+import { useState } from "react";
 import { GradientButton } from "../ui";
 import { FadeInOnScroll } from "./FadeInOnScroll";
+import { WaitlistModal } from "../WaitlistModal";
 
 interface PricingSectionProps {
   id: string;
@@ -13,60 +15,61 @@ interface PricingSectionProps {
 
 const PRICING_TIERS = [
   {
-    name: "STARTER",
-    subtitle: "Perfect for individuals and small teams",
+    name: "Free",
+    subtitle: "Get started with emotion tracking",
     price: "$0 / month",
     features: [
-      "Up to 1,000 sessions/month",
+      "Up to 500 sessions per month",
       "1 active experiment",
-      "Basic emotion detection",
-      "A/B testing",
+      "Basic emotion detection (8 emotions)",
+      "Session explorer with filters",
       "Email support",
-      "Community support",
     ],
     highlighted: false,
     ctaText: "Start Free",
-    ctaVariant: "outline" as const,
+    ctaVariant: "primary" as const,
+    badge: null,
   },
   {
-    name: "GROWTH",
-    subtitle: "For growing teams serious about conversion",
-    price: "$79 / month",
+    name: "Growth",
+    subtitle: "For teams serious about conversion",
+    price: "$29 / month",
     features: [
-      "Up to 50,000 sessions/month",
+      "Up to 10,000 sessions per month",
       "Unlimited experiments",
-      "Full emotion ML",
-      "Automatic Diagnosis",
-      "Emotion alerts (email + Slack)",
-      "Slack & Jira integrations",
+      "Full emotion detection",
+      "Automatic diagnosis",
+      "Emotion alerts (email)",
       "Page insights",
-      "Session emotion filters",
       "Priority support",
     ],
     highlighted: true,
-    ctaText: "Start Free Trial",
-    ctaVariant: "primary" as const,
+    ctaText: "Join Waiting List",
+    ctaVariant: "outline" as const,
+    badge: "Coming Soon",
   },
   {
-    name: "ENTERPRISE",
-    subtitle: "For large teams needing scale and compliance",
-    price: "Custom pricing",
+    name: "Scale",
+    subtitle: "For growing companies",
+    price: "$79 / month",
     features: [
-      "Unlimited sessions",
-      "GDPR compliance",
-      "SSO & advanced permissions",
-      "Data warehouse export",
-      "SLA guarantee",
-      "Dedicated success manager",
-      "Custom emotion models",
+      "Up to 50,000 sessions per month",
+      "Everything in Growth",
+      "Slack integration",
+      "Data export (CSV)",
+      "Team members (up to 5)",
+      "Dedicated support",
     ],
     highlighted: false,
-    ctaText: "Book a Demo",
+    ctaText: "Join Waiting List",
     ctaVariant: "outline" as const,
+    badge: "Coming Soon",
   },
 ];
 
 export function PricingSection({ id }: PricingSectionProps) {
+  const [showWaitlist, setShowWaitlist] = useState(false);
+
   return (
     <section id={id} className="py-[100px] pb-[120px]" style={{ background: "#F8F9FF" }}>
       <div className="max-w-[1200px] mx-auto px-6">
@@ -77,10 +80,10 @@ export function PricingSection({ id }: PricingSectionProps) {
               PRICING
             </p>
             <h2 className="text-[clamp(32px,4vw,40px)] font-bold text-[#111318] mb-4">
-              Simple, Transparent Pricing
+              Pricing
             </h2>
             <p className="text-lg text-[#4B5563]">
-              Start free. Scale as you grow. No hidden fees.
+              Free plan available now. Paid plans coming soon.
             </p>
           </div>
         </FadeInOnScroll>
@@ -98,10 +101,10 @@ export function PricingSection({ id }: PricingSectionProps) {
                   }
                 `}
               >
-                {tier.highlighted && (
+                {tier.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-[#007BFF] to-[#7C3AED] text-white text-xs font-bold px-4 py-1 rounded-full">
-                      MOST POPULAR
+                    <span className="bg-[#007BFF] text-white text-xs font-bold px-4 py-1 rounded-full">
+                      {tier.badge}
                     </span>
                   </div>
                 )}
@@ -124,22 +127,39 @@ export function PricingSection({ id }: PricingSectionProps) {
                 <GradientButton
                   variant={tier.ctaVariant}
                   size="md"
-                  href={tier.name === "ENTERPRISE" ? "/demo" : "/signup"}
+                  href={tier.name === "Free" ? "/signup" : undefined}
                   className="w-full"
                   glow={tier.highlighted}
+                  onClick={(e) => {
+                    if (tier.name !== "Free") {
+                      e.preventDefault();
+                      setShowWaitlist(true);
+                    }
+                  }}
                 >
                   {tier.ctaText}
                 </GradientButton>
+
+                {tier.name === "Growth" && (
+                  <p className="text-xs text-[#6B7280] text-center mt-3">
+                    We are in beta. Join the list for early access.
+                  </p>
+                )}
               </div>
             </FadeInOnScroll>
           ))}
         </div>
 
         {/* Footer note */}
-        <p className="text-center text-sm text-[#6B7280]">
-          All plans include a 14-day free trial. No credit card required.
-        </p>
+        <div className="text-center flex items-center justify-center gap-2 text-sm text-[#6B7280]">
+          <span>GDPR Compliant</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+          <span>Made in Germany</span>
+        </div>
       </div>
+
+      {/* Waitlist Modal */}
+      <WaitlistModal isOpen={showWaitlist} onClose={() => setShowWaitlist(false)} />
     </section>
   );
 }

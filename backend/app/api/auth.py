@@ -106,6 +106,13 @@ class GdprExportResponse(BaseModel):
     exported_at: datetime
 
 
+class UsageResponse(BaseModel):
+    plan: str
+    sessions_used: int
+    sessions_limit: int
+    reset_date: str
+
+
 # ── POST /auth/register ─────────────────────────────────────────
 
 
@@ -141,7 +148,7 @@ async def register(
         password_hash=hash_password(body.password),
         shop_domain=body.shop_domain,
         sdk_key_hash=key_hash,
-        plan=body.plan,
+        plan="free",
         is_active=True,
         gdpr_consent=body.gdpr_consent,
         gdpr_consent_at=now if body.gdpr_consent else None,
@@ -162,7 +169,7 @@ async def register(
         merchant_id=str(merchant.id),
         email=merchant.email,
         shop_domain=merchant.shop_domain,
-        plan=merchant.plan,
+        plan="free",
         sdk_key=raw_sdk_key,
         onboarding_completed=False,
     )
@@ -217,7 +224,7 @@ async def signup(
         password_hash=hash_password(body.password),
         shop_domain=body.workspace_name,
         sdk_key_hash=key_hash,
-        plan="trial",
+        plan="free",
         is_active=True,
         gdpr_consent=False,
         onboarding_completed=False,
@@ -237,7 +244,7 @@ async def signup(
         merchant_id=str(merchant.id),
         email=merchant.email,
         shop_domain=merchant.shop_domain,
-        plan="trial",
+        plan="free",
         sdk_key=raw_sdk_key,
         onboarding_completed=False,
     )
@@ -364,6 +371,42 @@ async def get_me(
         gdpr_consent=merchant.gdpr_consent,
         onboarding_completed=merchant.onboarding_completed,
         created_at=merchant.created_at,
+    )
+
+
+@router.get("/usage", response_model=UsageResponse)
+async def get_usage(
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get current account usage and limits."""
+    now = datetime.now(UTC)
+    current_month = now.month
+    current_year = now.year
+
+    # Calculate reset date (first of next month)
+    if current_month == 12:
+        reset_month = 1
+        reset_year = current_year + 1
+    else:
+        reset_month = current_month + 1
+        reset_year = current_year
+
+    reset_date = f"{reset_year:04d}-{reset_month:02d}-01"
+
+    # Reset counters if month has changed
+    if merchant.session_month != current_month or merchant.session_year != current_year:
+        return UsageResponse(
+            plan=merchant.plan,
+            sessions_used=0,
+            sessions_limit=merchant.monthly_session_limit,
+            reset_date=reset_date,
+        )
+
+    return UsageResponse(
+        plan=merchant.plan,
+        sessions_used=merchant.sessions_this_month,
+        sessions_limit=merchant.monthly_session_limit,
+        reset_date=reset_date,
     )
 
 

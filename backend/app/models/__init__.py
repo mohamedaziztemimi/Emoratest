@@ -16,6 +16,7 @@ from app.models.merchant import Merchant
 from app.models.segment import ConditionOperator, Segment, SegmentOperator, SegmentType
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
+from app.models.waitlist import WaitlistEntry
 
 __all__ = [
     "Base",
@@ -42,4 +43,5 @@ __all__ = [
     "EmotionEvent",
     "EmotionSession",
     "EmotionSource",
+    "WaitlistEntry",
 ]

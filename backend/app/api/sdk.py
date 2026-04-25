@@ -59,12 +59,6 @@ async def get_merchant_from_sdk_key(
             Merchant.is_active.is_(True),
         )
     )
-    result = await db.execute(
-        select(Merchant).where(
-            Merchant.sdk_key_hash == key_hash,
-            Merchant.is_active.is_(True),
-        )
-    )
     merchant = result.scalar_one_or_none()
 
     if not merchant:
@@ -96,10 +90,37 @@ async def create_session(
 ):
     """Create a new tracking session for the authenticated merchant.
     Merchant is identified via X-SDK-Key header, not request body.
+    Enforces monthly session limits.
     """
+    now = datetime.now(UTC)
+    current_month = now.month
+    current_year = now.year
+
+    # Reset session count if month has changed
+    if merchant.session_month != current_month or merchant.session_year != current_year:
+        from sqlalchemy import update as sql_update
+        await db.execute(
+            sql_update(Merchant)
+            .where(Merchant.id == merchant.id)
+            .values(sessions_this_month=0, session_month=current_month, session_year=current_year)
+        )
+        merchant.sessions_this_month = 0
+        merchant.session_month = current_month
+        merchant.session_year = current_year
+
+    # Check session limit
+    if merchant.sessions_this_month >= merchant.monthly_session_limit:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "session_limit_reached",
+                "message": "Monthly session limit reached",
+                "limit": merchant.monthly_session_limit,
+                "used": merchant.sessions_this_month,
+            },
+        )
 
     session_id = uuid.uuid4()
-    now = datetime.now(UTC)
 
     session = Session(
         id=session_id,
@@ -113,6 +134,15 @@ async def create_session(
     )
 
     db.add(session)
+
+    # Increment session count
+    from sqlalchemy import update as sql_update
+    await db.execute(
+        sql_update(Merchant)
+        .where(Merchant.id == merchant.id)
+        .values(sessions_this_month=Merchant.sessions_this_month + 1)
+    )
+
     await db.commit()
 
     return SessionCreateResponse(session_id=str(session_id))

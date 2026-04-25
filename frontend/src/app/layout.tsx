@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "EmoraTest — Emotion ML A/B Testing",
+    title: "EmoraTest: Emotion ML A/B Testing",
     description: "See why users quit with emotion-powered heatmaps and AI insights.",
     type: "website",
     url: BASE_URL,
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "EmoraTest — Emotion ML A/B Testing",
+    title: "EmoraTest: Emotion ML A/B Testing",
     description: "See why users quit with emotion-powered heatmaps and AI insights.",
     images: [`${BASE_URL}/og-image.png`],
     creator: "@emoratest",
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.svg",
+    icon: "/favicon.png",
     apple: "/apple-icon.png",
   },
   // JSON-LD structured data

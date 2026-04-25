@@ -26,6 +26,7 @@ from app.api.merchants import router as merchants_router
 from app.api.pages import router as pages_router
 from app.api.sdk import router as sdk_router
 from app.api.segments import router as segments_router
+from app.api.waitlist import router as waitlist_router
 from app.api.webhook import router as webhook_router
 from app.api.ws import router as ws_router
 from app.core.audit import AuditLogMiddleware
@@ -222,6 +223,9 @@ app.include_router(alerts_router, prefix=settings.API_V1_PREFIX)
 
 # Pages — page-level emotion insights
 app.include_router(pages_router)
+
+# Waitlist — for users interested in paid plans
+app.include_router(waitlist_router, prefix=settings.API_V1_PREFIX)
 
 
 # ── Health check ──────────────────────────────────────────────────

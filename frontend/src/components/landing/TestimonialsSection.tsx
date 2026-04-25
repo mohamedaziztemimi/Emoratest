@@ -34,7 +34,7 @@ export function TestimonialsSection() {
             Built for teams who care about user experience
           </h2>
           <p className="text-[16px] text-[var(--et-text-muted)] max-w-2xl mx-auto leading-relaxed">
-            EmoraTest helps you understand user emotions at scale — without surveys, interviews, or guesswork.
+            EmoraTest helps you understand user emotions at scale without surveys, interviews, or guesswork.
           </p>
         </div>
 

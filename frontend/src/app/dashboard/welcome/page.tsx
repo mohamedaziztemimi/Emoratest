@@ -215,7 +215,7 @@ function App() {
     >
       <div style={{ width: "100%", maxWidth: "700px" }}>
 
-        {/* STEP 1 — Welcome Header */}
+        {/* STEP 1 .  Welcome Header */}
         <div
           style={{
             display: "flex",
@@ -310,7 +310,7 @@ function App() {
               lineHeight: "1.4",
             }}
           >
-            <strong>Save your SDK key now</strong> — it will never be shown again for security reasons. You can always find it in Settings → SDK.
+            <strong>Save your SDK key now</strong> .  it will never be shown again for security reasons. You can always find it in Settings → SDK.
           </p>
         </div>
 

@@ -9,23 +9,23 @@ import { useState } from "react";
 const FAQ_ITEMS = [
   {
     question: "How is EmoraTest different from Hotjar or FullStory?",
-    answer: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW they feel while doing it. Our emotion ML classifies 8 emotional states from behavioral signals — confusion, frustration, delight — and links them directly to your revenue metrics. No other tool does this automatically.",
+    answer: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW they feel while doing it. Our emotion ML classifies 8 emotional states from behavioral signals like confusion, frustration, and delight. No other tool does this automatically.",
   },
   {
     question: "Will the tracking snippet slow down my website?",
-    answer: "No. The EmoraTest snippet is under 8KB gzipped and loads asynchronously — it never blocks your page render. We're built for performance-sensitive production sites. Most customers see zero measurable impact on Core Web Vitals.",
+    answer: "No. The EmoraTest snippet is under 8KB gzipped and loads asynchronously. It never blocks your page render. We are built for performance-sensitive production sites. Most customers see zero measurable impact on Core Web Vitals.",
   },
   {
     question: "How accurate is the emotion detection?",
-    answer: "Our ML model achieves 85-95% accuracy on confusion and frustration classification using behavioral signals (mouse patterns, rage-clicks, scroll hesitation, dwell time). For teams using optional webcam or voice analysis, accuracy increases further. We publish our benchmark methodology transparently.",
+    answer: "Our ML model achieves 80% plus accuracy on confusion and frustration classification using behavioral signals including mouse patterns, rage clicks, scroll hesitation, and dwell time.",
   },
   {
     question: "Is my users' data safe and GDPR compliant?",
-    answer: "Yes. EmoraTest is GDPR and HIPAA compliant by design. All behavioral data is anonymized by default. Opt-in features like webcam analysis require explicit user consent flows we provide out of the box. Your data is never sold or shared with third parties. Ever.",
+    answer: "Yes. EmoraTest is GDPR compliant by design. All behavioral data is anonymized by default. We use cookie consent for tracking. Your data is never sold or shared with third parties.",
   },
   {
     question: "How long does it take to see results?",
-    answer: "Most teams see their first emotion insights within hours of installing the snippet. Statistically significant A/B test results typically appear within 7-14 days depending on your traffic volume. Our multi-armed bandit algorithm can surface winners 30-50% faster than traditional fixed-split testing.",
+    answer: "Most teams see their first emotion insights within hours of installing the snippet. Statistically significant A/B test results typically appear within 7-14 days depending on your traffic volume.",
   },
 ];
 
@@ -61,7 +61,7 @@ export function FAQSection({ id = "faq" }: FAQSectionProps) {
             color: "#111318",
             marginBottom: "16px",
           }}>
-            Questions We Get Asked Every Day
+            FAQ
           </h2>
           <p style={{ fontSize: "16px", color: "#6B7280" }}>
             If you have others, we&apos;re always at hello@emoratest.com

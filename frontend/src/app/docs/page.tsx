@@ -141,7 +141,7 @@ export default function DocsPage() {
             <div className="mb-10 bg-gradient-to-r from-[#007BFF] to-[#7C3AED] rounded-2xl p-6 text-white">
               <h2 className="text-lg font-semibold mb-2">Quick Start</h2>
               <p className="text-sm text-white/80 mb-4">
-                Your unique SDK key — copy this to get started tracking emotions.
+                Your unique SDK key .  copy this to get started tracking emotions.
               </p>
               <div className="flex items-center gap-3">
                 <code className="flex-1 bg-white/20 backdrop-blur rounded-lg px-4 py-2.5 text-sm font-mono">
@@ -172,7 +172,7 @@ export default function DocsPage() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <p className="text-sm text-blue-800 font-medium mb-2">What you&apos;ll need:</p>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Your <strong>SDK Key</strong> — found in Settings → SDK after signing up</li>
+                  <li>• Your <strong>SDK Key</strong> .  found in Settings → SDK after signing up</li>
                   <li>• Access to edit your website&apos;s HTML or JavaScript files</li>
                 </ul>
               </div>
@@ -244,7 +244,7 @@ export default function EmoraTracker() {
                   id="install-npm"
                   language="bash"
                   code={`npm install emoratest
-# Coming soon — use the script tag method for now`}
+# Coming soon .  use the script tag method for now`}
                   copiedId={copiedCode}
                   onCopy={copyToClipboard}
                 />
@@ -256,7 +256,7 @@ export default function EmoraTracker() {
                 </p>
               </div>
               <p className="text-gray-600 mt-4 text-sm">
-                The SDK automatically handles session persistence across pages — no additional code needed.
+                The SDK automatically handles session persistence across pages .  no additional code needed.
               </p>
             </section>
 
@@ -309,12 +309,12 @@ export default function EmoraTracker() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
                 <p className="text-sm text-blue-800 font-medium mb-2">Available outcome types:</p>
                 <ul className="text-sm text-blue-700 grid grid-cols-2 gap-1">
-                  <li><code className="bg-blue-100 px-1 rounded">purchase</code> — Completed purchase</li>
-                  <li><code className="bg-blue-100 px-1 rounded">signup</code> — Signed up / registered</li>
-                  <li><code className="bg-blue-100 px-1 rounded">checkout_completed</code> — Finished checkout</li>
-                  <li><code className="bg-blue-100 px-1 rounded">demo_booked</code> — Scheduled a demo</li>
-                  <li><code className="bg-blue-100 px-1 rounded">lead_generated</code> — Submitted lead form</li>
-                  <li><code className="bg-blue-100 px-1 rounded">trial_started</code> — Started free trial</li>
+                  <li><code className="bg-blue-100 px-1 rounded">purchase</code> .  Completed purchase</li>
+                  <li><code className="bg-blue-100 px-1 rounded">signup</code> .  Signed up / registered</li>
+                  <li><code className="bg-blue-100 px-1 rounded">checkout_completed</code> .  Finished checkout</li>
+                  <li><code className="bg-blue-100 px-1 rounded">demo_booked</code> .  Scheduled a demo</li>
+                  <li><code className="bg-blue-100 px-1 rounded">lead_generated</code> .  Submitted lead form</li>
+                  <li><code className="bg-blue-100 px-1 rounded">trial_started</code> .  Started free trial</li>
                 </ul>
               </div>
 
@@ -514,7 +514,7 @@ function Headline() {
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mt-6">
                 <p className="text-sm text-purple-800">
                   <strong>How it works:</strong> Each visitor automatically gets assigned one variant and always sees the same one.
-                  The SDK handles this deterministically using stable hashing — you don&apos;t need to manage user assignments.
+                  The SDK handles this deterministically using stable hashing .  you don&apos;t need to manage user assignments.
                 </p>
               </div>
             </section>
@@ -542,7 +542,7 @@ if (result.variant === 'control') {
 } else {
   // Variant: Orange with urgency
   button.style.backgroundColor = '#FF6B00';
-  button.textContent = 'Buy Now — Free Shipping';
+  button.textContent = 'Buy Now .  Free Shipping';
 }`}
                     copiedId={copiedCode}
                     onCopy={copyToClipboard}

@@ -248,6 +248,11 @@ export function isInitialized(): boolean {
   return initialized;
 }
 
+/** Check if the monthly session limit has been reached. */
+export function isLimitReached(): boolean {
+  return transport?.limitReached ?? false;
+}
+
 // ── Feature Flag Methods ─────────────────────────────────────────
 
 /** Get or create persistent visitor ID (stored in localStorage). */

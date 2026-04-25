@@ -325,7 +325,7 @@ export default function SessionDetailPage() {
         <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome}</Badge>
       </div>
 
-      {/* Top Stat Cards — Prompt 21 */}
+      {/* Top Stat Cards .  Prompt 21 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricBox label="Page URL" value={formatPageUrl(s.page_url)} />
         <MetricBox label="Duration" value={formatDuration(s.ended_at ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null)} />
@@ -427,7 +427,7 @@ export default function SessionDetailPage() {
           </CardBody>
         </Card>
 
-        {/* Interventions — Prompt 21: Only show if recommendations exist */}
+        {/* Interventions .  Prompt 21: Only show if recommendations exist */}
         {!interventions.loading && !interventions.error && interventions.data && interventions.data.recommendations.length > 0 && (
           <Card>
             <CardHeader>
@@ -516,7 +516,7 @@ export default function SessionDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Similar sessions — Prompt 21 */}
+      {/* Similar sessions .  Prompt 21 */}
       <div className="text-center py-4">
         <Link
           href={`/dashboard/sessions?page=${encodeURIComponent(s.page_url)}&emotion=${s.primary_emotion || ''}`}

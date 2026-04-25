@@ -21,7 +21,7 @@ const FEATURES = [
   {
     icon: "🔍",
     title: "Automatic Diagnosis",
-    description: "EmoraTest automatically detects issues — rage clicks, hesitation spikes, high drop-offs — and tells you exactly why users struggle and what to fix.",
+    description: "EmoraTest automatically detects issues like rage clicks, hesitation spikes, and high drop-offs. It tells you exactly why users struggle and what to fix.",
   },
   {
     icon: "🎯",
@@ -55,10 +55,10 @@ export function FeaturesSection({ id }: FeaturesSectionProps) {
               Features
             </p>
             <h2 className="text-[clamp(32px,4vw,40px)] font-bold text-[#111318] mb-4">
-              Everything You Need to Win
+              What you get
             </h2>
             <p className="text-lg text-[#4B5563]">
-              Complete emotion intelligence platform — see what users feel, not just what they do.
+              Track emotions. Find problems. Fix them.
             </p>
           </div>
         </FadeInOnScroll>
