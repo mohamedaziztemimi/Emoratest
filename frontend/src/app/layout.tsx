@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/lib/auth";
 import EmoraTestScript from "@/components/EmoraTestScript";
+import { CookieConsent } from "@/components/CookieConsent";
 import { Inter, Figtree } from "next/font/google";
 import "./globals.css";
 
@@ -137,6 +138,9 @@ export default function RootLayout({
 
         {/* EmoraTest SDK - loads on all pages, client-side only */}
         <EmoraTestScript sdkKey={EMORATEST_SDK_KEY} />
+
+        {/* Cookie Consent Banner - GDPR required */}
+        <CookieConsent />
       </body>
     </html>
   );

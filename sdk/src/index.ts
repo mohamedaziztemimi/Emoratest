@@ -52,6 +52,8 @@ let queue: EventQueue | null = null;
 let sessionManager: SessionManager | null = null;
 let cleanups: (() => void)[] = [];
 let initialized = false;
+let pendingInit: EmoraTestConfig | null = null; // Store config when waiting for consent
+let consentGiven = false;
 
 // ── Feature Flag state ────────────────────────────────────────
 
@@ -112,6 +114,19 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   if (!userConfig.sdkKey) {
     throw new Error("[EmoraTest] sdkKey is required");
   }
+
+  // Check consent cookie (GDPR requirement)
+  const consentCookie = getConsentCookie();
+  if (consentCookie !== "accepted") {
+    // Consent not given - store config and wait for enableTracking()
+    pendingInit = userConfig;
+    if (userConfig.debug) {
+      console.debug("[EmoraTest] Waiting for user consent. Call enableTracking() after consent.");
+    }
+    return;
+  }
+
+  consentGiven = true;
 
   // Store config with resolved defaults
   config = {
@@ -389,4 +404,127 @@ export async function reportOutcome(
       console.error("[EmoraTest] Failed to report outcome:", err);
     }
   }
+}
+
+/** Get consent cookie value for GDPR compliance. */
+function getConsentCookie(): "accepted" | "rejected" | null {
+  if (typeof document === "undefined") return null;
+
+  const cookies = document.cookie.split(";").map((c) => c.trim());
+  const consentCookie = cookies.find((c) => c.startsWith("emoratest_consent="));
+  if (!consentCookie) return null;
+
+  const value = consentCookie.split("=")[1];
+  if (value === "accepted" || value === "rejected") {
+    return value;
+  }
+  return null;
+}
+
+/**
+ * Enable tracking after user consent is given.
+ * Call this after setting the emoratest_consent cookie to 'accepted'.
+ */
+export async function enableTracking(): Promise<void> {
+  if (initialized) {
+    console.warn("[EmoraTest] Already initialized. Call destroy() first.");
+    return;
+  }
+
+  if (!pendingInit) {
+    console.warn("[EmoraTest] No pending initialization. Call init() first.");
+    return;
+  }
+
+  const userConfig = pendingInit;
+  pendingInit = null;
+
+  // Verify consent was given
+  const consentCookie = getConsentCookie();
+  if (consentCookie !== "accepted") {
+    console.warn("[EmoraTest] Consent not accepted. Cannot enable tracking.");
+    return;
+  }
+
+  consentGiven = true;
+
+  // Store config with resolved defaults
+  config = {
+    sdkKey: userConfig.sdkKey,
+    apiUrl: userConfig.apiUrl ?? "https://emoratest.com",
+    flushIntervalMs: userConfig.flushIntervalMs ?? 2000,
+    maxBatchSize: userConfig.maxBatchSize ?? 50,
+    mouseMoveThrottleMs: userConfig.mouseMoveThrottleMs ?? 100,
+    debug: userConfig.debug ?? false,
+    disabled: false,
+  } as EmoraTestConfig & {
+    apiUrl: string;
+    flushIntervalMs: number;
+    maxBatchSize: number;
+    mouseMoveThrottleMs: number;
+    debug: boolean;
+    disabled: false;
+  };
+
+  // Set up components - send RAW SDK key, backend will hash it server-side
+  transport = new Transport(config.apiUrl!, config.sdkKey);
+  queue = new EventQueue(
+    transport,
+    config.flushIntervalMs!,
+    config.maxBatchSize!,
+    config.debug!,
+  );
+  sessionManager = new SessionManager(transport, config.debug!);
+
+  // Create session — backend uses X-SDK-Key header to find merchant
+  const session = await sessionManager.start();
+  queue.setSessionId(session.sessionId);
+  queue.start();
+
+  // Attach event collectors
+  cleanups = [
+    collectMouseMove(queue, config.mouseMoveThrottleMs!, getActiveVariants),
+    collectClicks(queue, getActiveVariants),
+    collectScroll(queue, getActiveVariants),
+    collectExitIntent(queue, getActiveVariants),
+    collectVisibility(queue, getActiveVariants),
+  ];
+
+  // Handle page unload — close session and flush events
+  const unloadHandler = () => {
+    if (queue) {
+      queue.flushBeacon();
+    }
+    if (sessionManager) {
+      sessionManager.endBeacon();
+    }
+  };
+
+  window.addEventListener("beforeunload", unloadHandler);
+  cleanups.push(() =>
+    window.removeEventListener("beforeunload", unloadHandler),
+  );
+
+  // Handle page visibility for mobile
+  const mobileUnloadHandler = () => {
+    if (document.visibilityState === "hidden") {
+      if (queue) queue.flushBeacon();
+    }
+  };
+  document.addEventListener("visibilitychange", mobileUnloadHandler);
+  cleanups.push(() =>
+    document.removeEventListener("visibilitychange", mobileUnloadHandler),
+  );
+
+  initialized = true;
+
+  if (config.debug) {
+    console.debug("[EmoraTest] Initialized after consent", {
+      sessionId: session.sessionId,
+      apiUrl: config.apiUrl,
+    });
+  }
+
+  // Auto-detect outcome based on URL patterns
+  detectOutcomeFromUrl?.();
 }

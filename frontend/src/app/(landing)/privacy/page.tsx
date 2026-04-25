@@ -1,201 +1,120 @@
-/* ────────────────────────────────────────────────────────
-   Privacy Policy Page - GDPR Compliance
-   ──────────────────────────────────────────────────────── */
-
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy - EmoraTest",
-  description: "Learn how EmoraTest collects, processes, and protects your data.",
+  title: "Privacy Policy",
+  description: "EmoraTest privacy policy and data handling practices.",
 };
+
+const currentDate = new Date().toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
 
 export default function PrivacyPage() {
   return (
-    <div
-      style={{
-        maxWidth: "800px",
-        margin: "0 auto",
-        padding: "120px 24px 80px",
-      }}
-    >
-      <div style={{ marginBottom: "48px" }}>
-        <h1
-          style={{
-            fontSize: "clamp(32px, 4vw, 48px)",
-            fontWeight: "700",
-            color: "#111318",
-            margin: "0 0 16px 0",
-            letterSpacing: "-0.5px",
-          }}
-        >
-          Privacy Policy
-        </h1>
-        <p style={{ fontSize: "16px", color: "#6B7280", margin: 0 }}>
-          Last updated: April 2026
-        </p>
-      </div>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-3xl mx-auto px-6 py-20">
+        <h1 className="text-4xl font-bold text-[#111318] mb-4">Privacy Policy</h1>
+        <p className="text-sm text-[#6B7280] mb-12">Last updated: {currentDate}</p>
 
-      <div
-        style={{
-          background: "#EFF6FF",
-          border: "1px solid #BFDBFE",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "32px",
-        }}
-      >
-        <p style={{ margin: 0, fontSize: "14px", color: "#1E40AF" }}>
-          <strong>Important:</strong> Under GDPR, EmoraTest acts as a <strong>Data Processor</strong> for
-          behavioral data collected via our SDK. Our merchant customers are the <strong>Data
-          Controllers</strong> and are responsible for obtaining consent from their end users. This
-          policy covers our use of cookies on emoratest.com and data we process on behalf of merchants.
-        </p>
-      </div>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">1. Who We Are</h2>
+          <p className="text-[#4B5563] leading-relaxed">
+            EmoraTest is operated by an individual entity in Germany. Contact us at{" "}
+            <a href="mailto:hello@emoratest.com" className="text-[#007BFF] hover:underline">
+              hello@emoratest.com
+            </a>
+          </p>
+        </section>
 
-      <section style={{ marginBottom: "48px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: "#111318",
-            marginBottom: "16px",
-          }}
-        >
-          1. Data We Collect on emoratest.com
-        </h2>
-        <p style={paragraphStyle}>
-          When you visit the EmoraTest website or use our dashboard, we collect:
-        </p>
-        <ul style={listStyle}>
-          <li>
-            <strong>Account Data:</strong> Email, password (hashed), workspace name, and settings
-          </li>
-          <li>
-            <strong>Authentication Cookies:</strong> HTTP-only cookies for secure session management
-          </li>
-          <li>
-            <strong>Usage Data:</strong> Dashboard interactions, feature usage, and support communications
-          </li>
-        </ul>
-      </section>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">2. What Data We Collect</h2>
+          <div className="space-y-4 text-[#4B5563] leading-relaxed">
+            <p>
+              <strong>When you use our dashboard:</strong> We collect your email address
+              and account information to provide our service. We store this data on
+              servers in Germany.
+            </p>
+            <p>
+              <strong>When our SDK is installed on a website:</strong> We collect
+              anonymous behavioral data from website visitors, including mouse
+              movements, clicks, scroll patterns, and page URLs.
+            </p>
+            <p className="text-[#6B7280] italic">
+              We do NOT collect: names, email addresses, IP addresses (hashed immediately),
+              keystrokes, form inputs, screenshots, or camera/microphone data.
+            </p>
+            <p>
+              All behavioral data is processed to detect emotional patterns (frustration,
+              confusion, satisfaction, etc.) using machine learning. No individual
+              identification is possible from this data.
+            </p>
+          </div>
+        </section>
 
-      <section style={{ marginBottom: "48px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: "#111318",
-            marginBottom: "16px",
-          }}
-        >
-          2. Data Processed on Behalf of Merchants
-        </h2>
-        <p style={paragraphStyle}>
-          Merchants install the EmoraTest SDK on <strong>their own websites</strong> to collect
-          behavioral data from <strong>their visitors</strong>. As a Data Processor, we process this
-          data on merchants&apos; behalf:
-        </p>
-        <ul style={listStyle}>
-          <li>
-            <strong>Behavioral Events:</strong> Clicks, scrolls, mouse movements, rage clicks
-          </li>
-          <li>
-            <strong>Session Data:</strong> Duration, page visits, timestamps
-          </li>
-          <li>
-            <strong>Emotion Predictions:</strong> 8-emotion classification
-          </li>
-        </ul>
-      </section>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">3. Legal Basis (GDPR)</h2>
+          <div className="space-y-4 text-[#4B5563] leading-relaxed">
+            <p>
+              <strong>For dashboard users:</strong> Contract performance (Art. 6(1)(b) GDPR)
+            </p>
+            <p>
+              <strong>For website visitors tracked by SDK:</strong> Consent (Art. 6(1)(a) GDPR).
+              Website operators using EmoraTest must obtain visitor consent before the
+              SDK begins tracking.
+            </p>
+          </div>
+        </section>
 
-      <section style={{ marginBottom: "48px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: "#111318",
-            marginBottom: "16px",
-          }}
-        >
-          3. Your Rights Under GDPR
-        </h2>
-        <ul style={listStyle}>
-          <li>
-            <strong>Right to Access:</strong> Request a copy of your account data
-          </li>
-          <li>
-            <strong>Right to Erasure:</strong> Request deletion of your account
-          </li>
-          <li>
-            <strong>Right to Portability:</strong> Receive your data in a structured format
-          </li>
-        </ul>
-      </section>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">4. Data Retention</h2>
+          <p className="text-[#4B5563] leading-relaxed">
+            Session data is retained for 90 days, then automatically deleted.
+            Account data is retained until you delete your account.
+          </p>
+        </section>
 
-      <section style={{ marginBottom: "48px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: "#111318",
-            marginBottom: "16px",
-          }}
-        >
-          4. Data Location and Security
-        </h2>
-        <p style={paragraphStyle}>
-          All data is processed and stored within the European Union (Hetzner, Germany).
-        </p>
-      </section>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">5. Your Rights</h2>
+          <p className="text-[#4B5563] leading-relaxed mb-4">
+            Under GDPR, you have the right to access your data, correct your data,
+            delete your data, restrict processing, data portability, and object to
+            processing.
+          </p>
+          <p className="text-[#4B5563] leading-relaxed">
+            To exercise these rights, contact{" "}
+            <a href="mailto:hello@emoratest.com" className="text-[#007BFF] hover:underline">
+              hello@emoratest.com
+            </a>
+          </p>
+        </section>
 
-      <section style={{ marginBottom: "48px" }}>
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: "#111318",
-            marginBottom: "16px",
-          }}
-        >
-          5. Contact
-        </h2>
-        <p style={paragraphStyle}>
-          Email:{" "}
-          <a href="mailto:privacy@emoratest.com" style={{ color: "#007BFF" }}>
-            privacy@emoratest.com
-          </a>
-        </p>
-      </section>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">6. Data Processing Location</h2>
+          <p className="text-[#4B5563] leading-relaxed">
+            All data is processed and stored on servers within the European Union
+            (Germany).
+          </p>
+        </section>
 
-      <div
-        style={{
-          borderTop: "1px solid #E5E7EB",
-          paddingTop: "24px",
-          marginTop: "48px",
-          textAlign: "center",
-        }}
-      >
-        <p style={{ fontSize: "14px", color: "#6B7280", margin: 0 }}>
-          <a href="/" style={{ color: "#007BFF", textDecoration: "none" }}>
-            ← Back to Home
-          </a>
-        </p>
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">7. Cookies</h2>
+          <p className="text-[#4B5563] leading-relaxed">
+            EmoraTest uses essential cookies for authentication (session management).
+            Our tracking SDK uses a consent cookie (emoratest_consent) to remember
+            your tracking preference. We do not use advertising or third-party
+            tracking cookies.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-[#111318] mb-4">8. Changes</h2>
+          <p className="text-[#4B5563] leading-relaxed">
+            We may update this policy. The latest version is always available at this URL.
+          </p>
+        </section>
       </div>
     </div>
   );
 }
-
-const paragraphStyle = {
-  fontSize: "15px",
-  lineHeight: "1.7",
-  color: "#374151",
-  marginBottom: "16px",
-};
-
-const listStyle = {
-  fontSize: "15px",
-  lineHeight: "1.7",
-  color: "#374151",
-  paddingLeft: "20px",
-  marginBottom: "16px",
-};
