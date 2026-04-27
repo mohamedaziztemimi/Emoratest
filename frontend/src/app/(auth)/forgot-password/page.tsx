@@ -19,7 +19,8 @@ export default function ForgotPasswordPage() {
     setSuccess(false);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) throw new Error("API URL not configured");
       const res = await fetch(`${apiUrl}/api/v1/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

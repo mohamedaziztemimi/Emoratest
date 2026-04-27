@@ -58,7 +58,8 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) throw new Error("API URL not configured");
       const res = await fetch(`${apiUrl}/api/v1/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
