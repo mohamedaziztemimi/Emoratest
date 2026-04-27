@@ -1,0 +1,20 @@
+# ────────────────────────────────────────────────────────────────
+# Caddyfile - EmoraTest Production Reverse Proxy
+# ────────────────────────────────────────────────────────────────
+
+:80 {
+    # API and SDK routes
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Static files (SDK)
+    handle /static/* {
+        reverse_proxy backend:8000
+    }
+
+    # All other routes → Next.js frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+}

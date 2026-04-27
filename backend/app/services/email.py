@@ -8,7 +8,7 @@ Supports multiple providers:
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
@@ -192,9 +192,7 @@ class EmailService:
     ) -> bool:
         """Send password reset email."""
         subject = "Reset Your EmoraTest Password"
-        expiry_time = datetime.now(UTC).replace(
-            minute=datetime.now(UTC).minute + expiry_minutes
-        ).strftime("%I:%M %p")
+        expiry_time = (datetime.now(UTC) + timedelta(minutes=expiry_minutes)).strftime("%I:%M %p")
 
         html_content = f"""
 <!DOCTYPE html>

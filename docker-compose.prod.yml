@@ -55,6 +55,8 @@ services:
         condition: service_healthy
     volumes:
       - ./ml/artifacts:/app/ml_artifacts:ro
+    expose:
+      - "8000"
     restart: unless-stopped
 
   # ── Frontend (Next.js) ─────────────────────────────────────
@@ -73,7 +75,26 @@ services:
       BACKEND_URL: http://backend:8000
     depends_on:
       - backend
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  # ── Caddy (Reverse Proxy + SSL) ────────────────────────────
+  caddy:
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
     restart: unless-stopped
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
