@@ -4,6 +4,8 @@ Provides:
     POST /auth/register  — create merchant account with password
     POST /auth/login     — authenticate and receive JWT
     GET  /auth/me        — get current merchant profile (JWT)
+    POST /auth/forgot-password  — request password reset email
+    POST /auth/reset-password    — reset password with token
     POST /auth/gdpr/consent  — record GDPR consent
     GET  /auth/gdpr/export   — export all merchant data (GDPR Art. 20)
     DELETE /auth/gdpr/delete — delete all merchant data (GDPR Art. 17)
@@ -11,13 +13,13 @@ Provides:
 
 import hashlib
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from redis import asyncio as aioredis
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import (
@@ -39,6 +41,7 @@ from app.models.intervention_result import InterventionResult
 from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
+from app.services.email import email_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -74,6 +77,25 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=255)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @validator("new_password")
+    def validate_password(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
 
 class AuthResponse(BaseModel):
@@ -163,6 +185,13 @@ async def register(
 
     token = create_access_token(str(merchant.id), merchant.email)
 
+    # Send welcome email
+    try:
+        await email_service.send_welcome(merchant.email, merchant.shop_domain)
+    except Exception as e:
+        # Don't fail registration if email fails
+        pass
+
     # Set httpOnly cookie with JWT
     auth_response = AuthResponse(
         access_token=token,
@@ -237,6 +266,13 @@ async def signup(
     await db.refresh(merchant)
 
     token = create_access_token(str(merchant.id), merchant.email)
+
+    # Send welcome email
+    try:
+        await email_service.send_welcome(merchant.email, merchant.shop_domain)
+    except Exception as e:
+        # Don't fail registration if email fails
+        pass
 
     # Set httpOnly cookie with JWT
     auth_response = AuthResponse(
@@ -352,6 +388,117 @@ async def login(
         domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
     )
     return response
+
+
+# ── POST /auth/forgot-password ───────────────────────────────────
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Request a password reset email.
+
+    Always returns success to prevent email enumeration.
+    If email exists, sends reset link with token valid for 30 minutes.
+    """
+    result = await db.execute(select(Merchant).where(Merchant.email == body.email))
+    merchant = result.scalar_one_or_none()
+
+    if merchant:
+        # Generate secure reset token
+        reset_token = secrets.token_urlsafe(32)
+        reset_expires = datetime.now(UTC) + timedelta(
+            minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+        )
+
+        # Store token in database
+        await db.execute(
+            update(Merchant)
+            .where(Merchant.id == merchant.id)
+            .values(
+                password_reset_token=reset_token,
+                password_reset_expires=reset_expires,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await db.commit()
+
+        # Send password reset email
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        await email_service.send_password_reset(
+            to=merchant.email,
+            reset_link=reset_link,
+            expiry_minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES,
+        )
+
+    # Always return success to prevent email enumeration
+    return {
+        "status": "ok",
+        "message": "If an account exists with that email, a password reset link has been sent.",
+    }
+
+
+# ── POST /auth/reset-password ────────────────────────────────────
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset password using a valid reset token.
+
+    Token must be valid and not expired.
+    """
+    # Find merchant with this reset token
+    result = await db.execute(
+        select(Merchant).where(Merchant.password_reset_token == body.token)
+    )
+    merchant = result.scalar_one_or_none()
+
+    if not merchant:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset token"
+        )
+
+    # Check if token has expired
+    if merchant.password_reset_expires and merchant.password_reset_expires < datetime.now(UTC):
+        # Clear expired token
+        await db.execute(
+            update(Merchant)
+            .where(Merchant.id == merchant.id)
+            .values(
+                password_reset_token=None,
+                password_reset_expires=None,
+            )
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token has expired. Please request a new one."
+        )
+
+    # Update password
+    await db.execute(
+        update(Merchant)
+        .where(Merchant.id == merchant.id)
+        .values(
+            password_hash=hash_password(body.new_password),
+            password_reset_token=None,  # Clear the token
+            password_reset_expires=None,
+            updated_at=datetime.now(UTC),
+        )
+    )
+    await db.commit()
+
+    return {
+        "status": "ok",
+        "message": "Password has been reset successfully. You can now log in with your new password."
+    }
 
 
 # ── GET /auth/me ─────────────────────────────────────────────────

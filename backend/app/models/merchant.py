@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -52,9 +52,24 @@ class Merchant(Base):
     session_year: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("EXTRACT(YEAR FROM NOW())")
     )
+    # Password reset fields
+    password_reset_token: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True
+    )
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "plan IN ('free','growth','scale','enterprise')",
+            name="ck_merchants_plan",
+        ),
+        Index("ix_merchants_password_reset_token", "password_reset_token"),
     )

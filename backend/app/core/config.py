@@ -27,11 +27,26 @@ class Settings(BaseSettings):
     # Environment detection
     ENVIRONMENT: str = "development"  # "development" or "production"
     BASE_DOMAIN: str = "emoratest.com"  # For cross-subdomain cookies
+    FRONTEND_URL: str = "http://localhost:3000"  # For password reset links
 
     # Cookie settings
     COOKIE_SECURE: bool = False  # Will be set based on ENVIRONMENT
     COOKIE_SAMESITE: str = "lax"  # "lax" for same-site, "none" for cross-domain
     COOKIE_DOMAIN: str | None = None  # None = current host, ".emoratest.com" for all subdomains
+
+    # Email settings
+    EMAIL_PROVIDER: str = "console"  # "resend", "sendgrid", "smtp", or "console" (for dev)
+    RESEND_API_KEY: str = ""  # Resend API key
+    SENDGRID_API_KEY: str = ""  # SendGrid API key
+    SMTP_HOST: str = ""  # SMTP server hostname
+    SMTP_PORT: int = 587  # SMTP port
+    SMTP_USER: str = ""  # SMTP username
+    SMTP_PASSWORD: str = ""  # SMTP password
+    SMTP_FROM_EMAIL: str = "noreply@emoratest.com"  # From email address
+    SMTP_FROM_NAME: str = "EmoraTest"  # From display name
+
+    # Password reset settings
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30  # Token valid for 30 minutes
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 
