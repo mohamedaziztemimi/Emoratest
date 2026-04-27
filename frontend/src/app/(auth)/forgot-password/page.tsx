@@ -48,16 +48,16 @@ export default function ForgotPasswordPage() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "4px",
-          marginBottom: "32px",
+          gap: "8px",
+          marginBottom: "40px",
         }}
       >
         <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
-          <img src="/logo2.png" alt="EmoraTest" style={{ height: "64px", width: "auto" }} />
+          <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
         </a>
         <span
           style={{
-            fontSize: "20px",
+            fontSize: "24px",
             fontWeight: "700",
             color: "#111318",
             letterSpacing: "-0.3px",
@@ -72,31 +72,32 @@ export default function ForgotPasswordPage() {
         style={{
           background: "white",
           border: "1px solid #E5E7EB",
-          borderRadius: "20px",
-          padding: "36px 40px",
+          borderRadius: "24px",
+          padding: "48px",
           width: "100%",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
         }}
       >
         {/* Header */}
         <h1
           style={{
-            fontSize: "24px",
+            fontSize: "28px",
             fontWeight: "700",
             color: "#111318",
-            margin: "0 0 6px 0",
-            letterSpacing: "-0.3px",
+            margin: "0 0 8px 0",
+            letterSpacing: "-0.5px",
           }}
         >
-          Forgot your password?
+          Reset your password
         </h1>
         <p
           style={{
-            fontSize: "14px",
+            fontSize: "15px",
             color: "#6B7280",
-            margin: "0 0 28px 0",
+            margin: "0 0 32px 0",
           }}
         >
-          Enter your email and we'll send you a reset link
+          We'll send you a link to reset your password
         </p>
 
         {/* Error banner */}
@@ -122,14 +123,25 @@ export default function ForgotPasswordPage() {
             style={{
               background: "#F0FDF4",
               border: "1px solid #BBF7D0",
-              borderRadius: "10px",
-              padding: "12px 16px",
-              fontSize: "14px",
-              color: "#16A34A",
-              marginBottom: "16px",
+              borderRadius: "12px",
+              padding: "20px",
+              marginBottom: "24px",
             }}
           >
-            If an account exists with that email, a password reset link has been sent.
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: "2px" }}>
+                <circle cx="12" cy="12" r="10" fill="#10B981" />
+                <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div>
+                <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: "600", color: "#16A34A" }}>
+                  Check your email
+                </p>
+                <p style={{ margin: 0, fontSize: "14px", color: "#6B7280", lineHeight: "1.5" }}>
+                  We sent a password reset link to <strong>{email}</strong>. The link expires in 30 minutes.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -210,7 +222,7 @@ export default function ForgotPasswordPage() {
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
-              {loading ? "Sending..." : "Send Reset Link"}
+              {loading ? "Sending link..." : "Send Reset Link"}
             </button>
           </form>
         ) : (

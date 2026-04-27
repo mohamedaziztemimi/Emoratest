@@ -50,16 +50,16 @@ export default function LoginPage() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "4px",
-          marginBottom: "32px",
+          gap: "8px",
+          marginBottom: "40px",
         }}
       >
         <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
-          <img src="/logo2.png" alt="EmoraTest" style={{ height: "64px", width: "auto" }} />
+          <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
         </a>
         <span
           style={{
-            fontSize: "20px",
+            fontSize: "24px",
             fontWeight: "700",
             color: "#111318",
             letterSpacing: "-0.3px",
@@ -74,31 +74,32 @@ export default function LoginPage() {
         style={{
           background: "white",
           border: "1px solid #E5E7EB",
-          borderRadius: "20px",
-          padding: "36px 40px",
+          borderRadius: "24px",
+          padding: "48px",
           width: "100%",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
         }}
       >
         {/* Header */}
         <h1
           style={{
-            fontSize: "24px",
+            fontSize: "28px",
             fontWeight: "700",
             color: "#111318",
-            margin: "0 0 6px 0",
-            letterSpacing: "-0.3px",
+            margin: "0 0 8px 0",
+            letterSpacing: "-0.5px",
           }}
         >
           Welcome back
         </h1>
         <p
           style={{
-            fontSize: "14px",
+            fontSize: "15px",
             color: "#6B7280",
-            margin: "0 0 28px 0",
+            margin: "0 0 32px 0",
           }}
         >
-          Sign in to your EmoraTest workspace
+          Sign in to your workspace to continue
         </p>
 
         {/* Error banner */}
