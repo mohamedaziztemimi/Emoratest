@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "EmoraTest privacy policy and data handling practices.",
+  title: "Privacy Policy — EmoraTest",
+  description: "EmoraTest privacy policy and data handling practices. Learn how we collect, process, and protect your data.",
 };
 
 const currentDate = new Date().toLocaleDateString("en-US", {

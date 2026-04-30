@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: "EmoraTest terms of service.",
+  title: "Terms of Service — EmoraTest",
+  description: "EmoraTest terms of service. Learn about your rights and responsibilities when using our emotion analytics platform.",
 };
 
 const currentDate = new Date().toLocaleDateString("en-US", {

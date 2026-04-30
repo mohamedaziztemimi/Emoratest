@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Impressum",
-  description: "Legal disclosure (Impressum) required by German law.",
+  title: "Impressum — EmoraTest",
+  description: "Legal disclosure (Impressum) for EmoraTest required by German law TMG §5.",
 };
 
 export default function ImpressumPage() {

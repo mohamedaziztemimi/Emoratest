@@ -11,7 +11,7 @@ const FOOTER_LINKS = {
     { label: "Integrations", href: "/#integrations" },
   ],
   resources: [
-    { label: "Documentation", href: "/dashboard/docs" },
+    { label: "Documentation", href: "/docs" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
