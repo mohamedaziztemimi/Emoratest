@@ -325,7 +325,7 @@ export default function SessionsPage() {
                       className="rounded border-[hsl(var(--border))]"
                     />
                   </th>
-                  {["Visitor", "Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
+                  {["Visitor", "IP / Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -362,14 +362,27 @@ export default function SessionsPage() {
                       className="px-5 py-3.5 cursor-pointer"
                       onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
                     >
-                      {s.country_code ? (
+                      <div className="space-y-0.5">
+                        {/* IP address */}
+                        {s.ip_address ? (
+                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))]">
+                            {s.ip_address.length > 20 ? `${s.ip_address.slice(0, 20)}...` : s.ip_address}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))]">--</span>
+                        )}
+                        {/* Country flag + code */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-base">{countryCodeToFlag(s.country_code)}</span>
-                          <span className="text-[13px] text-[hsl(var(--foreground))]">{s.country_code.toUpperCase()}</span>
+                          {s.country_code ? (
+                            <>
+                              <span className="text-base">{countryCodeToFlag(s.country_code)}</span>
+                              <span className="text-[13px] text-[hsl(var(--foreground))]">{s.country_code.toUpperCase()}</span>
+                            </>
+                          ) : (
+                            <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
-                      )}
+                      </div>
                     </td>
                     <td
                       className="max-w-[200px] truncate px-5 py-3.5 text-[hsl(var(--foreground))] cursor-pointer"

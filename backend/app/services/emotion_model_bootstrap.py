@@ -79,7 +79,7 @@ def generate_synthetic_features(n: int = 2000) -> tuple[np.ndarray, np.ndarray]:
             if emotion == 'frustration':
                 # High rage clicks, high velocity variance
                 X[i] = [
-                    np.random.uniform(400, 800),  # hesitation_score (0-1, but high here)
+                    np.random.uniform(0.5, 0.9),   # hesitation_score (0-1 scale, high for frustration)
                     np.random.uniform(0, 5),       # price_dwell_time_s
                     np.random.uniform(0.3, 0.8),   # rage_click_score
                     np.random.uniform(0, 2),       # scroll_retreat_count

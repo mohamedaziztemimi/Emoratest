@@ -59,6 +59,9 @@ def _heuristic_emotion_predict(features: dict) -> dict:
     Uses behavioral signals to predict emotions based on domain rules.
     This ensures emotions are always computed, even without ML artifacts.
 
+    BALANCED APPROACH: Both positive and negative emotions are equally possible
+    depending on user behavior patterns.
+
     Args:
         features: Dict with the 8 feature names as keys
 
@@ -68,66 +71,52 @@ def _heuristic_emotion_predict(features: dict) -> dict:
     f = features
 
     # Initialize all emotion scores to baseline
-    scores = {
-        'confusion': 0.1,
-        'frustration': 0.1,
-        'delight': 0.1,
-        'anxiety': 0.1,
-        'hesitation': 0.1,
-        'focus': 0.1,
-        'boredom': 0.1,
-        'satisfaction': 0.1,
-    }
+    scores = {emotion: 0.1 for emotion in ALL_EMOTIONS}
 
-    # Rule 1: High rage clicks → frustration
     rage_score = float(f.get('rage_click_score', 0))
-    if rage_score > 0.3:
-        boost = min(rage_score * 2, 0.6)
-        scores['frustration'] += boost
-        scores['anxiety'] += boost * 0.5
-
-    # Rule 2: High scroll retreats → confusion
     retreat_count = float(f.get('scroll_retreat_count', 0))
-    if retreat_count > 2:
-        scores['confusion'] += min(retreat_count * 0.1, 0.5)
-        scores['hesitation'] += min(retreat_count * 0.08, 0.4)
-
-    # Rule 3: High exit intents → frustration/anxiety
     exit_count = float(f.get('exit_intent_count', 0))
-    if exit_count > 1:
-        scores['frustration'] += min(exit_count * 0.15, 0.4)
-        scores['anxiety'] += min(exit_count * 0.1, 0.3)
-
-    # Rule 4: Long session with low friction → delight/satisfaction
     duration = float(f.get('session_duration_s', 0))
     hesitation = float(f.get('hesitation_score', 0))
-    if duration > 60 and hesitation < 0.3:
-        scores['delight'] += 0.3
+    velocity_var = float(f.get('velocity_variance', 0))
+    checkout_hesitation = float(f.get('checkout_hesitation_s', 0))
+    price_dwell = float(f.get('price_dwell_time_s', 0))
+
+    # NEGATIVE signals
+    if rage_score > 0.3:
+        scores['frustration'] += min(rage_score * 1.5, 0.5)
+    if retreat_count > 3:
+        scores['confusion'] += min(retreat_count * 0.08, 0.4)
+    if exit_count > 2:
+        scores['anxiety'] += min(exit_count * 0.1, 0.3)
+    if duration < 10 and rage_score < 0.1:
+        scores['boredom'] += 0.3
+    if hesitation > 0.6:
+        scores['hesitation'] += 0.3
+    if checkout_hesitation > 10:
+        scores['anxiety'] += 0.2
+
+    # POSITIVE signals — EQUALLY important for balanced predictions
+    if duration > 30 and rage_score < 0.2 and retreat_count < 2:
         scores['satisfaction'] += 0.3
         scores['focus'] += 0.2
+    if duration > 60 and exit_count < 1:
+        scores['delight'] += 0.3
+        scores['focus'] += 0.3
+    if price_dwell > 3 and rage_score < 0.2:
+        scores['focus'] += 0.3
+    if rage_score < 0.1 and retreat_count < 1 and exit_count < 1:
+        # Calm, normal browsing = satisfaction or focus, NOT frustration
+        scores['satisfaction'] += 0.25
+        scores['focus'] += 0.2
+    if duration > 20 and hesitation < 0.3 and rage_score < 0.15:
+        scores['delight'] += 0.2
 
-    # Rule 5: High checkout hesitation → anxiety/hesitation
-    checkout_hesitation = float(f.get('checkout_hesitation_s', 0))
-    if checkout_hesitation > 5:
-        scores['anxiety'] += 0.3
-        scores['hesitation'] += 0.3
-
-    # Rule 6: High velocity variance → frustration/confusion
-    velocity_var = float(f.get('velocity_variance', 0))
-    if velocity_var > 1000000:
-        scores['frustration'] += 0.25
-        scores['confusion'] += 0.2
-
-    # Rule 7: Very short session with no interaction → boredom
-    if duration < 10 and rage_score < 0.1 and retreat_count < 1:
-        scores['boredom'] += 0.4
-
-    # Normalize scores to sum to 1.0
+    # Normalize
     total = sum(scores.values())
     if total > 0:
         scores = {k: round(v / total, 4) for k, v in scores.items()}
 
-    # Find primary emotion
     primary_emotion = max(scores, key=scores.get)
     confidence = scores[primary_emotion]
 
@@ -137,7 +126,7 @@ def _heuristic_emotion_predict(features: dict) -> dict:
         'all_scores': scores,
         'valence': VALENCE_MAP.get(primary_emotion, 0.0),
         'arousal': AROUSAL_MAP.get(primary_emotion, 0.5),
-        '_fallback': True,  # Mark that this was a heuristic prediction
+        '_fallback': True,
     }
 
 

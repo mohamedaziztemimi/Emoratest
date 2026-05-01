@@ -54,7 +54,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./ml/artifacts:/app/ml_artifacts:ro
+      - ./ml/artifacts:/app/ml_artifacts
     expose:
       - "8000"
     restart: unless-stopped
