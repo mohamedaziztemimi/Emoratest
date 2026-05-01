@@ -1,37 +1,11 @@
-# ────────────────────────────────────────────────────────────────
-# Caddyfile - EmoraTest Production Reverse Proxy
-# ────────────────────────────────────────────────────────────────
-# Auto HTTPS, www → non-www redirect, proper routing
-
-# Redirect www to non-www (HTTPS)
-www.emoratest.com {
-    redir https://emoratest.com{uri} permanent
-}
-
-# Main site configuration
-emoratest.com {
-    # API and SDK routes → backend
+:80 {
     handle /api/* {
         reverse_proxy backend:8000
     }
-
     handle /static/* {
         reverse_proxy backend:8000
     }
-
-    # All other routes → Next.js frontend
     handle {
         reverse_proxy frontend:3000
     }
-
-    # Log access
-    log {
-        output file /var/log/caddy/emoratest-access.log
-    }
-}
-
-# HTTP to HTTPS redirect (both domains)
-http://emoratest.com,
-http://www.emoratest.com {
-    redir https://emoratest.com{uri} permanent
 }
