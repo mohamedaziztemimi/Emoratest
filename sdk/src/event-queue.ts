@@ -166,10 +166,14 @@ export class EventQueue {
       console.debug(`[EmoraTest] Flushing ${events.length} events`);
     }
 
+    // Get current page URL for session tracking
+    const pageUrl = typeof window !== "undefined" ? window.location.href : undefined;
+
     try {
       await this.transport.sendEvents({
         session_id: this.sessionId,
         events,
+        page_url: pageUrl,
       });
     } catch (err) {
       // Re-queue on failure (at the front)
@@ -190,9 +194,13 @@ export class EventQueue {
       );
     }
 
+    // Get current page URL for session tracking
+    const pageUrl = typeof window !== "undefined" ? window.location.href : undefined;
+
     this.transport.sendBeacon({
       session_id: this.sessionId,
       events,
+      page_url: pageUrl,
     });
   }
 

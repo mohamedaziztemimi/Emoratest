@@ -126,6 +126,7 @@ export interface RawEvent {
 export interface BatchPayload {
   session_id: string;
   events: RawEvent[];
+  page_url?: string;  // Current page URL (for session tracking)
 }
 
 // ── Session ───────────────────────────────────────────────────────

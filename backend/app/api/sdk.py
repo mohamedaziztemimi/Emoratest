@@ -325,6 +325,7 @@ async def ingest_events(
 ):
     """Ingest a batch of behavioral events for a session.
     Auto-creates session if it doesn't exist (defensive fallback).
+    Updates session page_url, IP, country, and ended_at on each event batch.
     """
 
     # Verify session belongs to this merchant
@@ -340,18 +341,33 @@ async def ingest_events(
     )
     session = result.first()
 
+    now = datetime.now(UTC)
+
+    # BUG 5: Extract IP address and country code from headers
+    client_ip = extract_client_ip(request)
+    country_code = request.headers.get("CF-IPCountry")  # Cloudflare provides 2-letter country code
+
+    # BUG 3: Get page_url from body or use Referer header as fallback
+    page_url = body.page_url
+    if not page_url or page_url == "unknown":
+        referer = request.headers.get("Referer")
+        if referer:
+            page_url = referer
+    if not page_url:
+        page_url = "unknown"
+
     # Auto-create session if not found (defensive programming)
     if session is None:
-        now = datetime.now(UTC)
         new_session = Session(
             id=sid,
             merchant_id=merchant.id,
-            page_url=body.page_url or "unknown",
+            page_url=page_url,
             started_at=now,
             outcome="unknown",
-            country_code=None,
+            country_code=country_code,
             device_type=None,
             expires_at=now + timedelta(days=90),
+            ip_address=client_ip,
         )
         db.add(new_session)
         await db.commit()
@@ -360,6 +376,20 @@ async def ingest_events(
 
         if session_merchant_id != merchant.id:
             raise HTTPException(status_code=404, detail="Session not found")
+
+        # BUG 4: Update ended_at timestamp when new events arrive (keeps session duration current)
+        # BUG 3 & 5: Also update page_url, IP, and country if they were previously unknown
+        await db.execute(
+            update(Session)
+            .where(Session.id == sid)
+            .values(
+                ended_at=now,
+                page_url=page_url if Session.page_url == "unknown" or not Session.page_url else Session.page_url,
+                ip_address=client_ip if not Session.ip_address else Session.ip_address,
+                country_code=country_code if not Session.country_code else Session.country_code,
+            )
+        )
+        await db.commit()
 
     # Bulk insert events
     events = [

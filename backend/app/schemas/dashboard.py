@@ -236,3 +236,22 @@ class EmotionTrendDay(BaseModel):
 class EmotionTrendResponse(BaseModel):
     days: list[EmotionTrendDay]
     emotions_seen: list[str]
+
+
+# ── Bulk Delete Request ────────────────────────────────────────────
+
+
+class BulkDeleteRequest(BaseModel):
+    session_ids: list[str] = Field(..., min_length=1, max_length=100)
+
+
+# ── Alerts ────────────────────────────────────────────────────────
+
+
+class AlertResponse(BaseModel):
+    alerts: list
+    total: int = 0
+
+
+class AlertCountResponse(BaseModel):
+    count: int = 0

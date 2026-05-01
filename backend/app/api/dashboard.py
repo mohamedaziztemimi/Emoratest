@@ -27,6 +27,9 @@ from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 from app.schemas.dashboard import (
+    AlertCountResponse,
+    AlertResponse,
+    BulkDeleteRequest,
     DashboardStatsResponse,
     DropOffReasonItem,
     DropOffReasonsResponse,
@@ -95,11 +98,10 @@ async def get_emotion_pulse(
     )
     sessions_with_issues = negative_result.scalar() or 0
 
-    # Count active experiments
+    # Count active experiments (all experiments for merchant)
     exp_result = await db.execute(
         select(func.count()).where(
             Experiment.merchant_id == merchant.id,
-            Experiment.is_active == True,
         )
     )
     active_experiments = exp_result.scalar() or 0
@@ -1823,11 +1825,12 @@ async def delete_session(
 @limiter.limit("50/minute")
 async def bulk_delete_sessions(
     request: Request,
-    session_ids: list[str],
+    body: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
     """Delete multiple sessions and all their events (JWT auth)."""
+    session_ids = body.session_ids
     if not session_ids or len(session_ids) > 100:
         raise HTTPException(status_code=400, detail="Provide 1-100 session IDs")
 
@@ -1854,3 +1857,64 @@ async def bulk_delete_sessions(
     await db.execute(delete(SessionFeatures).where(SessionFeatures.session_id.in_(ids)))
     await db.execute(delete(Session).where(Session.id.in_(ids)))
     await db.commit()
+
+
+# ── Alerts endpoints (BUG 2: missing endpoints) ────────────────────
+
+
+@router.get("/alerts/unresolved-count", response_model=AlertCountResponse)
+@limiter.limit("100/minute")
+async def get_unresolved_alerts_count(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get count of unresolved alerts for the merchant (placeholder for future feature)."""
+    return AlertCountResponse(count=0)
+
+
+@router.get("/alerts", response_model=AlertResponse)
+@limiter.limit("100/minute")
+async def get_alerts(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get alerts for the merchant (placeholder for future feature)."""
+    return AlertResponse(alerts=[], total=0)
+
+
+@router.get("/alerts/history/list", response_model=AlertResponse)
+@limiter.limit("100/minute")
+async def get_alerts_history(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get alert history for the merchant (placeholder for future feature)."""
+    return AlertResponse(alerts=[], total=0)
+
+
+# ── Diagnosis endpoints (BUG 2: missing endpoints) ────────────────
+
+
+@router.get("/diagnosis/primary")
+@limiter.limit("100/minute")
+async def get_primary_diagnosis(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get primary diagnosis for the merchant (placeholder for future feature)."""
+    return {"has_diagnosis": False}
+
+
+@router.get("/diagnosis/issues")
+@limiter.limit("100/minute")
+async def get_diagnosis_issues(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get diagnosis issues for the merchant (placeholder for future feature)."""
+    return {"issues": [], "total": 0}
