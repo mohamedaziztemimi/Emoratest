@@ -524,6 +524,7 @@ async def get_me(
 @router.get("/usage", response_model=UsageResponse)
 async def get_usage(
     merchant: Merchant = Depends(get_current_merchant),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get current account usage and limits."""
     now = datetime.now(UTC)
@@ -540,18 +541,21 @@ async def get_usage(
 
     reset_date = f"{reset_year:04d}-{reset_month:02d}-01"
 
-    # Reset counters if month has changed
-    if merchant.session_month != current_month or merchant.session_year != current_year:
-        return UsageResponse(
-            plan=merchant.plan,
-            sessions_used=0,
-            sessions_limit=merchant.monthly_session_limit,
-            reset_date=reset_date,
+    # Calculate actual session count for current month from database
+    month_start = datetime(now.year, now.month, 1, tzinfo=UTC)
+    count_result = await db.execute(
+        select(func.count()).select_from(
+            select(Session.id).where(
+                Session.merchant_id == merchant.id,
+                Session.started_at >= month_start,
+            ).subquery()
         )
+    )
+    actual_sessions_used = count_result.scalar() or 0
 
     return UsageResponse(
         plan=merchant.plan,
-        sessions_used=merchant.sessions_this_month,
+        sessions_used=actual_sessions_used,
         sessions_limit=merchant.monthly_session_limit,
         reset_date=reset_date,
     )

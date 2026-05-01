@@ -89,6 +89,8 @@ async def get_recommendations(
         friction_score=session.friction_score,
         intent_label=session.intent_label,
         features=features_dict,
+        page_url=session.page_url,
+        primary_emotion=session.primary_emotion,
         max_results=max_results,
     )
 

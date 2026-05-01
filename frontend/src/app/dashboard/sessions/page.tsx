@@ -16,6 +16,14 @@ const PAGE_SIZE = 20;
 
 // ── Helper Functions (Prompt 20) ─────────────────────────────────────────────
 
+// Convert country code to flag emoji
+function countryCodeToFlag(countryCode: string | null | undefined): string {
+  if (!countryCode) return "";
+  const code = countryCode.toUpperCase();
+  const base = 127397; // Regional Indicator Symbol Letter A base
+  return [...code].map(char => String.fromCodePoint(base + char.charCodeAt(0))).join("");
+}
+
 function formatPageUrl(url: string): string {
   // Strip http://localhost:8000 or other domains, show only path
   try {
@@ -317,7 +325,7 @@ export default function SessionsPage() {
                       className="rounded border-[hsl(var(--border))]"
                     />
                   </th>
-                  {["Visitor", "IP / Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
+                  {["Visitor", "Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -354,12 +362,10 @@ export default function SessionsPage() {
                       className="px-5 py-3.5 cursor-pointer"
                       onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
                     >
-                      {s.ip_address ? (
-                        <div className="flex flex-col">
-                          <span className="text-[13px] text-[hsl(var(--foreground))]">{s.ip_address}</span>
-                          {s.country_code && (
-                            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{s.country_code}</span>
-                          )}
+                      {s.country_code ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">{countryCodeToFlag(s.country_code)}</span>
+                          <span className="text-[13px] text-[hsl(var(--foreground))]">{s.country_code.toUpperCase()}</span>
                         </div>
                       ) : (
                         <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>

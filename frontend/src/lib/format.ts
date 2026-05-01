@@ -27,10 +27,15 @@ export function formatDate(iso: string | null | undefined): string {
 
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "--";
-  if (seconds < 60) return `${seconds.toFixed(0)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}m ${secs}s`;
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.round((seconds % 3600) / 60);
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
 export function formatNumber(value: number | null | undefined): string {

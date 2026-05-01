@@ -345,7 +345,7 @@ def _fetch_page_aggregates(
             )
         )
         .group_by(Session.page_url)
-        .having(func.count(Session.id) >= 3)  # Minimum sessions for reliability
+        .having(func.count(Session.id) >= 1)  # Lower threshold - show data even with 1 session
         .order_by(desc("avg_rage"), desc("avg_hesitation"), desc("abandon_rate"))
         .limit(10)
     )
@@ -428,8 +428,14 @@ async def get_primary_diagnosis(
 
     aggregates = _fetch_page_aggregates(db, merchant_id, hours)
 
+    # Get total session count even if no aggregates (for display)
+    total_sessions_result = db.query(func.count(Session.id)).filter(
+        Session.merchant_id == merchant_id,
+        Session.started_at >= datetime.utcnow() - timedelta(hours=hours),
+    ).scalar() or 0
+
     if not aggregates:
-        # Return neutral "no issues" state
+        # Return neutral "no issues" state with actual session count
         return DiagnosisResponse(
             summary=ProblemSummary(
                 title="No critical issues detected",
@@ -445,12 +451,19 @@ async def get_primary_diagnosis(
             ),
             actions=[
                 ActionItem(
-                    title="Review your funnel",
-                    description="Check conversion rates across key pages",
+                    title="Review your sessions",
+                    description=f"View all {total_sessions_result} sessions to understand user behavior",
                     type="edit_element",
-                    link="/dashboard/analytics",
+                    link="/dashboard/sessions",
                 )
             ],
+            supporting_charts={
+                "page_stats": {
+                    "total_sessions": total_sessions_result,
+                    "avg_friction": None,
+                    "top_emotion": None,
+                }
+            },
         )
 
     # Find the most severe issue

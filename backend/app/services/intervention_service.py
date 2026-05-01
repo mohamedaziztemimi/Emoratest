@@ -151,16 +151,44 @@ def recommend_interventions(
     friction_score: float | None,
     intent_label: str | None,
     features: dict | None = None,
+    page_url: str | None = None,
+    primary_emotion: str | None = None,
     max_results: int = 3,
 ) -> list[dict]:
     """Score and rank interventions for a session's risk profile.
 
     Returns the top-N interventions sorted by match priority (descending).
+    Descriptions are customized based on page URL and primary emotion.
     """
+    from urllib.parse import urlparse
+
     risk = abandonment_risk or 0.0
     friction = friction_score or 0.0
     intent = intent_label or "browsing"
     feats = features or {}
+
+    # Extract page path for display
+    page_path = page_url
+    if page_url:
+        try:
+            parsed = urlparse(page_url)
+            page_path = parsed.pathname or page_url
+            if page_path == "/":
+                page_path = "Home"
+        except Exception:
+            pass
+
+    # Emotion-specific guidance
+    emotion_guidance = {
+        "confusion": "Users appear confused — consider simplifying content or navigation.",
+        "frustration": "Users show frustration — check for broken or unresponsive elements.",
+        "hesitation": "Users are hesitating — add trust signals or clearer CTAs.",
+        "anxiety": "Users seem anxious — provide reassurance or simplify the process.",
+        "boredom": "Users appear disengaged — consider more engaging content or clearer value.",
+        "satisfaction": "Users are satisfied — maintain the current experience.",
+        "delight": "Users are delighted — consider what's working well.",
+        "focus": "Users are focused — the page is engaging effectively.",
+    }
 
     scored: list[tuple[float, InterventionTemplate]] = []
 
@@ -211,10 +239,17 @@ def recommend_interventions(
 
     results = []
     for priority, tmpl in scored[:max_results]:
+        # Customize description with page context
+        description = tmpl.description
+        if page_path:
+            description = f"On {page_path}: {tmpl.description.lower()}"
+        if primary_emotion and primary_emotion in emotion_guidance:
+            description += f" {emotion_guidance[primary_emotion]}"
+
         results.append({
             "intervention_id": tmpl.intervention_id,
             "name": tmpl.name,
-            "description": tmpl.description,
+            "description": description,
             "trigger": tmpl.trigger,
             "priority": round(priority, 4),
             "psychological_basis": tmpl.psychological_basis,

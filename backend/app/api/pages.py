@@ -213,18 +213,25 @@ async def get_page_detail(
     merchant: Merchant = Depends(get_current_merchant),
 ):
     """Get detailed emotion analysis for a single page."""
-    from urllib.parse import unquote
+    from urllib.parse import unquote, urlparse
 
     page_url = unquote(encoded_page)
     cutoff = datetime.now(UTC) - timedelta(days=days)
 
-    # Get session count
+    # Extract pathname for more flexible matching
+    try:
+        parsed_target = urlparse(page_url)
+        target_pathname = parsed_target.pathname or page_url
+    except Exception:
+        target_pathname = page_url
+
+    # Get session count - match by exact URL OR by pathname
     count_result = await db.execute(
         select(func.count(Session.id))
         .where(
             Session.merchant_id == merchant.id,
-            Session.page_url == page_url,
             Session.started_at >= cutoff,
+            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname))
         )
     )
     total_sessions = count_result.scalar() or 0
@@ -237,8 +244,8 @@ async def get_page_detail(
         select(Session.primary_emotion, func.count().label("cnt"))
         .where(
             Session.merchant_id == merchant.id,
-            Session.page_url == page_url,
             Session.started_at >= cutoff,
+            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
             Session.primary_emotion.isnot(None),
         )
         .group_by(Session.primary_emotion)
@@ -258,9 +265,9 @@ async def get_page_detail(
         select(Session.primary_emotion, func.count().label("cnt"))
         .where(
             Session.merchant_id == merchant.id,
-            Session.page_url == page_url,
             Session.started_at >= prev_cutoff,
             Session.started_at < cutoff,
+            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
             Session.primary_emotion.isnot(None),
         )
         .group_by(Session.primary_emotion)
@@ -286,8 +293,8 @@ async def get_page_detail(
         select(Session.id, Session.started_at, Session.primary_emotion, Session.emotion_confidence)
         .where(
             Session.merchant_id == merchant.id,
-            Session.page_url == page_url,
             Session.started_at >= cutoff,
+            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
         )
         .order_by(desc(Session.started_at))
         .limit(5)

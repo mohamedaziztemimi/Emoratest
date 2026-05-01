@@ -410,19 +410,19 @@ function IssuesList({ issues, isDemo }: { issues: IssueListItem[]; isDemo?: bool
 // ── NO DATA STATE (graceful, not error) ───────────────────────
 
 function NoDataState({ sessionCount, onTryDemo }: { sessionCount: number; onTryDemo: () => void }) {
-  const threshold = 20;
+  const threshold = 5;  // Lowered from 20 - show diagnosis earlier
   const remaining = threshold - sessionCount;
 
   return (
     <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-8 text-center">
       <span className="text-4xl mb-4 block">📊</span>
       <h2 className="text-xl font-bold text-gray-900 mb-2">
-        {sessionCount === 0 ? "Start collecting user data" : "Almost there..."}
+        {sessionCount === 0 ? "Start collecting user data" : "Collecting more data..."}
       </h2>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">
         {sessionCount === 0
           ? "Add the EmoraTest tracking script to your website to start analyzing user behavior and detecting issues."
-          : `We need ${remaining} more session${remaining !== 1 ? "s" : ""} to detect reliable patterns. Current: ${sessionCount} sessions.`}
+          : `Need ${remaining} more session${remaining !== 1 ? "s" : ""} for detailed diagnosis. Currently tracking: ${sessionCount} session${sessionCount !== 1 ? "s" : ""}.`}
       </p>
       <div className="flex items-center justify-center gap-3 flex-wrap">
         <a
