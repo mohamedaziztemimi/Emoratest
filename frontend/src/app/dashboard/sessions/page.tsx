@@ -49,10 +49,21 @@ function getCountryName(countryCode: string | null | undefined): string {
   return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode.toUpperCase();
 }
 
-// Format IP address - show full IPv6 or IPv4
+// Format IP address - shorten IPv6 for readability
 function formatIpAddress(ip: string | null | undefined): string {
   if (!ip) return "Unknown";
-  // Show the full IP address for both IPv4 and IPv6
+  // IPv6 addresses contain colons - shorten them for readability
+  if (ip.includes(":")) {
+    // Shorten IPv6 by replacing the longest run of zeros with ::
+    // e.g., 2a02:8071:5aa0:33c0:e82e:86d8:d42d:2e36 -> 2a02:8071:5aa0:33c0:e82e:86d8:d42d:2e36
+    // For very long IPv6, show first 4 groups + ...
+    const parts = ip.split(":");
+    if (parts.length > 6) {
+      return parts.slice(0, 4).join(":") + "...";
+    }
+    return ip;
+  }
+  // IPv4 - show as is
   return ip;
 }
 
