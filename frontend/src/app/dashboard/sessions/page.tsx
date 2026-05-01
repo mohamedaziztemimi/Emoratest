@@ -325,7 +325,7 @@ export default function SessionsPage() {
                       className="rounded border-[hsl(var(--border))]"
                     />
                   </th>
-                  {["Visitor", "IP / Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
+                  {["Visitor", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -354,34 +354,28 @@ export default function SessionsPage() {
                       className="px-5 py-3.5 cursor-pointer"
                       onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
                     >
-                      <span className="font-mono text-[13px] text-[hsl(var(--primary))]">
-                        {s.id.slice(0, 8)}...
-                      </span>
-                    </td>
-                    <td
-                      className="px-5 py-3.5 cursor-pointer"
-                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
-                    >
-                      <div className="space-y-0.5">
-                        {/* IP address */}
-                        {s.ip_address ? (
-                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))]">
-                            {s.ip_address.length > 20 ? `${s.ip_address.slice(0, 20)}...` : s.ip_address}
+                      <div className="space-y-1">
+                        {/* Visitor ID */}
+                        <span className="font-mono text-[13px] text-[hsl(var(--primary))]">
+                          {s.id.slice(0, 8)}...
+                        </span>
+                        {/* IP address - shortened for IPv6 */}
+                        {s.ip_address && (
+                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))] block">
+                            {s.ip_address.length > 20
+                              ? `${s.ip_address.slice(0, 19)}...`
+                              : s.ip_address}
                           </span>
-                        ) : (
-                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))]">--</span>
                         )}
                         {/* Country flag + code */}
-                        <div className="flex items-center gap-1.5">
-                          {s.country_code ? (
-                            <>
-                              <span className="text-base">{countryCodeToFlag(s.country_code)}</span>
-                              <span className="text-[13px] text-[hsl(var(--foreground))]">{s.country_code.toUpperCase()}</span>
-                            </>
-                          ) : (
-                            <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
-                          )}
-                        </div>
+                        {s.country_code && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm">{countryCodeToFlag(s.country_code)}</span>
+                            <span className="text-[12px] text-[hsl(var(--foreground))]">
+                              {s.country_code.toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td

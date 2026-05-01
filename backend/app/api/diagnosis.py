@@ -18,8 +18,10 @@ from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
+from app.core.auth import get_current_merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
+from app.models.merchant import Merchant
 from sqlalchemy import func, desc, and_, Integer, cast
 from sqlalchemy.orm import Session as DBSession
 
@@ -410,7 +412,7 @@ def _get_affected_sessions(
 async def get_primary_diagnosis(
     request: Request,
     db: DBSession = Depends(get_db),
-    merchant_id: str = Query(..., description="Merchant ID"),
+    merchant: Merchant = Depends(get_current_merchant),
     hours: int = Query(default=24, ge=1, le=168, description="Lookback period in hours"),
 ):
     """Returns the single most critical problem with full diagnosis.
@@ -422,15 +424,14 @@ async def get_primary_diagnosis(
     - Root cause explanation
     - Concrete action items
 
-    Note: For production, replace merchant_id query param with
-    Depends(get_current_merchant) for authentication.
+    Uses JWT authentication for merchant identification.
     """
 
-    aggregates = _fetch_page_aggregates(db, merchant_id, hours)
+    aggregates = _fetch_page_aggregates(db, merchant.id, hours)
 
     # Get total session count even if no aggregates (for display)
     total_sessions_result = db.query(func.count(Session.id)).filter(
-        Session.merchant_id == merchant_id,
+        Session.merchant_id == merchant.id,
         Session.started_at >= datetime.utcnow() - timedelta(hours=hours),
     ).scalar() or 0
 
@@ -555,7 +556,7 @@ async def get_primary_diagnosis(
 async def list_issues(
     request: Request,
     db: DBSession = Depends(get_db),
-    merchant_id: str = Query(..., description="Merchant ID"),
+    merchant: Merchant = Depends(get_current_merchant),
     hours: int = Query(default=24, ge=1, le=168, description="Lookback period in hours"),
 ):
     """Returns a prioritized list of all detected issues.
@@ -563,11 +564,10 @@ async def list_issues(
     Use this for the condensed issue list at the bottom of the
     diagnosis page.
 
-    Note: For production, replace merchant_id query param with
-    Depends(get_current_merchant) for authentication.
+    Uses JWT authentication for merchant identification.
     """
 
-    aggregates = _fetch_page_aggregates(db, merchant_id, hours)
+    aggregates = _fetch_page_aggregates(db, merchant.id, hours)
 
     issues = []
     high_count = 0

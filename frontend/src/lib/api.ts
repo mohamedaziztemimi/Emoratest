@@ -908,14 +908,16 @@ export async function fetchPrimaryDiagnosis(
   merchantId: string,
   hours = 24
 ): Promise<DiagnosisResponse> {
-  return request<DiagnosisResponse>(`/diagnosis/primary?merchant_id=${merchantId}&hours=${hours}`);
+  // merchant_id is extracted from JWT token by backend
+  return request<DiagnosisResponse>(`/diagnosis/primary?hours=${hours}`);
 }
 
 export async function fetchIssuesList(
   merchantId: string,
   hours = 24
 ): Promise<IssuesListResponse> {
-  return request<IssuesListResponse>(`/diagnosis/issues?merchant_id=${merchantId}&hours=${hours}`);
+  // merchant_id is extracted from JWT token by backend
+  return request<IssuesListResponse>(`/diagnosis/issues?hours=${hours}`);
 }
 
 export { ApiError };

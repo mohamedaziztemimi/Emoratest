@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -214,6 +214,7 @@ async def get_page_detail(
 ):
     """Get detailed emotion analysis for a single page."""
     from urllib.parse import unquote, urlparse
+    from sqlalchemy import or_
 
     page_url = unquote(encoded_page)
     cutoff = datetime.now(UTC) - timedelta(days=days)
@@ -229,24 +230,51 @@ async def get_page_detail(
         else:
             page_pattern = page_url
     else:
-        # It's a full URL - extract pathname for matching
+        # It's a full URL - try exact match first, then pathname matching
         try:
             parsed_target = urlparse(page_url)
-            page_pattern = parsed_target.pathname or page_url
+            # For full URLs, try both exact match and pathname match
+            # This handles cases where DB stores "http://localhost:8000/signup"
+            # and we receive the same URL
         except Exception:
             page_pattern = page_url
 
-    # Build query conditions - match by exact URL or by pathname contains
+    # Build query conditions - match by exact URL OR by pathname contains
     # This handles both: full URL in DB and pathname being passed
-    if page_pattern == "/":
-        # Special case for home page
-        url_condition = (Session.page_url == "/") | \
-                        (Session.page_url.contains(page_pattern)) | \
-                        (Session.page_url.contains(":80/")) | \
-                        (Session.page_url.contains(":3000/")) | \
-                        (Session.page_url.contains("emoratest.com/"))
+    url_conditions = []
+
+    if page_url.startswith("http"):
+        # Full URL: try exact match first
+        url_conditions.append(Session.page_url == page_url)
+        # Also try matching by pathname
+        try:
+            parsed = urlparse(page_url)
+            pathname = parsed.pathname
+            if pathname and pathname != "/":
+                url_conditions.append(Session.page_url.contains(pathname))
+        except Exception:
+            pass
+        # Handle home page URLs
+        if page_url.endswith("/") or page_url.endswith(":/") or "/?" in page_url:
+            url_conditions.append(Session.page_url.contains("/"))
     else:
-        url_condition = Session.page_url.contains(page_pattern)
+        # Just a pathname or "Home"
+        if page_pattern == "/":
+            # Home page - match URLs ending with / or containing just domain
+            url_conditions.append(Session.page_url == "/")
+            url_conditions.append(Session.page_url.contains(":80/"))
+            url_conditions.append(Session.page_url.contains(":3000/"))
+            url_conditions.append(Session.page_url.contains(":8000/"))
+            url_conditions.append(Session.page_url.contains("emoratest.com/"))
+            url_conditions.append(Session.page_url.contains("localhost/"))
+        else:
+            # Specific pathname
+            url_conditions.append(Session.page_url.contains(page_pattern))
+            # Also try exact match in case DB stores just the pathname
+            url_conditions.append(Session.page_url == page_pattern)
+
+    # Use OR to match any of the conditions
+    url_condition = or_(*url_conditions) if url_conditions else Session.page_url.contains(page_pattern)
 
     # Get session count
     count_result = await db.execute(
