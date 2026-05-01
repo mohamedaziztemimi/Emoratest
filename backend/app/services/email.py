@@ -223,13 +223,19 @@ class EmailService:
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center" style="padding: 20px 0;">
-                                        <a href="{reset_link}" style="display: inline-block; background: linear-gradient(135deg, #007BFF, #7C3AED); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
+                                        <a href="{reset_link}" style="display: inline-block; background: #007BFF; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
                                             Reset Password
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             <p style="margin: 24px 0 8px 0; font-size: 14px; color: #6B7280;">
+                                Or copy and paste this link:
+                            </p>
+                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #007BFF; word-break: break-all;">
+                                <a href="{reset_link}" style="color: #007BFF; word-break: break-all;">{reset_link}</a>
+                            </p>
+                            <p style="margin: 16px 0 8px 0; font-size: 14px; color: #6B7280;">
                                 This link will expire in {expiry_minutes} minutes.
                             </p>
                             <p style="margin: 0; font-size: 14px; color: #6B7280;">
@@ -385,13 +391,19 @@ Go to your dashboard: {reset_link}
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center" style="padding: 20px 0;">
-                                        <a href="{verification_link}" style="display: inline-block; background: linear-gradient(135deg, #007BFF, #7C3AED); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
+                                        <a href="{verification_link}" style="display: inline-block; background: #007BFF; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
                                             Verify Email Address
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             <p style="margin: 24px 0 8px 0; font-size: 14px; color: #6B7280;">
+                                Or copy and paste this link:
+                            </p>
+                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #007BFF; word-break: break-all;">
+                                <a href="{verification_link}" style="color: #007BFF; word-break: break-all;">{verification_link}</a>
+                            </p>
+                            <p style="margin: 16px 0 8px 0; font-size: 14px; color: #6B7280;">
                                 This link expires in 24 hours.
                             </p>
                             <p style="margin: 0; font-size: 14px; color: #6B7280;">
