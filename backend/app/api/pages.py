@@ -403,15 +403,18 @@ async def get_page_detail_query(
     if page_url.startswith("http"):
         # Full URL: try exact match first
         url_conditions.append(Session.page_url == page_url)
-        # Also try matching by pathname (in case DB has different domain)
+        # Also try matching by pathname (in case DB has different domain/port)
         try:
             parsed = urlparse(page_url)
             pathname = parsed.pathname
             if pathname and pathname != "/":
+                # Match by pathname (works for different domains/ports)
                 url_conditions.append(Session.page_url.contains(pathname))
                 # Try without leading slash too (e.g., "docs" instead of "/docs")
                 if pathname.startswith("/"):
                     url_conditions.append(Session.page_url.contains(pathname[1:]))
+                # Match exactly the pathname for URLs stored as just the path
+                url_conditions.append(Session.page_url == pathname)
         except Exception:
             pass
     else:
@@ -422,6 +425,7 @@ async def get_page_detail_query(
             url_conditions.append(Session.page_url.like("%:///%"))
             url_conditions.append(Session.page_url.like("%://localhost%"))
             url_conditions.append(Session.page_url.like("%://emoratest.com%"))
+            url_conditions.append(Session.page_url.like("%://emoratest.com/%"))
         else:
             # Specific pathname like "/docs" or "docs"
             url_conditions.append(Session.page_url == page_url)
@@ -430,6 +434,9 @@ async def get_page_detail_query(
             if not page_url.startswith("/"):
                 url_conditions.append(Session.page_url.contains(f"/{page_url}"))
                 url_conditions.append(Session.page_url.like(f"%//{page_url}%"))
+                url_conditions.append(Session.page_url == f"/{page_url}")
+            else:
+                url_conditions.append(Session.page_url.like(f"%{page_url}%"))
 
     # Use OR to match any of the conditions
     url_condition = or_(*url_conditions) if url_conditions else Session.page_url.contains(page_url)

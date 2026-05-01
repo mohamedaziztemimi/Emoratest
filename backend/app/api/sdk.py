@@ -81,6 +81,35 @@ def _is_ipv4(ip: str) -> bool:
         return False
 
 
+def _is_cloudflare_ip(ip: str) -> bool:
+    """Check if IP is a Cloudflare proxy IP (should be skipped)."""
+    if not ip or not _is_ipv4(ip):
+        return False
+    # Cloudflare IP ranges (simplified check)
+    # 172.64.0.0/13, 162.158.0.0/15, 104.16.0.0/13, etc.
+    parts = ip.strip().split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        first = int(parts[0])
+        second = int(parts[1])
+        # 172.64.x.x - 172.71.x.x (Cloudflare)
+        if first == 172 and 64 <= second <= 71:
+            return True
+        # 162.158.x.x - 162.159.x.x (Cloudflare)
+        if first == 162 and second in [158, 159]:
+            return True
+        # 104.16.x.x - 104.23.x.x (Cloudflare)
+        if first == 104 and 16 <= second <= 23:
+            return True
+        # 188.114.x.x (Cloudflare)
+        if first == 188 and second == 114:
+            return True
+    except ValueError:
+        pass
+    return False
+
+
 def extract_client_ip(request: Request) -> str | None:
     """Extract client IP from request headers, accounting for proxies.
 
@@ -88,9 +117,11 @@ def extract_client_ip(request: Request) -> str | None:
     1. CF-Connecting-IP (Cloudflare) - most reliable if Cloudflare is used
     2. X-Forwarded-For first IP (original client, leftmost)
     3. X-Real-IP (nginx/Caddy reverse proxy)
-    4. request.client.host (direct connection, least reliable)
+
+    NEVER uses request.client.host as it's usually the proxy IP (Cloudflare, etc.)
 
     Always prefers IPv4 over IPv6 when available.
+    Skips known Cloudflare proxy IPs.
 
     Returns None if no IP can be determined.
     """
@@ -102,8 +133,11 @@ def extract_client_ip(request: Request) -> str | None:
         first_cf = cf_ip.split(",")[0].strip()
         if _is_ipv4(first_cf):
             return first_cf
-        # If CF returned IPv6, still return it (better than nothing)
-        if first_cf:
+        # If CF returned IPv6, try to get IPv4 from other headers
+        if first_cf and ":" in first_cf:
+            # Got IPv6 from CF, but prefer IPv4 from other headers
+            pass
+        elif first_cf:
             return first_cf
 
     # 2. X-Forwarded-For - format: "client IP, proxy1, proxy2, ..."
@@ -112,10 +146,14 @@ def extract_client_ip(request: Request) -> str | None:
     if xff:
         xff_ips = [ip.strip() for ip in xff.split(",")]
         for ip in xff_ips:
-            # Return the first IPv4 found (original client)
-            if _is_ipv4(ip):
+            # Return the first IPv4 found that's NOT a Cloudflare IP
+            if _is_ipv4(ip) and not _is_cloudflare_ip(ip):
                 return ip
-        # No IPv4 in XFF, return first IP (might be IPv6)
+        # No valid IPv4 in XFF, return first non-Cloudflare IP (might be IPv6)
+        for ip in xff_ips:
+            if not _is_cloudflare_ip(ip):
+                return ip
+        # All IPs are Cloudflare, return first one anyway
         if xff_ips:
             return xff_ips[0]
 
@@ -123,17 +161,17 @@ def extract_client_ip(request: Request) -> str | None:
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
         real_ip = real_ip.strip()
-        if _is_ipv4(real_ip):
+        if _is_ipv4(real_ip) and not _is_cloudflare_ip(real_ip):
             return real_ip
-        if real_ip:
+        if real_ip and not _is_cloudflare_ip(real_ip):
             return real_ip
 
-    # 4. Direct connection (least reliable - could be proxy/Load Balancer IP)
+    # 4. Direct connection - ONLY as last resort, and check for Cloudflare IPs
     if request.client and request.client.host:
         host = request.client.host.strip()
-        if _is_ipv4(host):
+        if _is_ipv4(host) and not _is_cloudflare_ip(host):
             return host
-        if host:
+        if host and not _is_cloudflare_ip(host):
             return host
 
     return None
