@@ -410,25 +410,27 @@ function IssuesList({ issues, isDemo }: { issues: IssueListItem[]; isDemo?: bool
 // ── NO DATA STATE (graceful, not error) ───────────────────────
 
 function NoDataState({ sessionCount, onTryDemo }: { sessionCount: number; onTryDemo: () => void }) {
-  const threshold = 5;  // Lowered from 20 - show diagnosis earlier
+  const threshold = 10;  // Need 10 sessions for meaningful diagnosis
   const remaining = threshold - sessionCount;
 
   return (
     <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-8 text-center">
-      <span className="text-4xl mb-4 block">🔬</span>
-      <h2 className="text-xl font-bold text-gray-900 mb-2">AI-Powered Diagnosis</h2>
+      <span className="text-4xl mb-4 block">📊</span>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">
+        {sessionCount === 0 ? "Waiting for session data" : "Collecting more data..."}
+      </h2>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">
-        Automatic issue detection and actionable recommendations powered by emotion analytics.
-        {" "}Available on Growth and Scale plans.
+        {sessionCount === 0
+          ? `Diagnosis needs ${threshold} sessions to detect patterns. Sessions will appear once users visit your site with the EmoraTest SDK installed.`
+          : `${remaining} more session${remaining !== 1 ? "s" : ""} needed for diagnosis (${sessionCount}/${threshold} collected).`
+        }
       </p>
-      <div className="flex gap-3 justify-center">
-        <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
-          Upgrade to Growth — $29/mo
-        </button>
+      <div className="flex items-center justify-center gap-3 flex-wrap">
         <button
           onClick={onTryDemo}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors"
         >
+          <span>🎭</span>
           Try Demo Mode
         </button>
       </div>
