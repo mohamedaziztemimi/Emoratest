@@ -348,6 +348,89 @@ Go to your dashboard: {reset_link}
 
         return await self.send_email(to, subject, html_content, text_content)
 
+    async def send_verification_email(
+        self,
+        to: str,
+        verification_link: str,
+    ) -> bool:
+        """Send email verification email."""
+        subject = "Verify Your EmoraTest Account"
+
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f6fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f6fa; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #007BFF;">EmoraTest</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #111318;">Verify Your Email</h2>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #6B7280;">
+                                Thanks for signing up! Click the button below to verify your email address and activate your account.
+                            </p>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{verification_link}" style="display: inline-block; background: linear-gradient(135deg, #007BFF, #7C3AED); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
+                                            Verify Email Address
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 24px 0 8px 0; font-size: 14px; color: #6B7280;">
+                                This link expires in 24 hours.
+                            </p>
+                            <p style="margin: 0; font-size: 14px; color: #6B7280;">
+                                If you didn't create an account, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #9CA3AF;">
+                                &copy; 2026 EmoraTest. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        text_content = f"""
+Verify Your EmoraTest Account
+
+Thanks for signing up! Click the link below to verify your email address and activate your account:
+
+{verification_link}
+
+This link expires in 24 hours.
+
+If you didn't create an account, you can safely ignore this email.
+
+© 2026 EmoraTest. All rights reserved.
+"""
+
+        return await self.send_email(to, subject, html_content, text_content)
+
 
 # Global email service instance
 email_service = EmailService()

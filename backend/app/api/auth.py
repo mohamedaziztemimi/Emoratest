@@ -6,17 +6,22 @@ Provides:
     GET  /auth/me        — get current merchant profile (JWT)
     POST /auth/forgot-password  — request password reset email
     POST /auth/reset-password    — reset password with token
+    GET  /auth/verify-email     — verify email with token
+    POST /auth/resend-verification — resend verification email
     POST /auth/gdpr/consent  — record GDPR consent
     GET  /auth/gdpr/export   — export all merchant data (GDPR Art. 20)
     DELETE /auth/gdpr/delete — delete all merchant data (GDPR Art. 17)
 """
 
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr, Field, validator
 from redis import asyncio as aioredis
 from sqlalchemy import delete, func, select, update
@@ -220,14 +225,13 @@ async def register(
 # ── POST /auth/signup ────────────────────────────────────────────
 
 
-@router.post("/signup", response_model=AuthResponse, status_code=201)
+@router.post("/signup", status_code=201)
 async def signup(
     request: Request,
-    response: Response,
     body: SignupRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Signup a new merchant. Alias for /auth/register with frontend-compatible field names."""
+    """Signup a new merchant. Requires email verification before login."""
     # Manual rate limiting via Redis
     await rate_limit_signup(request)
 
@@ -243,9 +247,10 @@ async def signup(
     if existing_domain.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="Workspace name already registered")
 
-    # Generate SDK key
+    # Generate SDK key and verification token
     raw_sdk_key = secrets.token_hex(32)
     key_hash = hashlib.sha256(raw_sdk_key.encode()).hexdigest()
+    verification_token = secrets.token_urlsafe(32)
     now = datetime.now(UTC)
 
     merchant = Merchant(
@@ -257,6 +262,9 @@ async def signup(
         is_active=True,
         gdpr_consent=False,
         onboarding_completed=False,
+        email_verified=False,
+        email_verification_token=verification_token,
+        email_verification_sent_at=now,
         created_at=now,
         updated_at=now,
     )
@@ -265,38 +273,23 @@ async def signup(
     await db.commit()
     await db.refresh(merchant)
 
-    token = create_access_token(str(merchant.id), merchant.email)
-
-    # Send welcome email
+    # Send verification email
+    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
     try:
-        await email_service.send_welcome(merchant.email, merchant.shop_domain)
+        await email_service.send_verification_email(
+            to=merchant.email,
+            verification_link=verification_link,
+        )
     except Exception as e:
-        # Don't fail registration if email fails
-        pass
+        # Log but don't fail signup
+        logger.error(f"Failed to send verification email: {e}")
 
-    # Set httpOnly cookie with JWT
-    auth_response = AuthResponse(
-        access_token=token,
-        merchant_id=str(merchant.id),
-        email=merchant.email,
-        shop_domain=merchant.shop_domain,
-        plan="free",
-        sdk_key=raw_sdk_key,
-        onboarding_completed=False,
-    )
-
-    response = JSONResponse(content=auth_response.model_dump(mode="json"))
-    response.set_cookie(
-        key="auth_token",
-        value=token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,  # True in production (HTTPS), False in dev
-        samesite=settings.COOKIE_SAMESITE,  # "none" for cross-domain, "lax" for same-site
-        max_age=60 * 60 * 24 * 7,  # 7 days
-        path="/",  # Available on all paths
-        domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
-    )
-    return response
+    # Return success message - don't auto-login
+    return {
+        "status": "ok",
+        "message": "Account created. Please check your email to verify your account.",
+        "email": merchant.email,
+    }
 
 
 # ── POST /auth/login ────────────────────────────────────────────
@@ -359,6 +352,14 @@ async def login(
 
     if not merchant.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")
+
+    # Check if email is verified
+    if not merchant.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="email_not_verified",
+            headers={"X-Error-Code": "email_not_verified"},
+        )
 
     # Successful login - clear failed attempts
     attempts_key = f"login_attempts:{email}"
@@ -498,6 +499,132 @@ async def reset_password(
     return {
         "status": "ok",
         "message": "Password has been reset successfully. You can now log in with your new password."
+    }
+
+
+# ── GET /auth/verify-email ────────────────────────────────────────
+
+
+@router.get("/verify-email")
+async def verify_email(
+    token: str = Query(..., description="Email verification token"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify email using token from verification email.
+
+    Redirects to login with success/error status.
+    """
+    # Find merchant with this verification token
+    result = await db.execute(
+        select(Merchant).where(Merchant.email_verification_token == token)
+    )
+    merchant = result.scalar_one_or_none()
+
+    if not merchant:
+        # Redirect to login with error
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?verified=false",
+            status_code=302
+        )
+
+    # Check if token is expired (24 hours)
+    if merchant.email_verification_sent_at:
+        token_age = datetime.now(UTC) - merchant.email_verification_sent_at
+        if token_age.total_seconds() > 24 * 60 * 60:  # 24 hours
+            # Clear expired token
+            await db.execute(
+                update(Merchant)
+                .where(Merchant.id == merchant.id)
+                .values(
+                    email_verification_token=None,
+                    email_verification_sent_at=None,
+                )
+            )
+            await db.commit()
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/login?verified=expired",
+                status_code=302
+            )
+
+    # Mark email as verified
+    await db.execute(
+        update(Merchant)
+        .where(Merchant.id == merchant.id)
+        .values(
+            email_verified=True,
+            email_verification_token=None,
+            email_verification_sent_at=None,
+            updated_at=datetime.now(UTC),
+        )
+    )
+    await db.commit()
+
+    # Redirect to login with success
+    return RedirectResponse(
+        url=f"{settings.FRONTEND_URL}/login?verified=true",
+        status_code=302
+    )
+
+
+# ── POST /auth/resend-verification ─────────────────────────────────
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    request: Request,
+    body: ForgotPasswordRequest,  # Reuse the email schema
+    db: AsyncSession = Depends(get_db),
+):
+    """Resend email verification link.
+
+    Rate limited: max 1 email per 2 minutes per email address.
+    """
+    redis = await get_redis()
+    email = body.email
+
+    # Check rate limit
+    rate_limit_key = f"verify_email_rate:{email}"
+    if await redis.exists(rate_limit_key):
+        ttl = await redis.ttl(rate_limit_key)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {ttl} seconds before requesting another verification email.",
+        )
+
+    # Find merchant by email
+    result = await db.execute(select(Merchant).where(Merchant.email == email))
+    merchant = result.scalar_one_or_none()
+
+    if merchant and not merchant.email_verified:
+        # Generate new verification token
+        verification_token = secrets.token_urlsafe(32)
+        verification_link = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+
+        # Update merchant with new token
+        await db.execute(
+            update(Merchant)
+            .where(Merchant.id == merchant.id)
+            .values(
+                email_verification_token=verification_token,
+                email_verification_sent_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
+        )
+        await db.commit()
+
+        # Send verification email
+        await email_service.send_verification_email(
+            to=merchant.email,
+            verification_link=verification_link,
+        )
+
+        # Set rate limit (2 minutes)
+        await redis.setex(rate_limit_key, 120, "1")
+
+    # Always return success to prevent email enumeration
+    return {
+        "status": "ok",
+        "message": "If an account exists with that email and is not verified, a verification link has been sent.",
     }
 
 

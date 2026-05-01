@@ -59,6 +59,16 @@ class Merchant(Base):
     password_reset_expires: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Email verification fields
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    email_verification_token: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True
+    )
+    email_verification_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -72,4 +82,5 @@ class Merchant(Base):
             name="ck_merchants_plan",
         ),
         Index("ix_merchants_password_reset_token", "password_reset_token"),
+        Index("ix_merchants_email_verification_token", "email_verification_token"),
     )

@@ -23,6 +23,10 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldError>({});
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Password strength rules
   const getPasswordStrength = (pwd: string) => {
@@ -94,6 +98,37 @@ export default function SignupPage() {
     setFieldErrors((prev) => ({ ...prev, password: undefined }));
   };
 
+  const handleResendVerification = async () => {
+    if (!signupEmail) return;
+
+    setResendLoading(true);
+    setResendSuccess(false);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) throw new Error("API URL not configured");
+
+      const res = await fetch(`${apiUrl}/api/v1/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: signupEmail }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Failed to resend verification email");
+      }
+
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification email");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -124,17 +159,9 @@ export default function SignupPage() {
 
       const data = await res.json();
 
-      // Wait for cookie to be set before redirecting
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Redirect to welcome page with SDK key
-      const params = new URLSearchParams({
-        sdk_key: data.sdk_key || "",
-        email: data.email || email,
-        domain: data.shop_domain || workspaceName,
-        merchant_id: data.merchant_id || "",
-      });
-      window.location.href = `/dashboard/welcome?${params.toString()}`;
+      // Show success message instead of redirecting
+      setSignupSuccess(true);
+      setSignupEmail(data.email || email);
     } catch (err) {
       if (err && typeof err === "object" && "detail" in err) {
         setError((err as any).detail);
@@ -184,45 +211,156 @@ export default function SignupPage() {
           boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
         }}
       >
-        {/* Header */}
-        <h1
-          style={{
-            fontSize: "28px",
-            fontWeight: "700",
-            color: "#111318",
-            margin: "0 0 8px 0",
-            letterSpacing: "-0.5px",
-          }}
-        >
-          Create your account
-        </h1>
-        <p
-          style={{
-            fontSize: "15px",
-            color: "#10B981",
-            margin: "0 0 32px 0",
-            fontWeight: "500",
-          }}
-        >
-          Free forever. No credit card required.
-        </p>
+        {signupSuccess ? (
+          /* Success State */
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                background: "#D1FAE5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 24px",
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" fill="#10B981" />
+                <path
+                  d="M8 12L11 15L16 9"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h1
+              style={{
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#111318",
+                margin: "0 0 12px 0",
+              }}
+            >
+              Check your email!
+            </h1>
+            <p
+              style={{
+                fontSize: "15px",
+                color: "#6B7280",
+                margin: "0 0 8px 0",
+                lineHeight: "1.6",
+              }}
+            >
+              We've sent a verification link to:
+            </p>
+            <p
+              style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                color: "#111318",
+                margin: "0 0 24px 0",
+              }}
+            >
+              {signupEmail}
+            </p>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6B7280",
+                margin: "0 0 24px 0",
+                lineHeight: "1.5",
+              }}
+            >
+              Click the link in the email to verify your account and start using EmoraTest.
+            </p>
 
-        {/* Error banner */}
-        {error && (
-          <div
-            style={{
-              background: "#FEF2F2",
-              border: "1px solid #FECACA",
-              borderRadius: "10px",
-              padding: "12px 16px",
-              fontSize: "14px",
-              color: "#DC2626",
-              marginBottom: "16px",
-            }}
-          >
-            {error}
+            {/* Resend success message */}
+            {resendSuccess && (
+              <div
+                style={{
+                  background: "#F0FDF4",
+                  border: "1px solid #BBF7D0",
+                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  fontSize: "14px",
+                  color: "#16A34A",
+                  marginBottom: "16px",
+                }}
+              >
+                Verification email sent! Check your inbox.
+              </div>
+            )}
+
+            <button
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              style={{
+                background: "white",
+                border: "1.5px solid #E5E7EB",
+                color: "#374151",
+                borderRadius: "10px",
+                padding: "11px 16px",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: resendLoading ? "not-allowed" : "pointer",
+                opacity: resendLoading ? 0.6 : 1,
+                transition: "opacity 150ms ease",
+                marginBottom: "16px",
+              }}
+            >
+              {resendLoading ? "Sending..." : "Resend verification email"}
+            </button>
+
+            <div style={{ fontSize: "13px", color: "#6B7280" }}>
+              Didn't receive the email? Check your spam folder.
+            </div>
           </div>
-        )}
+        ) : (
+          /* Signup Form */
+          <>
+            {/* Header */}
+            <h1
+              style={{
+                fontSize: "28px",
+                fontWeight: "700",
+                color: "#111318",
+                margin: "0 0 8px 0",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              Create your account
+            </h1>
+            <p
+              style={{
+                fontSize: "15px",
+                color: "#10B981",
+                margin: "0 0 32px 0",
+                fontWeight: "500",
+              }}
+            >
+              Free forever. No credit card required.
+            </p>
+
+            {/* Error banner */}
+            {error && (
+              <div
+                style={{
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  fontSize: "14px",
+                  color: "#DC2626",
+                  marginBottom: "16px",
+                }}
+              >
+                {error}
+              </div>
+            )}
 
         {/* Form */}
         <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -585,6 +723,9 @@ export default function SignupPage() {
             {loading ? "Creating account..." : "Create Free Account"}
           </button>
         </form>
+          </>
+        )}
+
       </div>
 
       {/* Below card */}
