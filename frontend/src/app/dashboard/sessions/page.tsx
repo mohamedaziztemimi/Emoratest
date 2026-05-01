@@ -32,7 +32,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   UA: "Ukraine", GR: "Greece", RO: "Romania", BG: "Bulgaria", HU: "Hungary",
   RS: "Serbia", HR: "Croatia", SI: "Slovenia", SK: "Slovakia", BA: "Bosnia",
   MK: "North Macedonia", AL: "Albania", LT: "Lithuania", LV: "Latvia", EE: "Estonia",
-  IS: "Iceland", LU: "Luxembourg", MT: "Malta", CY: "Cyprus", IN: "India",
+  IS: "Iceland", LU: "Luxembourg", MT: "Malta", CY: "Cyprus",
 };
 
 // Convert country code to flag emoji

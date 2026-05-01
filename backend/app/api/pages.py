@@ -390,6 +390,13 @@ async def get_page_detail_query(
     page_url = unquote(page)
     cutoff = datetime.now(UTC) - timedelta(days=days)
 
+    # DEBUG: Log what we received
+    print(f"[DEBUG] Page detail request:")
+    print(f"  page_url: {page_url}")
+    print(f"  merchant_id: {merchant.id}")
+    print(f"  cutoff: {cutoff}")
+    print(f"  days: {days}")
+
     # Build URL matching conditions - handle full URLs, paths, and special names
     url_conditions = []
 
@@ -433,6 +440,22 @@ async def get_page_detail_query(
         )
     )
     total_sessions = count_result.scalar() or 0
+
+    # DEBUG: Log what URLs exist for this merchant
+    all_urls_result = await db.execute(
+        select(Session.page_url, Session.started_at)
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+        )
+        .limit(10)
+    )
+    all_urls = all_urls_result.all()
+    print(f"[DEBUG] Page detail - Found {len(all_urls)} sessions for merchant in time window:")
+    for url, started in all_urls:
+        print(f"  - {url} (started: {started})")
+    print(f"[DEBUG] Page detail - URL conditions: {len(url_conditions)} conditions")
+    print(f"[DEBUG] Page detail - Total matching sessions: {total_sessions}")
 
     if total_sessions == 0:
         raise HTTPException(status_code=404, detail="No data for this page")

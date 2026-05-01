@@ -70,22 +70,27 @@ export default function PageDetailPage() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         // Use query parameter for the page URL to avoid issues with slashes
-        const res = await fetch(
-          `${apiUrl}/api/v1/pages/insights/detail?page=${encodeURIComponent(pageUrl)}&days=7`,
-          { credentials: "include" }
-        );
+        const url = `${apiUrl}/api/v1/pages/insights/detail?page=${encodeURIComponent(pageUrl)}&days=7`;
+        console.log("[DEBUG] Frontend fetching page detail:", { pageUrl, apiUrl, requestUrl: url });
+        const res = await fetch(url, { credentials: "include" });
 
         if (res.status === 401) {
           router.push("/login");
           return;
         }
 
+        console.log("[DEBUG] Frontend response status:", res.status);
         if (res.ok) {
           const detail = await res.json();
+          console.log("[DEBUG] Frontend received data:", detail);
           setData(detail);
         } else if (res.status === 404) {
+          const err = await res.json();
+          console.log("[DEBUG] Frontend 404 error:", err);
           setError("No data available for this page");
         } else {
+          const err = await res.text();
+          console.log("[DEBUG] Frontend error response:", err);
           setError("Failed to load page details");
         }
       } catch (err) {
