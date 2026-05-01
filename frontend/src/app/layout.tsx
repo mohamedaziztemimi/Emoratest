@@ -88,9 +88,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/favicon.png", sizes: "32x32" },
-      { url: "/favicon.png", sizes: "64x64" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.png", sizes: "64x64", type: "image/png" },
+      { url: "/favicon.png", sizes: "128x128", type: "image/png" },
+      { url: "/favicon.png", sizes: "256x256", type: "image/png" },
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" },
     ],
+    shortcut: "/favicon.png",
     apple: "/apple-icon.png",
   },
   // JSON-LD structured data - Organization schema

@@ -412,9 +412,11 @@ async def get_page_detail_query(
                 url_conditions.append(Session.page_url.contains(pathname))
                 # Try without leading slash too (e.g., "docs" instead of "/docs")
                 if pathname.startswith("/"):
-                    url_conditions.append(Session.page_url.contains(pathname[1:]))
-                # Match exactly the pathname for URLs stored as just the path
-                url_conditions.append(Session.page_url == pathname)
+                    path_without_slash = pathname[1:]
+                    url_conditions.append(Session.page_url.contains(path_without_slash))
+                    # Try exact pathname match
+                    url_conditions.append(Session.page_url == pathname)
+                    url_conditions.append(Session.page_url == path_without_slash)
         except Exception:
             pass
     else:
@@ -429,17 +431,19 @@ async def get_page_detail_query(
         else:
             # Specific pathname like "/docs" or "docs"
             url_conditions.append(Session.page_url == page_url)
-            url_conditions.append(Session.page_url.like(f"%{page_url}"))
+            url_conditions.append(Session.page_url.like(f"%{page_url}%"))
             # Also try with leading slash
             if not page_url.startswith("/"):
                 url_conditions.append(Session.page_url.contains(f"/{page_url}"))
                 url_conditions.append(Session.page_url.like(f"%//{page_url}%"))
                 url_conditions.append(Session.page_url == f"/{page_url}")
-            else:
-                url_conditions.append(Session.page_url.like(f"%{page_url}%"))
 
     # Use OR to match any of the conditions
     url_condition = or_(*url_conditions) if url_conditions else Session.page_url.contains(page_url)
+
+    # DEBUG: Log the URL conditions being used
+    print(f"[DEBUG] Page detail - Query URL: {page_url}")
+    print(f"[DEBUG] Page detail - URL conditions count: {len(url_conditions)}")
 
     # Get session count
     count_result = await db.execute(
