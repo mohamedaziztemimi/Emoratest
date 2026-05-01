@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
+
 # Copy dependency file
 COPY pyproject.toml .
 
@@ -19,6 +22,10 @@ RUN pip install --no-cache-dir -e "."
 
 # Copy application code
 COPY . .
+
+# Set ownership and switch to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
 

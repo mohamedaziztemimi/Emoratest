@@ -5,7 +5,7 @@
     "pdf-parse": "^2.2.2",
     "pdf-to-img": "^5.0.0",
     "pdf-to-text": "^0.0.7",
-    "pdf2json": "^3.1.4",
+    "pdf2json": "^4.0.3",
     "pdfjs-dist": "^5.6.205",
     "tesseract.js": "^7.0.0"
   }
