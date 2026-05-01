@@ -67,71 +67,76 @@ async def get_merchant_from_sdk_key(
     return merchant
 
 
-def _prefer_ipv4(ip: str | None) -> str | None:
-    """Prefer IPv4 if available in a comma-separated list of IPs.
-
-    IPv4 addresses contain dots (.) and not colons (:).
-    IPv6 addresses contain colons (:).
-
-    If the input is a single IP (not comma-separated), return it as-is.
-    If the input contains multiple IPs, prefer the first IPv4 address.
-    """
+def _is_ipv4(ip: str) -> bool:
+    """Check if the given string is a valid IPv4 address."""
     if not ip:
-        return None
-
-    # Split by comma and check each IP
-    ips = [i.strip() for i in ip.split(",")]
-    for candidate in ips:
-        # IPv4 addresses contain dots but not colons (excluding IPv6-mapped IPv4)
-        if "." in candidate and ":" not in candidate:
-            return candidate
-    # No IPv4 found, return the first IP
-    return ips[0] if ips else None
+        return False
+    # IPv4 contains dots and not colons
+    parts = ip.strip().split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        return all(0 <= int(p) <= 255 for p in parts)
+    except ValueError:
+        return False
 
 
 def extract_client_ip(request: Request) -> str | None:
     """Extract client IP from request headers, accounting for proxies.
 
-    Checks in order:
-    1. CF-Connecting-IP (Cloudflare)
-    2. X-Forwarded-For (standard proxy header, can have multiple IPs)
-    3. X-Real-IP (nginx/common proxy)
-    4. Fall back to request.client.host
+    Priority order:
+    1. CF-Connecting-IP (Cloudflare) - most reliable if Cloudflare is used
+    2. X-Forwarded-For first IP (original client, leftmost)
+    3. X-Real-IP (nginx/Caddy reverse proxy)
+    4. request.client.host (direct connection, least reliable)
 
-    Prefers IPv4 over IPv6 when both are available.
+    Always prefers IPv4 over IPv6 when available.
 
     Returns None if no IP can be determined.
     """
-    # Collect all potential IPs from headers
-    potential_ips = []
-
-    # Cloudflare
+    # 1. Cloudflare Connecting IP - most reliable when behind Cloudflare
     cf_ip = request.headers.get("CF-Connecting-IP")
     if cf_ip:
-        potential_ips.append(cf_ip.strip())
+        cf_ip = cf_ip.strip()
+        # CF-Connecting-IP can contain multiple IPs (rare), take first
+        first_cf = cf_ip.split(",")[0].strip()
+        if _is_ipv4(first_cf):
+            return first_cf
+        # If CF returned IPv6, still return it (better than nothing)
+        if first_cf:
+            return first_cf
 
-    # X-Forwarded-For (can contain multiple IPs: client, proxy1, proxy2)
+    # 2. X-Forwarded-For - format: "client IP, proxy1, proxy2, ..."
+    # The LEFTMOST IP is the original client
     xff = request.headers.get("X-Forwarded-For")
     if xff:
-        potential_ips.append(xff.strip())
+        xff_ips = [ip.strip() for ip in xff.split(",")]
+        for ip in xff_ips:
+            # Return the first IPv4 found (original client)
+            if _is_ipv4(ip):
+                return ip
+        # No IPv4 in XFF, return first IP (might be IPv6)
+        if xff_ips:
+            return xff_ips[0]
 
-    # X-Real-IP
+    # 3. X-Real-IP - set by nginx/Caddy, usually the real client IP
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
-        potential_ips.append(real_ip.strip())
+        real_ip = real_ip.strip()
+        if _is_ipv4(real_ip):
+            return real_ip
+        if real_ip:
+            return real_ip
 
-    # Direct connection
+    # 4. Direct connection (least reliable - could be proxy/Load Balancer IP)
     if request.client and request.client.host:
-        potential_ips.append(request.client.host)
+        host = request.client.host.strip()
+        if _is_ipv4(host):
+            return host
+        if host:
+            return host
 
-    # Prefer IPv4 over IPv6 from all collected IPs
-    for ip in potential_ips:
-        preferred = _prefer_ipv4(ip)
-        if preferred and "." in preferred and ":" not in preferred:
-            return preferred
-
-    # No IPv4 found, return the first available IP
-    return potential_ips[0] if potential_ips else None
+    return None
 
 router = APIRouter(tags=["sdk"])
 
@@ -192,6 +197,13 @@ async def create_session(
     # Extract IP address and user agent
     client_ip = extract_client_ip(request)
     user_agent = request.headers.get("User-Agent")
+
+    # DEBUG: Log all IP-related headers to diagnose IP capture issues
+    print(f"[DEBUG IP] Captured IP: {client_ip}")
+    print(f"[DEBUG IP] CF-Connecting-IP: {request.headers.get('CF-Connecting-IP')}")
+    print(f"[DEBUG IP] X-Forwarded-For: {request.headers.get('X-Forwarded-For')}")
+    print(f"[DEBUG IP] X-Real-IP: {request.headers.get('X-Real-IP')}")
+    print(f"[DEBUG IP] request.client.host: {request.client.host if request.client else 'N/A'}")
 
     session = Session(
         id=session_id,
