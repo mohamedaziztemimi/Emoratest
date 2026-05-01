@@ -4,70 +4,19 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { authLogin } from "@/lib/api";
 
-function LoginForm() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const verified = searchParams.get("verified"); // true, false, expired
-
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showResend, setShowResend] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-
-  // Show verification success message from URL param
-  useEffect(() => {
-    if (verified === "true") {
-      setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 5000);
-    }
-  }, [verified]);
-
-  const handleResendVerification = async () => {
-    if (!email) {
-      setError("Please enter your email address first");
-      return;
-    }
-
-    setResendLoading(true);
-    setError("");
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) throw new Error("API URL not configured");
-
-      const res = await fetch(`${apiUrl}/api/v1/auth/resend-verification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Failed to resend verification email");
-      }
-
-      setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resend verification email");
-    } finally {
-      setResendLoading(false);
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setShowResend(false);
 
     try {
       const data = await authLogin({ email, password });
@@ -84,13 +33,7 @@ function LoginForm() {
       }
     } catch (err) {
       if (err && typeof err === "object" && "detail" in err) {
-        const detail = (err as any).detail;
-        if (detail === "email_not_verified" || detail.includes("verify your email")) {
-          setError("Please verify your email before logging in. Check your inbox for the verification link.");
-          setShowResend(true);
-        } else {
-          setError(detail);
-        }
+        setError((err as any).detail);
       } else {
         setError(err instanceof Error ? err.message : "Login failed");
       }
@@ -159,23 +102,6 @@ function LoginForm() {
           Sign in to your workspace to continue
         </p>
 
-        {/* Success banner (email verified) */}
-        {resendSuccess && (
-          <div
-            style={{
-              background: "#F0FDF4",
-              border: "1px solid #BBF7D0",
-              borderRadius: "10px",
-              padding: "12px 16px",
-              fontSize: "14px",
-              color: "#16A34A",
-              marginBottom: "16px",
-            }}
-          >
-            {verified === "true" ? "Email verified successfully! Please log in." : "Verification email sent. Please check your inbox."}
-          </div>
-        )}
-
         {/* Error banner */}
         {error && (
           <div
@@ -190,25 +116,6 @@ function LoginForm() {
             }}
           >
             {error}
-            {showResend && (
-              <button
-                onClick={handleResendVerification}
-                disabled={resendLoading}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#007BFF",
-                  textDecoration: "underline",
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  cursor: resendLoading ? "not-allowed" : "pointer",
-                  marginTop: "8px",
-                  padding: 0,
-                }}
-              >
-                {resendLoading ? "Sending..." : "Resend verification email"}
-              </button>
-            )}
           </div>
         )}
 
@@ -377,40 +284,5 @@ function LoginForm() {
         </a>
       </p>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ width: "100%", maxWidth: "400px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "4px",
-            marginBottom: "32px",
-          }}
-        >
-          <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
-            <img src="/logo2.png" alt="EmoraTest" style={{ height: "64px", width: "auto" }} />
-          </a>
-          <span
-            style={{
-              fontSize: "20px",
-              fontWeight: "700",
-              color: "#111318",
-              letterSpacing: "-0.3px",
-            }}
-          >
-            EmoraTest
-          </span>
-        </div>
-        <div style={{ textAlign: "center", color: "#6B7280" }}>Loading...</div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
   );
 }

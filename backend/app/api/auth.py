@@ -225,13 +225,14 @@ async def register(
 # ── POST /auth/signup ────────────────────────────────────────────
 
 
-@router.post("/signup", status_code=201)
+@router.post("/signup", response_model=AuthResponse, status_code=201)
 async def signup(
     request: Request,
+    response: Response,
     body: SignupRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Signup a new merchant. Requires email verification before login."""
+    """Signup a new merchant. Alias for /auth/register with frontend-compatible field names."""
     # Manual rate limiting via Redis
     await rate_limit_signup(request)
 
@@ -247,10 +248,9 @@ async def signup(
     if existing_domain.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="Workspace name already registered")
 
-    # Generate SDK key and verification token
+    # Generate SDK key
     raw_sdk_key = secrets.token_hex(32)
     key_hash = hashlib.sha256(raw_sdk_key.encode()).hexdigest()
-    verification_token = secrets.token_urlsafe(32)
     now = datetime.now(UTC)
 
     merchant = Merchant(
@@ -262,9 +262,6 @@ async def signup(
         is_active=True,
         gdpr_consent=False,
         onboarding_completed=False,
-        email_verified=False,
-        email_verification_token=verification_token,
-        email_verification_sent_at=now,
         created_at=now,
         updated_at=now,
     )
@@ -273,23 +270,38 @@ async def signup(
     await db.commit()
     await db.refresh(merchant)
 
-    # Send verification email
-    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
-    try:
-        await email_service.send_verification_email(
-            to=merchant.email,
-            verification_link=verification_link,
-        )
-    except Exception as e:
-        # Log but don't fail signup
-        logger.error(f"Failed to send verification email: {e}")
+    token = create_access_token(str(merchant.id), merchant.email)
 
-    # Return success message - don't auto-login
-    return {
-        "status": "ok",
-        "message": "Account created. Please check your email to verify your account.",
-        "email": merchant.email,
-    }
+    # Send welcome email
+    try:
+        await email_service.send_welcome(merchant.email, merchant.shop_domain)
+    except Exception as e:
+        # Don't fail registration if email fails
+        pass
+
+    # Set httpOnly cookie with JWT
+    auth_response = AuthResponse(
+        access_token=token,
+        merchant_id=str(merchant.id),
+        email=merchant.email,
+        shop_domain=merchant.shop_domain,
+        plan="free",
+        sdk_key=raw_sdk_key,
+        onboarding_completed=False,
+    )
+
+    response = JSONResponse(content=auth_response.model_dump(mode="json"))
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,  # True in production (HTTPS), False in dev
+        samesite=settings.COOKIE_SAMESITE,  # "none" for cross-domain, "lax" for same-site
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        path="/",  # Available on all paths
+        domain=settings.COOKIE_DOMAIN,  # ".emoratest.com" in production for subdomain sharing
+    )
+    return response
 
 
 # ── POST /auth/login ────────────────────────────────────────────
@@ -352,14 +364,6 @@ async def login(
 
     if not merchant.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")
-
-    # Check if email is verified
-    if not merchant.email_verified:
-        raise HTTPException(
-            status_code=403,
-            detail="email_not_verified",
-            headers={"X-Error-Code": "email_not_verified"},
-        )
 
     # Successful login - clear failed attempts
     attempts_key = f"login_attempts:{email}"
