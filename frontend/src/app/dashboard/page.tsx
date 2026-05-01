@@ -385,9 +385,9 @@ function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
     );
   }
 
-  if (!issue.has_issue) return null;
+  if (!topIssue?.has_issue) return null;
 
-  const isHigh = issue.severity === "high";
+  const isHigh = topIssue.severity === "high";
 
   return (
     <div
@@ -409,10 +409,10 @@ function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
         </div>
         <div>
           <div className="primary-insight-title">
-            Users {issue.issue_type?.toLowerCase().includes("rage") ? "rage-clicking" : "struggling"} on {issue.page_title}
+            Users {topIssue.issue_type?.toLowerCase().includes("rage") ? "rage-clicking" : "struggling"} on {topIssue.page_title}
           </div>
           <div className="primary-insight-subtitle">
-            {issue.frustration_pct}% of users affected on {issue.page_title} • {issue.affected_sessions} sessions
+            {topIssue.frustration_pct}% of users affected on {topIssue.page_title} • {topIssue.affected_sessions} sessions
           </div>
         </div>
       </div>
@@ -421,18 +421,18 @@ function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
         <div className="primary-insight-detail">
           <span className="primary-insight-detail-label">Frustration</span>
           <span className="primary-insight-detail-value" style={{ color: "#EF4444" }}>
-            {issue.frustration_pct}%
+            {topIssue.frustration_pct}%
           </span>
         </div>
         <div className="primary-insight-detail">
           <span className="primary-insight-detail-label">Severity</span>
           <span className="primary-insight-detail-value" style={{ color: isHigh ? "#DC2626" : "#EA580C", textTransform: "capitalize" }}>
-            {issue.severity}
+            {topIssue.severity}
           </span>
         </div>
         <div className="primary-insight-detail">
           <span className="primary-insight-detail-label">Affected</span>
-          <span className="primary-insight-detail-value">{issue.affected_sessions} sessions</span>
+          <span className="primary-insight-detail-value">{topIssue.affected_sessions} sessions</span>
         </div>
       </div>
 
