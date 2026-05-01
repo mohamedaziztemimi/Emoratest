@@ -46,7 +46,7 @@ const DEMO_DIAGNOSIS: DiagnosisResponse = {
     page_name: "Checkout",
     affected_users_pct: 0,
     severity: "medium",
-    estimated_lost_revenue: undefined,
+    estimated_lost_revenue: null,
   },
   evidence: [],
   root_cause: {
