@@ -49,15 +49,10 @@ function getCountryName(countryCode: string | null | undefined): string {
   return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode.toUpperCase();
 }
 
-// Format IP address - shorten IPv6, keep IPv4 as is
+// Format IP address - show full IPv6 or IPv4
 function formatIpAddress(ip: string | null | undefined): string {
   if (!ip) return "Unknown";
-  // IPv6 addresses are long and contain colons
-  if (ip.includes(":") && ip.length > 25) {
-    // Show first 4 groups + "..."
-    const parts = ip.split(":");
-    return parts.slice(0, 4).join(":") + "...";
-  }
+  // Show the full IP address for both IPv4 and IPv6
   return ip;
 }
 

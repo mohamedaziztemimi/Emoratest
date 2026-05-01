@@ -409,6 +409,9 @@ async def get_page_detail_query(
             pathname = parsed.pathname
             if pathname and pathname != "/":
                 url_conditions.append(Session.page_url.contains(pathname))
+                # Try without leading slash too (e.g., "docs" instead of "/docs")
+                if pathname.startswith("/"):
+                    url_conditions.append(Session.page_url.contains(pathname.slice(1)))
         except Exception:
             pass
     else:
@@ -426,6 +429,7 @@ async def get_page_detail_query(
             # Also try with leading slash
             if not page_url.startswith("/"):
                 url_conditions.append(Session.page_url.contains(f"/{page_url}"))
+                url_conditions.append(Session.page_url.like(f"%//{page_url}%"))
 
     # Use OR to match any of the conditions
     url_condition = or_(*url_conditions) if url_conditions else Session.page_url.contains(page_url)
