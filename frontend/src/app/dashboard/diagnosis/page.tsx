@@ -559,6 +559,12 @@ export default function DiagnosisPage() {
     );
   }
 
+  // At this point, displayDiagnosis is guaranteed to be non-null
+  // Either we're in demo mode (using DEMO_DIAGNOSIS) or we have real diagnosis data
+  if (!displayDiagnosis) {
+    return null;
+  }
+
   // Main diagnosis view (real or demo)
   return (
     <div className="max-w-5xl mx-auto pb-24">
