@@ -67,38 +67,71 @@ async def get_merchant_from_sdk_key(
     return merchant
 
 
+def _prefer_ipv4(ip: str | None) -> str | None:
+    """Prefer IPv4 if available in a comma-separated list of IPs.
+
+    IPv4 addresses contain dots (.) and not colons (:).
+    IPv6 addresses contain colons (:).
+
+    If the input is a single IP (not comma-separated), return it as-is.
+    If the input contains multiple IPs, prefer the first IPv4 address.
+    """
+    if not ip:
+        return None
+
+    # Split by comma and check each IP
+    ips = [i.strip() for i in ip.split(",")]
+    for candidate in ips:
+        # IPv4 addresses contain dots but not colons (excluding IPv6-mapped IPv4)
+        if "." in candidate and ":" not in candidate:
+            return candidate
+    # No IPv4 found, return the first IP
+    return ips[0] if ips else None
+
+
 def extract_client_ip(request: Request) -> str | None:
     """Extract client IP from request headers, accounting for proxies.
 
     Checks in order:
     1. CF-Connecting-IP (Cloudflare)
-    2. X-Forwarded-For (standard proxy header, take first IP)
+    2. X-Forwarded-For (standard proxy header, can have multiple IPs)
     3. X-Real-IP (nginx/common proxy)
     4. Fall back to request.client.host
 
+    Prefers IPv4 over IPv6 when both are available.
+
     Returns None if no IP can be determined.
     """
+    # Collect all potential IPs from headers
+    potential_ips = []
+
     # Cloudflare
     cf_ip = request.headers.get("CF-Connecting-IP")
     if cf_ip:
-        return cf_ip.strip()
+        potential_ips.append(cf_ip.strip())
 
     # X-Forwarded-For (can contain multiple IPs: client, proxy1, proxy2)
     xff = request.headers.get("X-Forwarded-For")
     if xff:
-        # Take the first IP (original client)
-        return xff.split(",")[0].strip()
+        potential_ips.append(xff.strip())
 
     # X-Real-IP
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
-        return real_ip.strip()
+        potential_ips.append(real_ip.strip())
 
     # Direct connection
     if request.client and request.client.host:
-        return request.client.host
+        potential_ips.append(request.client.host)
 
-    return None
+    # Prefer IPv4 over IPv6 from all collected IPs
+    for ip in potential_ips:
+        preferred = _prefer_ipv4(ip)
+        if preferred and "." in preferred and ":" not in preferred:
+            return preferred
+
+    # No IPv4 found, return the first available IP
+    return potential_ips[0] if potential_ips else None
 
 router = APIRouter(tags=["sdk"])
 

@@ -533,8 +533,9 @@ export default function DiagnosisPage() {
     high_severity_count: 0,
   } : issues;
 
-  // No real data and not in demo mode - show "collect more data" state
-  if (!isDemoMode && (!diagnosis || !diagnosis.summary || diagnosis.summary.affected_users_pct === 0)) {
+  // No real data and not in demo mode - show appropriate message
+  if (!isDemoMode && (!diagnosis || !diagnosis.summary)) {
+    // No diagnosis data at all - show collecting state
     const pageStats = diagnosis?.supporting_charts?.page_stats as Record<string, unknown> | undefined;
     const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
     return (
@@ -547,6 +548,45 @@ export default function DiagnosisPage() {
           onToggleDemo={() => setIsDemoMode(true)}
         />
         <NoDataState sessionCount={sessionCount} onTryDemo={() => setIsDemoMode(true)} />
+      </div>
+    );
+  }
+
+  // Show "All clear" state when there are sessions but no negative emotions detected
+  if (!isDemoMode && diagnosis && diagnosis.summary && diagnosis.summary.affected_users_pct === 0) {
+    const pageStats = diagnosis?.supporting_charts?.page_stats as Record<string, unknown> | undefined;
+    const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
+    const topEmotion = pageStats?.top_emotion as string | undefined;
+
+    return (
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          onTimeRangeChange={setTimeRange}
+          timeRange={timeRange}
+          showDemoToggle
+          isDemoMode={false}
+          onToggleDemo={() => setIsDemoMode(true)}
+        />
+        <section className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-8 text-center">
+          <span className="text-4xl mb-4 block">✅</span>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">All clear — No issues detected</h2>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            {sessionCount > 0
+              ? `Analyzed ${sessionCount} session${sessionCount !== 1 ? "s" : ""} — users are having a smooth experience.`
+              : "No sessions in the selected time window."
+            }
+            {topEmotion && topEmotion !== "none" && (
+              <span className="block mt-2">Top emotion: {topEmotion}</span>
+            )}
+          </p>
+          <button
+            onClick={() => setIsDemoMode(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors"
+          >
+            <span>🎭</span>
+            Try Demo Mode
+          </button>
+        </section>
       </div>
     );
   }

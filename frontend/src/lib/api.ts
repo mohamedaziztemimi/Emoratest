@@ -909,7 +909,7 @@ export async function fetchPrimaryDiagnosis(
   hours = 24
 ): Promise<DiagnosisResponse> {
   // merchant_id is extracted from JWT token by backend
-  return request<DiagnosisResponse>(`/diagnosis/primary?hours=${hours}`);
+  return request<DiagnosisResponse>(`/dashboard/diagnosis/primary?hours=${hours}`);
 }
 
 export async function fetchIssuesList(
@@ -917,7 +917,7 @@ export async function fetchIssuesList(
   hours = 24
 ): Promise<IssuesListResponse> {
   // merchant_id is extracted from JWT token by backend
-  return request<IssuesListResponse>(`/diagnosis/issues?hours=${hours}`);
+  return request<IssuesListResponse>(`/dashboard/diagnosis/issues?hours=${hours}`);
 }
 
 export { ApiError };
