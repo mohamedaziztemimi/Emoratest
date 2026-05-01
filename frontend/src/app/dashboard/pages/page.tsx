@@ -35,7 +35,7 @@ export default function PageInsightsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = "";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         const res = await fetch(`${apiUrl}/api/v1/pages/insights?days=7&limit=50`, {
           credentials: "include",
         });
@@ -83,7 +83,8 @@ export default function PageInsightsPage() {
   };
 
   const handlePageClick = (pageUrl: string) => {
-    router.push(`/dashboard/pages/${encodeURIComponent(pageUrl)}`);
+    // Use query parameter to avoid issues with slashes in URLs
+    router.push(`/dashboard/pages/detail?page=${encodeURIComponent(pageUrl)}`);
   };
 
   if (loading) {

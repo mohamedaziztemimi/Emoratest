@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { use } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface PageDetailInsight {
   page_url: string;
@@ -37,21 +36,22 @@ const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
 };
 
 export default function PageDetailPage() {
-  const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<PageDetailInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const encodedUrl = params.url as string;
-  const pageUrl = decodeURIComponent(encodedUrl);
+  // Get page URL from query parameter
+  const pageUrl = searchParams.get("page") || "";
 
   const getPagePath = (url: string) => {
     try {
       const u = new URL(url);
       return u.pathname === "/" ? "Home" : u.pathname;
     } catch {
-      return url;
+      // If not a full URL, return as-is
+      return url === "/" ? "Home" : url;
     }
   };
 
@@ -60,11 +60,18 @@ export default function PageDetailPage() {
   };
 
   useEffect(() => {
+    if (!pageUrl) {
+      setError("No page specified");
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
-        const apiUrl = "";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        // Use query parameter for the page URL to avoid issues with slashes
         const res = await fetch(
-          `${apiUrl}/api/v1/pages/insights/${encodedUrl}?days=7`,
+          `${apiUrl}/api/v1/pages/insights/detail?page=${encodeURIComponent(pageUrl)}&days=7`,
           { credentials: "include" }
         );
 
@@ -90,7 +97,7 @@ export default function PageDetailPage() {
     };
 
     fetchData();
-  }, [encodedUrl, router]);
+  }, [pageUrl, router]);
 
   if (loading) {
     return (

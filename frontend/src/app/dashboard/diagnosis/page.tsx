@@ -415,30 +415,20 @@ function NoDataState({ sessionCount, onTryDemo }: { sessionCount: number; onTryD
 
   return (
     <section className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-8 text-center">
-      <span className="text-4xl mb-4 block">📊</span>
-      <h2 className="text-xl font-bold text-gray-900 mb-2">
-        {sessionCount === 0 ? "Start collecting user data" : "Collecting more data..."}
-      </h2>
+      <span className="text-4xl mb-4 block">🔬</span>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">AI-Powered Diagnosis</h2>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">
-        {sessionCount === 0
-          ? "Add the EmoraTest tracking script to your website to start analyzing user behavior and detecting issues."
-          : `Need ${remaining} more session${remaining !== 1 ? "s" : ""} for detailed diagnosis. Currently tracking: ${sessionCount} session${sessionCount !== 1 ? "s" : ""}.`}
+        Automatic issue detection and actionable recommendations powered by emotion analytics.
+        {" "}Available on Growth and Scale plans.
       </p>
-      <div className="flex items-center justify-center gap-3 flex-wrap">
-        <a
-          href="/dashboard/settings"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors"
-        >
-          View Setup Guide
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
+      <div className="flex gap-3 justify-center">
+        <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
+          Upgrade to Growth — $29/mo
+        </button>
         <button
           onClick={onTryDemo}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-semibold hover:bg-purple-200 transition-colors"
+          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
         >
-          <span>🎭</span>
           Try Demo Mode
         </button>
       </div>

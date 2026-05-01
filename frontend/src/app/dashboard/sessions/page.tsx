@@ -16,12 +16,49 @@ const PAGE_SIZE = 20;
 
 // ── Helper Functions (Prompt 20) ─────────────────────────────────────────────
 
+// Country names mapping
+const COUNTRY_NAMES: Record<string, string> = {
+  DE: "Germany", US: "United States", GB: "United Kingdom", FR: "France",
+  ES: "Spain", IT: "Italy", NL: "Netherlands", BE: "Belgium", AT: "Austria",
+  CH: "Switzerland", SE: "Sweden", NO: "Norway", DK: "Denmark", FI: "Finland",
+  PL: "Poland", CZ: "Czech Republic", PT: "Portugal", IE: "Ireland",
+  CA: "Canada", AU: "Australia", JP: "Japan", KR: "South Korea",
+  CN: "China", IN: "India", BR: "Brazil", MX: "Mexico", RU: "Russia",
+  TR: "Turkey", SA: "Saudi Arabia", AE: "UAE", SG: "Singapore",
+  NZ: "New Zealand", ZA: "South Africa", AR: "Argentina", CL: "Chile",
+  CO: "Colombia", PE: "Peru", VE: "Venezuela", MY: "Malaysia", TH: "Thailand",
+  VN: "Vietnam", ID: "Indonesia", PH: "Philippines", HK: "Hong Kong", TW: "Taiwan",
+  IL: "Israel", EG: "Egypt", NG: "Nigeria", KE: "Kenya", MA: "Morocco",
+  UA: "Ukraine", GR: "Greece", RO: "Romania", BG: "Bulgaria", HU: "Hungary",
+  RS: "Serbia", HR: "Croatia", SI: "Slovenia", SK: "Slovakia", BA: "Bosnia",
+  MK: "North Macedonia", AL: "Albania", LT: "Lithuania", LV: "Latvia", EE: "Estonia",
+  IS: "Iceland", LU: "Luxembourg", MT: "Malta", CY: "Cyprus", IN: "India",
+};
+
 // Convert country code to flag emoji
 function countryCodeToFlag(countryCode: string | null | undefined): string {
   if (!countryCode) return "";
   const code = countryCode.toUpperCase();
   const base = 127397; // Regional Indicator Symbol Letter A base
   return [...code].map(char => String.fromCodePoint(base + char.charCodeAt(0))).join("");
+}
+
+// Get country name from code
+function getCountryName(countryCode: string | null | undefined): string {
+  if (!countryCode) return "";
+  return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode.toUpperCase();
+}
+
+// Format IP address - shorten IPv6, keep IPv4 as is
+function formatIpAddress(ip: string | null | undefined): string {
+  if (!ip) return "Unknown";
+  // IPv6 addresses are long and contain colons
+  if (ip.includes(":") && ip.length > 25) {
+    // Show first 4 groups + "..."
+    const parts = ip.split(":");
+    return parts.slice(0, 4).join(":") + "...";
+  }
+  return ip;
 }
 
 function formatPageUrl(url: string): string {
@@ -354,25 +391,17 @@ export default function SessionsPage() {
                       className="px-5 py-3.5 cursor-pointer"
                       onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
                     >
-                      <div className="space-y-1">
-                        {/* Visitor ID */}
-                        <span className="font-mono text-[13px] text-[hsl(var(--primary))]">
-                          {s.id.slice(0, 8)}...
+                      <div className="space-y-0.5">
+                        {/* IP address - primary identifier */}
+                        <span className="font-mono text-[13px] text-[hsl(var(--foreground))] block">
+                          {formatIpAddress(s.ip_address)}
                         </span>
-                        {/* IP address - shortened for IPv6 */}
-                        {s.ip_address && (
-                          <span className="font-mono text-[11px] text-[hsl(var(--muted-foreground))] block">
-                            {s.ip_address.length > 20
-                              ? `${s.ip_address.slice(0, 19)}...`
-                              : s.ip_address}
-                          </span>
-                        )}
-                        {/* Country flag + code */}
+                        {/* Country flag + name */}
                         {s.country_code && (
                           <div className="flex items-center gap-1">
                             <span className="text-sm">{countryCodeToFlag(s.country_code)}</span>
-                            <span className="text-[12px] text-[hsl(var(--foreground))]">
-                              {s.country_code.toUpperCase()}
+                            <span className="text-[12px] text-[hsl(var(--muted-foreground))]">
+                              {getCountryName(s.country_code)}
                             </span>
                           </div>
                         )}

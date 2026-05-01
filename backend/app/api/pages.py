@@ -368,3 +368,150 @@ async def get_page_detail(
         interactive_elements=interactive_elements,
         recent_sessions=recent_sessions,
     )
+
+
+@router.get("/insights/detail", response_model=PageDetailInsight, summary="Get page detail (query param)")
+@limiter.limit("60/minute")
+async def get_page_detail_query(
+    request: Request,
+    page: str = Query(..., description="Page URL to get details for"),
+    days: int = Query(7, ge=1, le=30, description="Lookback period in days"),
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get detailed emotion analysis for a single page using query parameter.
+
+    This endpoint is preferred over the path-parameter version as it handles
+    URLs with slashes more cleanly.
+    """
+    from urllib.parse import unquote, urlparse
+    from sqlalchemy import or_
+
+    page_url = unquote(page)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+
+    # Build URL matching conditions - handle full URLs, paths, and special names
+    url_conditions = []
+
+    if page_url.startswith("http"):
+        # Full URL: try exact match first
+        url_conditions.append(Session.page_url == page_url)
+        # Also try matching by pathname (in case DB has different domain)
+        try:
+            parsed = urlparse(page_url)
+            pathname = parsed.pathname
+            if pathname and pathname != "/":
+                url_conditions.append(Session.page_url.contains(pathname))
+        except Exception:
+            pass
+    else:
+        # Just a pathname or "Home"
+        if page_url == "Home" or page_url == "/":
+            # Home page - match multiple patterns
+            url_conditions.append(Session.page_url == "/")
+            url_conditions.append(Session.page_url.like("%:///%"))
+            url_conditions.append(Session.page_url.like("%://localhost%"))
+            url_conditions.append(Session.page_url.like("%://emoratest.com%"))
+        else:
+            # Specific pathname like "/docs" or "docs"
+            url_conditions.append(Session.page_url == page_url)
+            url_conditions.append(Session.page_url.like(f"%{page_url}"))
+            # Also try with leading slash
+            if not page_url.startswith("/"):
+                url_conditions.append(Session.page_url.contains(f"/{page_url}"))
+
+    # Use OR to match any of the conditions
+    url_condition = or_(*url_conditions) if url_conditions else Session.page_url.contains(page_url)
+
+    # Get session count
+    count_result = await db.execute(
+        select(func.count(Session.id))
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+            url_condition,
+        )
+    )
+    total_sessions = count_result.scalar() or 0
+
+    if total_sessions == 0:
+        raise HTTPException(status_code=404, detail="No data for this page")
+
+    # Get emotion breakdown
+    emotion_result = await db.execute(
+        select(Session.primary_emotion, func.count().label("cnt"))
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+            url_condition,
+            Session.primary_emotion.isnot(None),
+        )
+        .group_by(Session.primary_emotion)
+    )
+    emotion_rows = emotion_result.all()
+    total_emotions = sum(r.cnt for r in emotion_rows) or 1
+    emotion_breakdown = {
+        r.primary_emotion: round(r.cnt / total_emotions * 100, 1)
+        for r in emotion_rows
+    }
+
+    # Calculate trends (vs previous period)
+    prev_cutoff = cutoff - timedelta(days=days)
+    curr_frustration = emotion_breakdown.get("frustration", 0)
+
+    prev_emotion_result = await db.execute(
+        select(Session.primary_emotion, func.count().label("cnt"))
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= prev_cutoff,
+            Session.started_at < cutoff,
+            url_condition,
+            Session.primary_emotion.isnot(None),
+        )
+        .group_by(Session.primary_emotion)
+    )
+    prev_emotion_rows = prev_emotion_result.all()
+    total_prev = sum(r.cnt for r in prev_emotion_rows) or 1
+    prev_frustration = (
+        round(next((r.cnt for r in prev_emotion_rows if r.primary_emotion == "frustration"), 0) / total_prev * 100, 1)
+        if prev_emotion_rows
+        else 0
+    )
+
+    trend = {
+        "frustration_change": round(curr_frustration - prev_frustration, 1),
+    }
+
+    # Get interactive elements (simplified - return top elements with events)
+    # In production, this would query enriched events
+    interactive_elements = []
+
+    # Get recent sessions
+    sessions_result = await db.execute(
+        select(Session.id, Session.started_at, Session.primary_emotion, Session.emotion_confidence)
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+            url_condition,
+        )
+        .order_by(desc(Session.started_at))
+        .limit(5)
+    )
+    recent_sessions = [
+        {
+            "id": str(s.id),
+            "started_at": s.started_at.isoformat(),
+            "primary_emotion": s.primary_emotion,
+            "emotion_confidence": s.emotion_confidence,
+        }
+    for s in sessions_result.all()
+    ]
+
+    return PageDetailInsight(
+        page_url=page_url,
+        total_sessions=total_sessions,
+        emotion_breakdown=emotion_breakdown,
+        trend=trend,
+        interactive_elements=interactive_elements,
+        recent_sessions=recent_sessions,
+    )
