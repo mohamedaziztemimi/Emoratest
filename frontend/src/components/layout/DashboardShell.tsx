@@ -4,12 +4,24 @@ import { useCallback, useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import clsx from "clsx";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+interface SearchResult {
+  id: string;
+  type: "session" | "page";
+  title: string;
+  url?: string;
+  emotion?: string;
+}
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("emoratest_theme");
@@ -27,6 +39,59 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       return next;
     });
   }, []);
+
+  // Search functionality
+  useEffect(() => {
+    const performSearch = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+        // Search sessions by visitor ID or page URL
+        const sessionsRes = await fetch(`${apiUrl}/api/v1/dashboard/sessions?search=${encodeURIComponent(searchQuery)}&page_size=5`, {
+          credentials: "include",
+        });
+
+        if (sessionsRes.ok) {
+          const data = await sessionsRes.json();
+          const results: SearchResult[] = (data.sessions || []).map((s: any) => ({
+            id: s.id,
+            type: "session" as const,
+            title: s.visitor_id || s.id.slice(0, 8),
+            url: s.page_url,
+            emotion: s.primary_emotion,
+          }));
+          setSearchResults(results);
+        } else {
+          setSearchResults([]);
+        }
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+  }, []);
+
+  const handleResultClick = useCallback((result: SearchResult) => {
+    clearSearch();
+    if (result.type === "session") {
+      router.push(`/dashboard/sessions/${result.id}`);
+    }
+  }, [router, clearSearch]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -64,30 +129,63 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             </button>
 
             {/* Search */}
-            <div className={`hidden items-center gap-2 rounded-xl border transition-all sm:flex ${
-              searchFocused ? 'border-[hsl(var(--primary))] bg-[hsl(var(--card))]' : 'border-transparent bg-[hsl(var(--secondary))]'
-            } px-3 py-2`}>
-              <svg className="h-4 w-4 text-[hsl(var(--muted-foreground))]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                className="flex-1 bg-transparent border-none outline-none text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            <div className="relative hidden sm:block">
+              <div className={`flex items-center gap-2 rounded-xl border transition-all ${
+                searchFocused || searchResults.length > 0 ? 'border-[hsl(var(--primary))] bg-[hsl(var(--card))]' : 'border-transparent bg-[hsl(var(--secondary))]'
+              } px-3 py-2`}>
+                <svg className="h-4 w-4 text-[hsl(var(--muted-foreground))]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search sessions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  className="flex-1 bg-transparent border-none outline-none text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] min-w-[200px]"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {searchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[hsl(var(--border))] shadow-lg overflow-hidden z-50">
+                  {searching && (
+                    <div className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">Searching...</div>
+                  )}
+                  {!searching && searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      onClick={() => handleResultClick(result)}
+                      className="w-full px-4 py-3 text-left hover:bg-[hsl(var(--accent))] transition-colors border-b border-[hsl(var(--border))] last:border-b-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs text-[hsl(var(--primary))]">{result.title}</span>
+                        {result.url && <span className="text-sm text-[hsl(var(--foreground))] truncate">{result.url}</span>}
+                        {result.emotion && (
+                          <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-[hsl(var(--secondary))]">{result.emotion}</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* No Results */}
+              {searchFocused && searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[hsl(var(--border))] shadow-lg p-4 z-50">
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">No sessions found matching "{searchQuery}"</p>
+                </div>
               )}
             </div>
           </div>

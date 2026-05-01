@@ -66,6 +66,40 @@ async def get_merchant_from_sdk_key(
 
     return merchant
 
+
+def extract_client_ip(request: Request) -> str | None:
+    """Extract client IP from request headers, accounting for proxies.
+
+    Checks in order:
+    1. CF-Connecting-IP (Cloudflare)
+    2. X-Forwarded-For (standard proxy header, take first IP)
+    3. X-Real-IP (nginx/common proxy)
+    4. Fall back to request.client.host
+
+    Returns None if no IP can be determined.
+    """
+    # Cloudflare
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip()
+
+    # X-Forwarded-For (can contain multiple IPs: client, proxy1, proxy2)
+    xff = request.headers.get("X-Forwarded-For")
+    if xff:
+        # Take the first IP (original client)
+        return xff.split(",")[0].strip()
+
+    # X-Real-IP
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+
+    # Direct connection
+    if request.client and request.client.host:
+        return request.client.host
+
+    return None
+
 router = APIRouter(tags=["sdk"])
 
 
@@ -122,6 +156,10 @@ async def create_session(
 
     session_id = uuid.uuid4()
 
+    # Extract IP address and user agent
+    client_ip = extract_client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+
     session = Session(
         id=session_id,
         merchant_id=merchant.id,
@@ -131,6 +169,8 @@ async def create_session(
         country_code=body.country_code,
         device_type=body.device_type,
         expires_at=now + timedelta(days=90),
+        ip_address=client_ip,
+        user_agent=user_agent,
     )
 
     db.add(session)

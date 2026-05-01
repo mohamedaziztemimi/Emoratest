@@ -21,6 +21,8 @@ class SessionListItem(BaseModel):
     emotion_confidence: float | None = None
     valence: float | None = None
     arousal: float | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
 
 
 class SessionListResponse(BaseModel):

@@ -56,7 +56,6 @@ interface UsageData {
 export default function OverviewPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [hasData, setHasData] = useState(false);
 
   // Data from new endpoints
   const [pulse, setPulse] = useState<EmotionPulse | null>(null);
@@ -84,8 +83,6 @@ export default function OverviewPage() {
 
         if (sessionsRes.ok) {
           const sessionsData = await sessionsRes.json();
-          const hasRealData = (sessionsData.total || 0) > 0;
-          setHasData(hasRealData);
 
           // Fetch all dashboard data in parallel
           const [pulseRes, issueRes, pagesRes, sessionsListRes, usageRes] = await Promise.all([
@@ -187,37 +184,6 @@ export default function OverviewPage() {
         </>
       )}
 
-      {/* No Data State */}
-      {!loading && !hasData && (
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 sm:p-6 mb-6 bg-white border border-[hsl(var(--border))] rounded-2xl">
-          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl flex-shrink-0">
-            🚀
-          </div>
-          <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-lg font-bold text-[hsl(var(--foreground))] mb-1">
-              Install the SDK to see your real data
-            </h3>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-              You&apos;re seeing demo data. Add one line of code to your website to start detecting emotions.
-            </p>
-          </div>
-          <div className="flex gap-3 w-full sm:w-auto">
-            <a
-              href="/dashboard/welcome"
-              className="flex-1 sm:flex-none bg-gradient-to-r from-[#007BFF] to-[#7C3AED] text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              Install SDK →
-            </a>
-            <a
-              href="/docs"
-              className="flex-1 sm:flex-none bg-white text-[#007BFF] border border-[hsl(var(--border))] rounded-lg px-6 py-3 text-sm font-medium hover:bg-[hsl(var(--accent))] transition-colors"
-            >
-              View docs
-            </a>
-          </div>
-        </div>
-      )}
-
       {/* Session Limit Warning Banner - Prompt 13 */}
       {!loading && usage && !dismissedUsageBanner && (
         <div
@@ -287,61 +253,52 @@ export default function OverviewPage() {
         <div className="stat-grid mb-8">
           <StatCard
             label="Emotion Score"
-            value={hasData && pulse ? String(pulse.emotion_score) : "72"}
+            value={pulse ? String(pulse.emotion_score) : "0"}
             subtext={
-              hasData && pulse
+              pulse
                 ? (pulse.emotion_trend > 0 ? `↑ ${pulse.emotion_trend}% vs last week` : pulse.emotion_trend < 0 ? `${pulse.emotion_trend}% vs last week` : "Stable")
-                : "↑ 5% vs last week"
+                : "No data yet"
             }
-            dotColor={hasData && pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#10B981"}
-            valueColor={hasData && pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#10B981"}
-            showDemoBadge={!hasData}
+            dotColor={pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#9CA3AF"}
+            valueColor={pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#9CA3AF"}
           />
           <StatCard
             label="Sessions Today"
-            value={hasData && pulse ? String(pulse.sessions_today) : "1,247"}
-            subtext={
-              hasData && pulse
-                ? `${pulse.sessions_with_issues} with issues`
-                : "142 with issues"
-            }
+            value={pulse ? String(pulse.sessions_today) : "0"}
+            subtext={pulse ? `${pulse.sessions_with_issues} with issues` : "No sessions yet"}
             dotColor="#007BFF"
             valueColor="#111318"
-            showDemoBadge={!hasData}
           />
           <StatCard
             label="Frustration Alerts"
-            value={hasData && pulse ? String(pulse.frustration_alerts) : "3"}
-            subtext={hasData && pulse ? (pulse.frustration_alerts === 0 ? "All clear" : "pages affected") : "pages affected"}
-            dotColor={hasData && pulse && pulse.frustration_alerts > 0 ? "#EF4444" : "#10B981"}
-            valueColor={hasData && pulse && pulse.frustration_alerts > 0 ? "#EF4444" : "#10B981"}
-            showDemoBadge={!hasData}
+            value={pulse ? String(pulse.frustration_alerts) : "0"}
+            subtext={pulse ? (pulse.frustration_alerts === 0 ? "All clear" : "pages affected") : "No data yet"}
+            dotColor={pulse && pulse.frustration_alerts > 0 ? "#EF4444" : "#10B981"}
+            valueColor={pulse && pulse.frustration_alerts > 0 ? "#EF4444" : "#10B981"}
           />
           <StatCard
             label="Active Experiments"
-            value={hasData && pulse ? String(pulse.active_experiments) : "2"}
-            subtext={hasData && pulse ? (pulse.active_experiments === 1 ? "running" : "running") : "running"}
+            value={pulse ? String(pulse.active_experiments) : "0"}
+            subtext={pulse ? (pulse.active_experiments === 1 ? "running" : pulse.active_experiments === 0 ? "none" : "running") : "No experiments"}
             dotColor="#7C3AED"
             valueColor="#111318"
-            showDemoBadge={!hasData}
           />
         </div>
       )}
 
       {/* Top Issue Card - Prompt 15 */}
-      {!loading && (
-        <TopIssueCard hasData={hasData} topIssue={topIssue} />
+      {!loading && topIssue && (
+        <TopIssueCard topIssue={topIssue} />
       )}
 
       {/* Pages Needing Attention - Prompt 16 */}
       {!loading && pagesAttention.length > 0 && (
-        <PagesAttentionCard hasData={hasData} pages={pagesAttention} />
+        <PagesAttentionCard pages={pagesAttention} />
       )}
 
       {/* Problem Sessions - Prompt 17 */}
-      {!loading && (
+      {!loading && problemSessions.length > 0 && (
         <ProblemSessionsCard
-          hasData={hasData}
           sessions={problemSessions}
           getTimeAgo={getTimeAgo}
           formatDuration={formatDuration}
@@ -349,15 +306,23 @@ export default function OverviewPage() {
         />
       )}
 
+      {!loading && problemSessions.length === 0 && (
+        <div className="card" style={{ padding: "20px" }}>
+          <p className="type-body" style={{ textAlign: "center", color: "#059669" }}>
+            ✓ No frustrated sessions detected — your users are happy!
+          </p>
+        </div>
+      )}
+
       {/* Supporting Insights */}
       {!loading && (
-        <SupportingInsights hasData={hasData}>
+        <SupportingInsights>
           <SupportingCard title="Emotion Trends" subtitle="Last 7 days">
-            <EmotionTrendsCompact hasData={hasData} />
+            <EmotionTrendsCompact />
           </SupportingCard>
 
           <SupportingCard title="Active Experiments">
-            <ActiveExperimentsCompact hasData={hasData} count={pulse?.active_experiments || 0} />
+            <ActiveExperimentsCompact count={pulse?.active_experiments || 0} />
           </SupportingCard>
         </SupportingInsights>
       )}
@@ -376,23 +341,15 @@ function StatCard({
   subtext,
   dotColor,
   valueColor,
-  showDemoBadge = false,
 }: {
   label: string;
   value: string;
   subtext: string;
   dotColor: string;
   valueColor: string;
-  showDemoBadge?: boolean;
 }) {
   return (
     <div className="stat-card border-blue">
-      {showDemoBadge && (
-        <span className="absolute top-3 right-3 bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] text-[10px] rounded px-1.5 py-0.5 font-medium">
-          Demo
-        </span>
-      )}
-
       <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dotColor }} />
         {label}
@@ -409,21 +366,8 @@ function StatCard({
 
 // ── Top Issue Card - Prompt 15 ───────────────────────────────────────────────────
 
-function TopIssueCard({ hasData, topIssue }: { hasData: boolean; topIssue: TopIssue | null }) {
-  // Demo data when no real data
-  const demoIssue = {
-    has_issue: true,
-    page_url: "/checkout",
-    page_title: "Checkout",
-    issue_type: "Rage click spike",
-    severity: "high" as const,
-    affected_sessions: 50,
-    frustration_pct: 38,
-    time_window: "24h",
-  };
-
-  const issue = hasData && topIssue?.has_issue ? topIssue : demoIssue;
-  const showAllClear = hasData && !topIssue?.has_issue;
+function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
+  const showAllClear = !topIssue?.has_issue;
 
   if (showAllClear) {
     return (
@@ -501,24 +445,14 @@ function TopIssueCard({ hasData, topIssue }: { hasData: boolean; topIssue: TopIs
       >
         View diagnosis →
       </a>
-
-      {!hasData && (
-        <span className="absolute top-3 right-3 bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] text-[10px] rounded px-1.5 py-0.5 font-medium">
-          Demo
-        </span>
-      )}
     </div>
   );
 }
 
 // ── Pages Attention Card - Prompt 16 ─────────────────────────────────────────────
 
-function PagesAttentionCard({ hasData, pages }: { hasData: boolean; pages: PageAttention[] }) {
-  const displayPages = hasData ? pages : [
-    { page_url: "/checkout", dominant_emotion: "frustration", emotion_pct: 38, session_count: 89 },
-    { page_url: "/pricing", dominant_emotion: "confusion", emotion_pct: 24, session_count: 56 },
-    { page_url: "/signup", dominant_emotion: "hesitation", emotion_pct: 18, session_count: 34 },
-  ];
+function PagesAttentionCard({ pages }: { pages: PageAttention[] }) {
+  const displayPages = pages;
 
   const getEmotionColor = (emotion: string) => {
     const colors: Record<string, string> = {
@@ -579,12 +513,6 @@ function PagesAttentionCard({ hasData, pages }: { hasData: boolean; pages: PageA
                 </div>
                 <span style={{ fontSize: "12px", color: "#9CA3AF" }}>{page.session_count} sessions</span>
               </div>
-
-              {!hasData && (
-                <span className="absolute top-3 right-3 bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] text-[10px] rounded px-1.5 py-0.5 font-medium">
-                  Demo
-                </span>
-              )}
             </div>
           ))}
         </div>
@@ -596,23 +524,17 @@ function PagesAttentionCard({ hasData, pages }: { hasData: boolean; pages: PageA
 // ── Problem Sessions Card - Prompt 17 ────────────────────────────────────────────
 
 function ProblemSessionsCard({
-  hasData,
   sessions,
   getTimeAgo,
   formatDuration,
   getEmotionColor,
 }: {
-  hasData: boolean;
   sessions: ProblemSession[];
   getTimeAgo: (date: string) => string;
   formatDuration: (seconds: number | null) => string;
   getEmotionColor: (emotion: string) => string;
 }) {
-  const displaySessions = hasData ? sessions : [
-    { id: "1", visitor_id: "a1b2c3d4", page_url: "/checkout", primary_emotion: "frustration", emotion_confidence: 78, created_at: new Date(Date.now() - 300000).toISOString(), duration_seconds: 154 },
-    { id: "2", visitor_id: "e5f6g7h8", page_url: "/pricing", primary_emotion: "confusion", emotion_confidence: 65, created_at: new Date(Date.now() - 900000).toISOString(), duration_seconds: 89 },
-    { id: "3", visitor_id: "i9j0k1l2", page_url: "/signup", primary_emotion: "anxiety", emotion_confidence: 72, created_at: new Date(Date.now() - 1800000).toISOString(), duration_seconds: 201 },
-  ];
+  const displaySessions = sessions;
 
   if (displaySessions.length === 0) {
     return (
@@ -672,14 +594,6 @@ function ProblemSessionsCard({
           </tbody>
         </table>
       </div>
-
-      {!hasData && (
-        <div style={{ position: "relative" }}>
-          <span className="absolute top-3 right-3 bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] text-[10px] rounded px-1.5 py-0.5 font-medium">
-            Demo
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -699,9 +613,10 @@ function SkeletonCard({ height = "140px" }: { height?: string }) {
   );
 }
 
-function EmotionTrendsCompact({ hasData }: { hasData: boolean }) {
+function EmotionTrendsCompact() {
   const [data, setData] = useState<{ day: string; confusion: number; frustration: number; delight: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     const fetchTrends = async () => {
@@ -709,13 +624,16 @@ function EmotionTrendsCompact({ hasData }: { hasData: boolean }) {
         const res = await fetch(`${API_BASE}/api/v1/dashboard/emotion-trends?days=7`, { credentials: "include" });
         if (res.ok) {
           const trendData = await res.json();
-          const chartData = trendData.map((d: any) => ({
-            day: d.label,
-            confusion: d.friction,
-            frustration: d.risk,
-            delight: Math.max(0, 100 - d.friction - d.risk / 2),
-          }));
-          setData(chartData);
+          if (trendData && trendData.length > 0) {
+            setHasData(true);
+            const chartData = trendData.map((d: any) => ({
+              day: d.label,
+              confusion: d.friction,
+              frustration: d.risk,
+              delight: Math.max(0, 100 - d.friction - d.risk / 2),
+            }));
+            setData(chartData);
+          }
         }
       } catch (_err) {
         // Use empty on error
@@ -730,7 +648,7 @@ function EmotionTrendsCompact({ hasData }: { hasData: boolean }) {
     return <div style={{ padding: "20px 0", textAlign: "center" }}><SkeletonCard height="120px" /></div>;
   }
 
-  if (!hasData || data.length === 0) {
+  if (data.length === 0) {
     return <p style={{ fontSize: "13px", color: "#9CA3AF", textAlign: "center", padding: "20px 0" }}>Trend data being collected...</p>;
   }
 
@@ -763,8 +681,8 @@ function EmotionTrendsCompact({ hasData }: { hasData: boolean }) {
   );
 }
 
-function ActiveExperimentsCompact({ hasData, count }: { hasData: boolean; count: number }) {
-  if (hasData && count === 0) {
+function ActiveExperimentsCompact({ count }: { count: number }) {
+  if (count === 0) {
     return (
       <p className="type-body" style={{ textAlign: "center", padding: "16px 0", color: "#9CA3AF" }}>
         No active experiments. <a href="/dashboard/experiments" className="link">Create one →</a>
@@ -774,22 +692,24 @@ function ActiveExperimentsCompact({ hasData, count }: { hasData: boolean; count:
 
   return (
     <div className="space-y-3">
-      <div className="list-item">
-        <div className="list-item-icon purple">
-          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "16px", height: "16px" }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023-.501.05.75.082M5 14.5l-1.456 7.28a.75.75 0 00.736.893h15.44a.75.75 0 00.736-.893L19 14.5M5 14.5h14" />
-          </svg>
-        </div>
-        <div className="list-item-content">
-          <div className="list-item-title">Checkout CTA Test</div>
-          <div className="list-item-meta">
-            <span className="badge badge-purple">A/B</span>
-            <span className="badge badge-green">Running</span>
+      {count > 0 && (
+        <>
+          <div className="list-item">
+            <div className="list-item-icon purple">
+              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "16px", height: "16px" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023-.501.05.75.082M5 14.5l-1.456 7.28a.75.75 0 00.736.893h15.44a.75.75 0 00.736-.893L19 14.5M5 14.5h14" />
+              </svg>
+            </div>
+            <div className="list-item-content">
+              <div className="list-item-title">{count} Active Experiment{count !== 1 ? "s" : ""}</div>
+              <div className="list-item-meta">
+                <span className="badge badge-green">Running</span>
+              </div>
+            </div>
           </div>
-          <div className="list-item-subtitle mt-1">Day 4 of 14</div>
-        </div>
-      </div>
-      <a href="/dashboard/experiments" className="link" style={{ fontSize: "13px" }}>View all experiments →</a>
+          <a href="/dashboard/experiments" className="link" style={{ fontSize: "13px" }}>View all experiments →</a>
+        </>
+      )}
     </div>
   );
 }
@@ -803,7 +723,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-function SupportingInsights({ hasData, children }: { hasData: boolean; children: React.ReactNode }) {
+function SupportingInsights({ children }: { children: React.ReactNode }) {
   return (
     <div className="supporting-insights">
       <div className="supporting-insights-header">

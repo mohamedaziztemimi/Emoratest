@@ -64,3 +64,11 @@ class Session(Base):
     arousal: Mapped[float | None] = mapped_column(
         Float, nullable=True
     )
+
+    # Tracking fields
+    ip_address: Mapped[str | None] = mapped_column(
+        String(45), nullable=True  # IPv6 can be up to 45 chars
+    )
+    user_agent: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )

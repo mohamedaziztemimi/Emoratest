@@ -516,6 +516,8 @@ async def list_sessions(
                     if s.emotion_confidence else None,
                 valence=s.valence,
                 arousal=s.arousal,
+                ip_address=s.ip_address,
+                user_agent=s.user_agent,
             )
             for s in sessions
         ],
@@ -1781,3 +1783,74 @@ async def get_emotion_trend(
         days=trend_days,
         emotions_seen=sorted(all_emotions),
     )
+
+
+# ── DELETE /sessions/{session_id} — delete a single session ─────────────────
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+@limiter.limit("100/minute")
+async def delete_session(
+    request: Request,
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Delete a single session and all its events (JWT auth)."""
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
+
+    # Verify session belongs to merchant
+    result = await db.execute(
+        select(Session.id).where(Session.id == sid, Session.merchant_id == merchant.id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Delete related events, features, then session
+    await db.execute(delete(Event).where(Event.session_id == sid))
+    await db.execute(delete(SessionFeatures).where(SessionFeatures.session_id == sid))
+    await db.execute(delete(Session).where(Session.id == sid))
+    await db.commit()
+
+
+# ── DELETE /sessions/bulk — delete multiple sessions ──────────────────────────
+
+
+@router.post("/sessions/bulk-delete", status_code=204)
+@limiter.limit("50/minute")
+async def bulk_delete_sessions(
+    request: Request,
+    session_ids: list[str],
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Delete multiple sessions and all their events (JWT auth)."""
+    if not session_ids or len(session_ids) > 100:
+        raise HTTPException(status_code=400, detail="Provide 1-100 session IDs")
+
+    # Parse and validate UUIDs
+    try:
+        ids = [uuid.UUID(sid) for sid in session_ids]
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID format") from exc
+
+    # Verify all sessions belong to merchant
+    result = await db.execute(
+        select(Session.id).where(
+            Session.id.in_(ids),
+            Session.merchant_id == merchant.id,
+        )
+    )
+    found_ids = {row[0] for row in result.all()}
+
+    if len(found_ids) != len(ids):
+        raise HTTPException(status_code=403, detail="Some sessions don't belong to you")
+
+    # Delete related events, features, then sessions
+    await db.execute(delete(Event).where(Event.session_id.in_(ids)))
+    await db.execute(delete(SessionFeatures).where(SessionFeatures.session_id.in_(ids)))
+    await db.execute(delete(Session).where(Session.id.in_(ids)))
+    await db.commit()

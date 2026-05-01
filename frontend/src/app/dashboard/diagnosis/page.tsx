@@ -41,71 +41,32 @@ const SEVERITY_CONFIG = {
 
 const DEMO_DIAGNOSIS: DiagnosisResponse = {
   summary: {
-    title: "Users are clicking furiously on broken elements",
+    title: "Demo: High frustration detected on checkout",
     page_url: "https://example.com/checkout",
     page_name: "Checkout",
-    affected_users_pct: 23,
-    severity: "high",
-    estimated_lost_revenue: "~$1,200/week",
+    affected_users_pct: 0,
+    severity: "medium",
+    estimated_lost_revenue: undefined,
   },
-  evidence: [
-    {
-      type: "rage_clicks",
-      value: "23%",
-      label: "23% of clicks show rage patterns",
-      element: "#checkout-button",
-      session_ids: [],
-    },
-    {
-      type: "hesitation",
-      value: "45%",
-      label: "45% hesitation score before checkout",
-      element: null,
-      session_ids: [],
-    },
-    {
-      type: "drop_off",
-      value: "38%",
-      label: "38% abandon at checkout step",
-      element: null,
-      session_ids: [],
-    },
-  ],
+  evidence: [],
   root_cause: {
-    primary_cause: "Checkout button appears unresponsive",
-    explanation: "Users are rapidly clicking the checkout button because they expect an action that isn't happening. The button may have no click handler, be blocked by an overlay, or respond too slowly.",
-    contributing_factors: [
-      "Possible invisible overlay blocking clicks",
-      "Button may have no click handler attached",
-      "Response time > 2 seconds causing double-clicks",
-      "No visual feedback on click",
-    ],
+    primary_cause: "This is a demo to show what diagnoses look like",
+    explanation: "When you have real session data (50+ sessions), diagnoses will be based on actual user behavior patterns.",
+    contributing_factors: [],
   },
   actions: [
     {
-      title: "Test the checkout button",
-      description: "Click on the checkout button to verify it responds correctly",
+      title: "Install the SDK to start collecting data",
+      description: "Add the EmoraTest tracking script to your website",
       type: "edit_element",
-      link: "/dashboard/editor",
-    },
-    {
-      title: "Create A/B test to fix",
-      description: "Test a version with faster response or clearer visual feedback",
-      type: "ab_test",
-      link: "/dashboard/experiments?template=fix-checkout",
-    },
-    {
-      title: "Add loading indicator",
-      description: "Show visual feedback when checkout is processing",
-      type: "edit_element",
-      link: "/dashboard/editor",
+      link: "/dashboard/settings",
     },
   ],
   supporting_charts: {
     page_stats: {
-      total_sessions: 127,
-      avg_friction: 42,
-      top_emotion: "frustration",
+      total_sessions: 0,
+      avg_friction: 0,
+      top_emotion: "none",
     },
   },
   generated_at: new Date().toISOString(),
@@ -564,32 +525,25 @@ export default function DiagnosisPage() {
   );
 
   // Determine what to show
-  const showDemo = isDemoMode || error || !diagnosis;
+  const showDemo = isDemoMode;
   const displayDiagnosis = showDemo ? DEMO_DIAGNOSIS : diagnosis;
   const displayIssues = showDemo ? {
     issues: [
       {
         id: "1",
-        title: "Users hesitating on pricing page",
+        title: "Demo: Users hesitating on pricing page",
         page_url: "https://example.com/pricing",
-        affected_users: 45,
-        severity: "medium",
-      },
-      {
-        id: "2",
-        title: "High drop-off at sign up form",
-        page_url: "https://example.com/signup",
-        affected_users: 32,
+        affected_users: 0,
         severity: "medium",
       },
     ],
-    total_issues: 2,
+    total_issues: 1,
     high_severity_count: 0,
   } : issues;
 
   // No real data and not in demo mode - show "collect more data" state
-  if (!isDemoMode && diagnosis && diagnosis.summary.affected_users_pct === 0) {
-    const pageStats = diagnosis.supporting_charts?.page_stats as Record<string, unknown> | undefined;
+  if (!isDemoMode && (!diagnosis || !diagnosis.summary || diagnosis.summary.affected_users_pct === 0)) {
+    const pageStats = diagnosis?.supporting_charts?.page_stats as Record<string, unknown> | undefined;
     const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
     return (
       <div className="max-w-5xl mx-auto">

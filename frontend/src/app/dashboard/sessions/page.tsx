@@ -10,6 +10,8 @@ import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const PAGE_SIZE = 20;
 
 // ── Helper Functions (Prompt 20) ─────────────────────────────────────────────
@@ -115,6 +117,9 @@ export default function SessionsPage() {
     page_size: PAGE_SIZE,
   });
   const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
   const fetcher = useCallback(() => fetchSessions(filters), [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -123,6 +128,75 @@ export default function SessionsPage() {
   const setFilter = useCallback(<K extends keyof SessionFilters>(key: K, value: SessionFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   }, []);
+
+  // Delete functions
+  const deleteSession = useCallback(async (sessionId: string) => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/dashboard/sessions/${sessionId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete session");
+      }
+      setSelectedSessions((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
+      refetch();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
+  }, [refetch]);
+
+  const bulkDeleteSessions = useCallback(async () => {
+    if (selectedSessions.size === 0) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/dashboard/sessions/bulk-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ session_ids: Array.from(selectedSessions) }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete sessions");
+      }
+      setSelectedSessions(new Set());
+      refetch();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
+  }, [selectedSessions, refetch]);
+
+  const toggleSessionSelection = useCallback((sessionId: string) => {
+    setSelectedSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAllSessions = useCallback(() => {
+    if (!data) return;
+    if (selectedSessions.size === data.sessions.length) {
+      setSelectedSessions(new Set());
+    } else {
+      setSelectedSessions(new Set(data.sessions.map((s) => s.id)));
+    }
+  }, [data, selectedSessions.size]);
 
   // Prompt 19: Handle emotion filter selection
   const handleEmotionSelect = useCallback((emotion: string | null) => {
@@ -201,16 +275,54 @@ export default function SessionsPage() {
         <EmptyState title="No sessions found" description="Adjust your filters or wait for new data." />
       ) : (
         <Card className="overflow-hidden">
+          {/* Bulk Actions Bar */}
+          {selectedSessions.size > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-[hsl(var(--accent))] border-b border-[hsl(var(--border))]">
+              <span className="text-sm text-[hsl(var(--foreground))]">
+                {selectedSessions.size} session{selectedSessions.size !== 1 ? "s" : ""} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedSessions(new Set())}
+                  className="px-3 py-1.5 text-sm font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))] rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={bulkDeleteSessions}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? "Deleting..." : "Delete Selected"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {deleteError && (
+            <div className="px-4 py-3 bg-red-50 border-b border-red-200">
+              <p className="text-sm text-red-600">{deleteError}</p>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)]">
                 <tr>
-                  {["Visitor", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time"].map((h) => (
+                  <th className="px-3 py-3.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedSessions.size === data.sessions.length}
+                      onChange={toggleAllSessions}
+                      className="rounded border-[hsl(var(--border))]"
+                    />
+                  </th>
+                  {["Visitor", "IP / Location", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
                     >
-                      {h}
+                      {h || " "}
                     </th>
                   ))}
                 </tr>
@@ -219,18 +331,50 @@ export default function SessionsPage() {
                 {data.sessions.map((s) => (
                   <tr
                     key={s.id}
-                    className="transition-colors hover:bg-[hsl(var(--accent)/0.5)] cursor-pointer"
-                    onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    className="transition-colors hover:bg-[hsl(var(--accent)/0.5)]"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-3 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedSessions.has(s.id)}
+                        onChange={() => toggleSessionSelection(s.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-[hsl(var(--border))]"
+                      />
+                    </td>
+                    <td
+                      className="px-5 py-3.5 cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       <span className="font-mono text-[13px] text-[hsl(var(--primary))]">
                         {s.id.slice(0, 8)}...
                       </span>
                     </td>
-                    <td className="max-w-[200px] truncate px-5 py-3.5 text-[hsl(var(--foreground))]">
+                    <td
+                      className="px-5 py-3.5 cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
+                      {s.ip_address ? (
+                        <div className="flex flex-col">
+                          <span className="text-[13px] text-[hsl(var(--foreground))]">{s.ip_address}</span>
+                          {s.country_code && (
+                            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{s.country_code}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
+                      )}
+                    </td>
+                    <td
+                      className="max-w-[200px] truncate px-5 py-3.5 text-[hsl(var(--foreground))] cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       {formatPageUrl(s.page_url)}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td
+                      className="px-5 py-3.5 cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       {s.primary_emotion ? (
                         <div className="flex items-center gap-2">
                           <span
@@ -245,7 +389,10 @@ export default function SessionsPage() {
                         <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td
+                      className="px-5 py-3.5 cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       {s.emotion_confidence !== null ? (
                         <span className="text-[13px] text-[hsl(var(--muted-foreground))]">
                           {s.emotion_confidence}%
@@ -254,7 +401,10 @@ export default function SessionsPage() {
                         <span className="text-[12px] text-[hsl(var(--muted-foreground))]">--</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
+                    <td
+                      className="px-5 py-3.5 text-[hsl(var(--muted-foreground))] cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       {formatDuration(
                         // Calculate duration from started_at to ended_at, or use a reasonable default
                         s.ended_at
@@ -262,7 +412,10 @@ export default function SessionsPage() {
                           : null
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td
+                      className="px-5 py-3.5 cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       <Badge variant={outcomeVariant(s.outcome)}>
                         {(() => {
                           // If session ended but outcome is still unknown, show "Left"
@@ -273,8 +426,28 @@ export default function SessionsPage() {
                         })()}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3.5 text-[hsl(var(--muted-foreground))]">
+                    <td
+                      className="px-5 py-3.5 text-[hsl(var(--muted-foreground))] cursor-pointer"
+                      onClick={() => (window.location.href = `/dashboard/sessions/${s.id}`)}
+                    >
                       {formatTimeAgo(s.started_at)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete session ${s.id.slice(0, 8)}...?`)) {
+                            deleteSession(s.id);
+                          }
+                        }}
+                        disabled={deleting}
+                        className="p-1.5 text-[hsl(var(--muted-foreground))] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Delete session"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -112,6 +112,8 @@ export interface SessionListItem {
   emotion_confidence: number | null;
   valence: number | null;
   arousal: number | null;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 export interface SessionListResponse {
