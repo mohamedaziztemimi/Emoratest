@@ -90,13 +90,17 @@ export function ConfettiWin({ trigger, message }: ConfettiWinProps) {
     if (message) {
       const messageEl = document.createElement("div");
       messageEl.className = "absolute inset-0 flex items-center justify-center";
-      messageEl.innerHTML = `
-        <div class="text-center animate-confetti-message">
-          <div class="text-3xl font-bold bg-gradient-to-r from-[var(--et-blue)] to-[var(--et-purple)] bg-clip-text text-transparent mb-2">
-            ${message}
-          </div>
-        </div>
-      `;
+
+      const contentEl = document.createElement("div");
+      contentEl.className = "text-center animate-confetti-message";
+
+      const textEl = document.createElement("div");
+      textEl.className = "text-3xl font-bold bg-gradient-to-r from-[var(--et-blue)] to-[var(--et-purple)] bg-clip-text text-transparent mb-2";
+      // Use textContent to safely set message text (prevents XSS)
+      textEl.textContent = message;
+
+      contentEl.appendChild(textEl);
+      messageEl.appendChild(contentEl);
       container.appendChild(messageEl);
 
       // Remove message after animation
