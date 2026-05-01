@@ -87,7 +87,10 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.png", sizes: "32x32" },
+      { url: "/favicon.png", sizes: "64x64" },
+    ],
     apple: "/apple-icon.png",
   },
   // JSON-LD structured data - Organization schema

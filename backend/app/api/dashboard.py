@@ -201,20 +201,19 @@ async def get_top_issue(
     day_ago = now - timedelta(hours=24)
 
     # Get all pages with sessions in last 24h
+    # Count sessions distinctly to avoid counting multiple events per session
     pages_result = await db.execute(
         select(
             Session.page_url,
-            func.count().label("total"),
+            func.count(func.distinct(Session.id)).label("total"),
             func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration_count"),
-            func.sum(case((Event.type == "click", 1), else_=0)).label("click_count"),
         )
-        .join(Event, Event.session_id == Session.id)
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= day_ago,
         )
         .group_by(Session.page_url)
-        .having(func.count() >= 3)  # Minimum 3 sessions for meaningful data
+        .having(func.count(func.distinct(Session.id)) >= 3)  # Minimum 3 sessions
     )
     pages = pages_result.all()
 
@@ -1895,26 +1894,275 @@ async def get_alerts_history(
     return AlertResponse(alerts=[], total=0)
 
 
-# ── Diagnosis endpoints (BUG 2: missing endpoints) ────────────────
+# ── Diagnosis endpoints ────────────────────────────────────────
 
 
 @router.get("/diagnosis/primary")
 @limiter.limit("100/minute")
 async def get_primary_diagnosis(
     request: Request,
+    hours: int = Query(24, ge=1, le=720, description="Hours to look back"),
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
-    """Get primary diagnosis for the merchant (placeholder for future feature)."""
-    return {"has_diagnosis": False}
+    """Get primary diagnosis for the merchant.
+
+    Returns the most critical issue detected in the time window.
+    """
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(hours=hours)
+
+    # Get all sessions with emotions in the time window
+    sessions_result = await db.execute(
+        select(func.count()).where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+        )
+    )
+    total_sessions = sessions_result.scalar() or 0
+
+    # Group by page_url and calculate frustration rate
+    pages_result = await db.execute(
+        select(
+            Session.page_url,
+            func.count().label("total"),
+            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration_count"),
+        )
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+        )
+        .group_by(Session.page_url)
+        .having(func.count() >= 1)
+    )
+    pages = pages_result.all()
+
+    if not pages or total_sessions == 0:
+        # No data yet - return structure that frontend can handle
+        return {
+            "summary": {
+                "title": "All clear",
+                "page_url": "",
+                "page_name": "",
+                "affected_users_pct": 0,
+                "severity": "low",
+                "estimated_lost_revenue": None,
+            },
+            "evidence": [],
+            "root_cause": {
+                "primary_cause": "No issues detected",
+                "explanation": f"No negative emotion patterns detected in the last {hours} hours.",
+                "contributing_factors": [],
+            },
+            "actions": [],
+            "supporting_charts": {
+                "page_stats": {
+                    "total_sessions": total_sessions,
+                    "avg_friction": 0,
+                    "top_emotion": "none",
+                },
+            },
+            "generated_at": now.isoformat(),
+        }
+
+    # Find page with highest frustration %
+    worst_page = None
+    worst_pct = 0
+
+    for page in pages:
+        total = page.total or 0
+        frustration_pct = (page.frustration_count or 0) / total * 100 if total > 0 else 0
+
+        if frustration_pct > worst_pct:
+            worst_pct = frustration_pct
+            worst_page = page
+
+    # Determine severity
+    if worst_pct >= 50:
+        severity = "high"
+    elif worst_pct >= 25:
+        severity = "medium"
+    else:
+        severity = "low"
+
+    # Get page title
+    from urllib.parse import urlparse
+    parsed = urlparse(worst_page.page_url)
+    page_title = parsed.path or worst_page.page_url
+    if page_title == "/":
+        page_name = "Home"
+    else:
+        page_name = page_title.strip("/").capitalize() or "Page"
+
+    # Generate recommendation based on severity and emotion
+    recommendations = []
+    if severity == "high":
+        recommendations.append({
+            "title": "Review the signup flow for friction points",
+            "description": f"Users on {page_name} are showing high frustration. Check for form errors, confusing labels, or technical issues.",
+            "type": "edit_element",
+            "link": f"/dashboard/pages?url={worst_page.page_url}",
+        })
+    elif severity == "medium":
+        recommendations.append({
+            "title": "Monitor user behavior on this page",
+            "description": f"Some users are experiencing frustration on {page_name}. Consider A/B testing improvements.",
+            "type": "ab_test",
+            "link": f"/dashboard/pages?url={worst_page.page_url}",
+        })
+
+    return {
+        "summary": {
+            "title": f"Users showing frustration on {page_name}",
+            "page_url": worst_page.page_url,
+            "page_name": page_name,
+            "affected_users_pct": round(worst_pct),
+            "severity": severity,
+            "estimated_lost_revenue": None,
+        },
+        "evidence": [
+            {
+                "type": "session_pattern",
+                "value": f"{worst_page.total}",
+                "label": "total sessions on this page",
+                "element": None,
+                "session_ids": [],
+            },
+            {
+                "type": "rage_clicks" if worst_pct > 40 else "hesitation",
+                "value": f"{round(worst_pct)}%",
+                "label": "frustration rate",
+                "element": None,
+                "session_ids": [],
+            },
+        ],
+        "root_cause": {
+            "primary_cause": f"High frustration detected on {page_name}",
+            "explanation": f"{round(worst_pct)}% of users on this page are showing frustration signals. This indicates usability issues or technical problems.",
+            "contributing_factors": [
+                "Form or input validation issues",
+                "Confusing navigation or labels",
+                "Slow page load or response times",
+            ][:2],  # Limit to 2 factors
+        },
+        "actions": recommendations,
+        "supporting_charts": {
+            "page_stats": {
+                "total_sessions": total_sessions,
+                "avg_friction": round(worst_pct),
+                "top_emotion": "frustration",
+            },
+        },
+        "generated_at": now.isoformat(),
+    }
 
 
 @router.get("/diagnosis/issues")
 @limiter.limit("100/minute")
 async def get_diagnosis_issues(
     request: Request,
+    hours: int = Query(24, ge=1, le=720, description="Hours to look back"),
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
-    """Get diagnosis issues for the merchant (placeholder for future feature)."""
-    return {"issues": [], "total": 0}
+    """Get diagnosis issues for the merchant.
+
+    Returns all detected issues in the time window.
+    """
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(hours=hours)
+
+    # Get total sessions
+    total_result = await db.execute(
+        select(func.count()).where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+        )
+    )
+    total_sessions = total_result.scalar() or 0
+
+    # Group by page and emotion to find issues
+    pages_result = await db.execute(
+        select(
+            Session.page_url,
+            func.count().label("total"),
+            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration"),
+            func.sum(case((Session.primary_emotion == "confusion", 1), else_=0)).label("confusion"),
+            func.sum(case((Session.primary_emotion == "anxiety", 1), else_=0)).label("anxiety"),
+        )
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+            Session.primary_emotion.in_(["frustration", "confusion", "anxiety"]),
+        )
+        .group_by(Session.page_url)
+        .having(func.sum(case((Session.primary_emotion.in_(["frustration", "confusion", "anxiety"]), 1), else_=0)) > 0)
+    )
+    pages = pages_result.all()
+
+    issues = []
+    for page in pages:
+        total = page.total or 0
+        frustration = page.frustration or 0
+        confusion = page.confusion or 0
+        anxiety = page.anxiety or 0
+
+        # Find dominant negative emotion
+        emotion_counts = {
+            "frustration": frustration,
+            "confusion": confusion,
+            "anxiety": anxiety,
+        }
+        dominant_emotion = max(emotion_counts, key=emotion_counts.get)
+        emotion_count = emotion_counts[dominant_emotion]
+
+        if emotion_count == 0:
+            continue
+
+        emotion_pct = round(emotion_count / total * 100) if total > 0 else 0
+
+        # Only include if meaningful issue (>10%)
+        if emotion_pct < 10:
+            continue
+
+        # Determine severity
+        if emotion_pct >= 50:
+            severity = "high"
+        elif emotion_pct >= 25:
+            severity = "medium"
+        else:
+            severity = "low"
+
+        # Get page title
+        from urllib.parse import urlparse
+        parsed = urlparse(page.page_url)
+        page_title = parsed.path or page.page_url
+        if page_title == "/":
+            page_name = "Home"
+        else:
+            page_name = page_title.strip("/").capitalize() or "Page"
+
+        # Generate signals
+        signals = []
+        if emotion_pct > 40:
+            signals.append("negative emotions")
+        if emotion_pct > 60:
+            signals.append("high distress")
+
+        issues.append({
+            "id": str(len(issues) + 1),
+            "title": f"High {dominant_emotion} on {page_name}",
+            "page_url": page.page_url,
+            "emotion": dominant_emotion + "d",  # frustration -> frustrated
+            "percentage": emotion_pct,
+            "session_count": emotion_count,
+            "severity": severity,
+            "signals": signals,
+            "recommendation": f"Review the {page_name} page for usability issues affecting {emotion_pct}% of users.",
+        })
+
+    return {
+        "issues": issues,
+        "total_issues": len(issues),
+        "high_severity_count": sum(1 for i in issues if i["severity"] == "high"),
+    }

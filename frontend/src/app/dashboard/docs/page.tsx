@@ -171,11 +171,11 @@ export default function DocsPage() {
 
                 <h3 className="text-lg font-semibold mb-3 mt-6">HTML (Any website)</h3>
                 <CodeBlock
-                  code={`<script src="https://YOUR_DOMAIN/static/sdk/emoratest.umd.js"></script>
+                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
 </script>`}
-                  onCopy={() => copyToClipboard(`<script src="https://YOUR_DOMAIN/static/sdk/emoratest.umd.js"></script>
+                  onCopy={() => copyToClipboard(`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
 </script>`, "install-html")}
@@ -190,7 +190,7 @@ import { useEffect } from "react";
 export default function EmoraTracker() {
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = "https://YOUR_DOMAIN/static/sdk/emoratest.umd.js";
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
     script.async = true;
     script.onload = () => {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
@@ -206,7 +206,7 @@ import { useEffect } from "react";
 export default function EmoraTracker() {
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = "https://YOUR_DOMAIN/static/sdk/emoratest.umd.js";
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
     script.async = true;
     script.onload = () => {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
@@ -231,7 +231,7 @@ export default function EmoraTracker() {
 
                 <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))] mt-4">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                    <strong className="text-[hsl(var(--foreground))]">Note:</strong> Replace <code className="bg-[hsl(var(--secondary))] px-1 rounded">YOUR_DOMAIN</code> with your EmoraTest instance URL
+                    <strong className="text-[hsl(var(--foreground))]">Note:</strong> Replace <code className="bg-[hsl(var(--secondary))] px-1 rounded">emoratest.com</code> with your EmoraTest instance URL
                     and <code className="bg-[hsl(var(--secondary))] px-1 rounded">YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="text-[hsl(var(--primary))] hover:underline">Settings → SDK</a>.
                   </p>
                 </div>
@@ -309,7 +309,7 @@ if (window.EmoraTest) {
                       code={`// Example with a generic consent callback
 onConsentGranted('analytics', function() {
   const script = document.createElement('script');
-  script.src = 'https://YOUR_DOMAIN/static/sdk/emoratest.umd.js';
+  script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
   script.onload = function() {
     EmoraTest.init({ sdkKey: 'YOUR_SDK_KEY' });
   };
@@ -317,7 +317,7 @@ onConsentGranted('analytics', function() {
 });`}
                       onCopy={() => copyToClipboard(`onConsentGranted('analytics', function() {
   const script = document.createElement('script');
-  script.src = 'https://YOUR_DOMAIN/static/sdk/emoratest.umd.js';
+  script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
   script.onload = function() {
     EmoraTest.init({ sdkKey: 'YOUR_SDK_KEY' });
   };

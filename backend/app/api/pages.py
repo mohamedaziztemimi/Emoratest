@@ -218,20 +218,43 @@ async def get_page_detail(
     page_url = unquote(encoded_page)
     cutoff = datetime.now(UTC) - timedelta(days=days)
 
-    # Extract pathname for more flexible matching
-    try:
-        parsed_target = urlparse(page_url)
-        target_pathname = parsed_target.pathname or page_url
-    except Exception:
-        target_pathname = page_url
+    # Handle both full URLs and pathnames (like "/signup" or "Home")
+    # If page_url starts with "http", it's a full URL
+    # Otherwise, it's a pathname or page name
+    if not page_url.startswith("http"):
+        # It's a pathname or page name - match by contains
+        # "Home" maps to "/", "/signup" maps to pages containing "/signup"
+        if page_url == "Home" or page_url == "/":
+            page_pattern = "/"
+        else:
+            page_pattern = page_url
+    else:
+        # It's a full URL - extract pathname for matching
+        try:
+            parsed_target = urlparse(page_url)
+            page_pattern = parsed_target.pathname or page_url
+        except Exception:
+            page_pattern = page_url
 
-    # Get session count - match by exact URL OR by pathname
+    # Build query conditions - match by exact URL or by pathname contains
+    # This handles both: full URL in DB and pathname being passed
+    if page_pattern == "/":
+        # Special case for home page
+        url_condition = (Session.page_url == "/") | \
+                        (Session.page_url.contains(page_pattern)) | \
+                        (Session.page_url.contains(":80/")) | \
+                        (Session.page_url.contains(":3000/")) | \
+                        (Session.page_url.contains("emoratest.com/"))
+    else:
+        url_condition = Session.page_url.contains(page_pattern)
+
+    # Get session count
     count_result = await db.execute(
         select(func.count(Session.id))
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
-            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname))
+            url_condition,
         )
     )
     total_sessions = count_result.scalar() or 0
@@ -245,7 +268,7 @@ async def get_page_detail(
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
-            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
+            url_condition,
             Session.primary_emotion.isnot(None),
         )
         .group_by(Session.primary_emotion)
@@ -267,7 +290,7 @@ async def get_page_detail(
             Session.merchant_id == merchant.id,
             Session.started_at >= prev_cutoff,
             Session.started_at < cutoff,
-            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
+            url_condition,
             Session.primary_emotion.isnot(None),
         )
         .group_by(Session.primary_emotion)
@@ -294,7 +317,7 @@ async def get_page_detail(
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
-            (Session.page_url == page_url) | (Session.page_url.contains(target_pathname)),
+            url_condition,
         )
         .order_by(desc(Session.started_at))
         .limit(5)

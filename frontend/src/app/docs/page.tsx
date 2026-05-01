@@ -196,7 +196,7 @@ export default function DocsPage() {
                 <CodeBlock
                   id="install-html"
                   language="html"
-                  code={`<script src="https://YOUR_DOMAIN/static/sdk/emoratest.umd.js"></script>
+                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
 </script>`}
@@ -220,7 +220,7 @@ import { useEffect } from "react";
 export default function EmoraTracker() {
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = "https://YOUR_DOMAIN/static/sdk/emoratest.umd.js";
+    script.src = "https://emoratest.com/static/sdk/emoratest.umd.js";
     script.async = true;
     script.onload = () => {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
@@ -252,7 +252,7 @@ export default function EmoraTracker() {
 
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Important:</strong> Replace <code>YOUR_DOMAIN</code> with your EmoraTest instance URL and <code>YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="underline font-semibold">Settings → SDK</a>.
+                  <strong>Important:</strong> Replace <code>emoratest.com</code> with your EmoraTest instance URL and <code>YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="underline font-semibold">Settings → SDK</a>.
                 </p>
               </div>
               <p className="text-gray-600 mt-4 text-sm">
