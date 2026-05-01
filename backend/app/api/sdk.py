@@ -125,55 +125,85 @@ def extract_client_ip(request: Request) -> str | None:
 
     Returns None if no IP can be determined.
     """
+    # DEBUG: Log ALL headers for diagnosis
+    print(f"[DEBUG IP] ===== Headers received =====")
+    print(f"[DEBUG IP] CF-Connecting-IP: {request.headers.get('CF-Connecting-IP', 'MISSING')}")
+    print(f"[DEBUG IP] X-Forwarded-For: {request.headers.get('X-Forwarded-For', 'MISSING')}")
+    print(f"[DEBUG IP] X-Real-IP: {request.headers.get('X-Real-IP', 'MISSING')}")
+    print(f"[DEBUG IP] CF-Pseudo-IPv4: {request.headers.get('CF-Pseudo-IPv4', 'MISSING')}")
+    print(f"[DEBUG IP] True-Client-IP: {request.headers.get('True-Client-IP', 'MISSING')}")
+    print(f"[DEBUG IP] CF-Ray: {request.headers.get('CF-Ray', 'MISSING')}")
+    print(f"[DEBUG IP] request.client.host: {request.client.host if request.client else 'N/A'}")
+
     # 1. Cloudflare Connecting IP - most reliable when behind Cloudflare
     cf_ip = request.headers.get("CF-Connecting-IP")
     if cf_ip:
         cf_ip = cf_ip.strip()
+        print(f"[DEBUG IP] Processing CF-Connecting-IP: {cf_ip}")
         # CF-Connecting-IP can contain multiple IPs (rare), take first
         first_cf = cf_ip.split(",")[0].strip()
-        if _is_ipv4(first_cf):
+        print(f"[DEBUG IP] First CF IP: {first_cf}, is_ipv4: {_is_ipv4(first_cf)}, is_cf_ip: {_is_cloudflare_ip(first_cf)}")
+        if _is_ipv4(first_cf) and not _is_cloudflare_ip(first_cf):
+            print(f"[DEBUG IP] ✓ Returning CF-Connecting-IP: {first_cf}")
             return first_cf
-        # If CF returned IPv6, try to get IPv4 from other headers
+        # If CF returned IPv6, check for CF-Pseudo-IPv4 header (Cloudflare provides this)
         if first_cf and ":" in first_cf:
-            # Got IPv6 from CF, but prefer IPv4 from other headers
-            pass
-        elif first_cf:
-            return first_cf
+            pseudo_ipv4 = request.headers.get("CF-Pseudo-IPv4")
+            if pseudo_ipv4 and _is_ipv4(pseudo_ipv4):
+                print(f"[DEBUG IP] ✓ Returning CF-Pseudo-IPv4: {pseudo_ipv4}")
+                return pseudo_ipv4.strip()
+            # Try True-Client-IP header as well
+            true_client_ip = request.headers.get("True-Client-IP")
+            if true_client_ip and _is_ipv4(true_client_ip):
+                print(f"[DEBUG IP] ✓ Returning True-Client-IP: {true_client_ip}")
+                return true_client_ip.strip()
 
     # 2. X-Forwarded-For - format: "client IP, proxy1, proxy2, ..."
     # The LEFTMOST IP is the original client
     xff = request.headers.get("X-Forwarded-For")
     if xff:
+        print(f"[DEBUG IP] Processing X-Forwarded-For: {xff}")
         xff_ips = [ip.strip() for ip in xff.split(",")]
         for ip in xff_ips:
+            print(f"[DEBUG IP]   Checking XFF IP: {ip}, is_ipv4: {_is_ipv4(ip)}, is_cf_ip: {_is_cloudflare_ip(ip)}")
             # Return the first IPv4 found that's NOT a Cloudflare IP
             if _is_ipv4(ip) and not _is_cloudflare_ip(ip):
+                print(f"[DEBUG IP] ✓ Returning XFF IP: {ip}")
                 return ip
         # No valid IPv4 in XFF, return first non-Cloudflare IP (might be IPv6)
         for ip in xff_ips:
             if not _is_cloudflare_ip(ip):
+                print(f"[DEBUG IP] ✓ Returning XFF IP (fallback): {ip}")
                 return ip
         # All IPs are Cloudflare, return first one anyway
         if xff_ips:
+            print(f"[DEBUG IP] ⚠ Returning XFF first IP (all CF): {xff_ips[0]}")
             return xff_ips[0]
 
     # 3. X-Real-IP - set by nginx/Caddy, usually the real client IP
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
+        print(f"[DEBUG IP] Processing X-Real-IP: {real_ip}")
         real_ip = real_ip.strip()
         if _is_ipv4(real_ip) and not _is_cloudflare_ip(real_ip):
+            print(f"[DEBUG IP] ✓ Returning X-Real-IP: {real_ip}")
             return real_ip
         if real_ip and not _is_cloudflare_ip(real_ip):
+            print(f"[DEBUG IP] ✓ Returning X-Real-IP (fallback): {real_ip}")
             return real_ip
 
     # 4. Direct connection - ONLY as last resort, and check for Cloudflare IPs
     if request.client and request.client.host:
         host = request.client.host.strip()
+        print(f"[DEBUG IP] Processing request.client.host: {host}")
         if _is_ipv4(host) and not _is_cloudflare_ip(host):
+            print(f"[DEBUG IP] ✓ Returning client.host: {host}")
             return host
         if host and not _is_cloudflare_ip(host):
+            print(f"[DEBUG IP] ⚠ Returning client.host (is CF IP!): {host}")
             return host
 
+    print(f"[DEBUG IP] ✗ No IP found!")
     return None
 
 router = APIRouter(tags=["sdk"])
