@@ -45,6 +45,16 @@ function PageHeader({
   );
 }
 
+interface SummaryCardsProps {
+  total: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+  positive_pct: number;
+  neutral_pct: number;
+  negative_pct: number;
+}
+
 function SummaryCards({
   total,
   positive,
@@ -53,7 +63,7 @@ function SummaryCards({
   positive_pct,
   neutral_pct,
   negative_pct,
-}: FeedbackSummaryResponse) {
+}: SummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Responses */}
