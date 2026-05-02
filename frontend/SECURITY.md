@@ -1,31 +1,34 @@
 # Security Policy
 
-## LGPL License Findings - False Positives
+## LGPL License Findings - Accepted Risk (False Positive)
 
 ### Issue: `@img/sharp-libvips-*` packages (LGPL-3.0-or-later)
 
-**Status**: ACCEPTABLE - False Positive
+**Status**: ACCEPTED - Not a security or legal risk
 
 **Explanation**:
-These are optional native binary dependencies for the `sharp` image processing library, which is used internally by Next.js for Image Optimization.
+These are optional, platform-specific native binary dependencies for the `sharp` image processing library, used internally by Next.js for Image Optimization.
 
-1. **LGPL v3 allows dynamic linking**: These libraries are dynamically loaded at runtime, which LGPL v3 explicitly permits without requiring derivative works to be open source.
+**Why this is NOT a security or legal risk:**
 
-2. **Optional dependencies**: These packages are marked as `optional: true` in `package-lock.json` and are platform-specific (darwin-x64, linux-arm64, win32-x64, etc.).
+1. **LGPL v3 allows dynamic linking**: These libraries are dynamically loaded at runtime. LGPL v3 explicitly permits dynamic linking without requiring derivative works to be open source. The copyleft effect only applies to static linking or modifying the library itself.
 
-3. **No direct linking**: EmoraTest application code does not directly link to these libraries. They are loaded internally by:
-   - Next.js → sharp → @img/sharp-libvips-*
+2. **Indirect dependency**: EmoraTest application code does not directly link to these libraries. The dependency chain is:
+   - Next.js → sharp → @img/sharp-libvips-* (optional)
 
-4. **Falls back gracefully**: If these optional binaries are not available, sharp falls back to its own built-in binaries or the serverless prebuilt binaries.
+3. **Platform-specific**: These packages only install on matching platforms (darwin-x64, linux-arm64, etc.). They are NOT installed in all environments.
 
-**Legal Assessment**:
-- Using LGPL v3 libraries via dynamic linking does **not** require releasing your application source code
-- The copyleft effect of LGPL v3 only applies to **static linking** or **modifying the library itself**
-- Our use case is purely dynamic runtime loading
+4. **Optional**: Marked as `optional: true` - sharp falls back to its built-in binaries if unavailable.
 
-**References**:
-- [LGPL v3 FAQ - Dynamic Linking](https://www.gnu.org/licenses/lgpl-faq.html)
-- [Sharp License Documentation](https://github.com/lovell/sharp/blob/main/LICENSE)
+5. **No user data exposure**: These libraries process images locally and do not transmit any data externally.
+
+**Security scanners may flag this because:**
+- Static analysis sees LGPL license and assumes worst-case copyleft impact
+- Scanners don't understand that dynamic linking is permitted under LGPL
+- Scanners don't distinguish between optional and required dependencies
+
+**Legal Opinion**:
+Using LGPL v3 libraries via dynamic linking does NOT require releasing your application source code. This is a well-understood and accepted interpretation of LGPL v3.
 
 ---
 
