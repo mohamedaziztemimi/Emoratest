@@ -1,7 +1,7 @@
 """Consolidate 8 emotions to 4 scientifically-grounded emotions
 
 Revision ID: 020_consolidate_emotions
-Revises: 019_create_waitlist_table
+Revises: 019_create_waitlist
 Create Date: 2024-05-02
 
 This migration consolidates the 8-emotion system to a 4-emotion system:
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '020_consolidate_emotions'
-down_revision = '019_create_waitlist_table'
+down_revision = '019_create_waitlist'
 branch_labels = None
 depends_on = None
 
