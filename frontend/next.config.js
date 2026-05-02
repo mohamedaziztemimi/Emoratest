@@ -6,7 +6,6 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   compress: true,
-  swcMinify: true,
   // Image optimization
   images: {
     formats: ["image/avif", "image/webp"],

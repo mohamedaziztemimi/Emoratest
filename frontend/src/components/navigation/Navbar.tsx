@@ -5,6 +5,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { GradientButton } from "../ui";
 import { API_BASE } from "@/lib/api";
 
@@ -24,6 +26,7 @@ const NAV_LINKS: NavLink[] = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [authState, setAuthState] = useState<"loading" | "logged-in" | "logged-out">("loading");
@@ -105,7 +108,7 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <a
+            <Link
               href="/"
               className="flex items-center gap-2"
               onClick={(e) => {
@@ -126,7 +129,7 @@ export function Navbar() {
                   Beta
                 </span>
               </div>
-            </a>
+            </Link>
 
             {/* Desktop nav links */}
             <div className="hidden md:flex items-center gap-8">

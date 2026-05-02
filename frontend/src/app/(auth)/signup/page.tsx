@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { API_BASE } from "@/lib/api";
+import Link from "next/link";
 
 interface FieldError {
   name?: string;
@@ -158,9 +159,9 @@ export default function SignupPage() {
           marginBottom: "40px",
         }}
       >
-        <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+        <Link href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
           <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
-        </a>
+        </Link>
         <span
           style={{
             fontSize: "24px",
@@ -539,7 +540,7 @@ export default function SignupPage() {
                 rel="noopener noreferrer"
               >
                 Privacy Policy
-              </a>
+              </Link>
               {" and "}
               <a
                 href="/terms"
@@ -548,7 +549,7 @@ export default function SignupPage() {
                 rel="noopener noreferrer"
               >
                 Terms of Service
-              </a>
+              </Link>
             </label>
           </div>
 
@@ -606,7 +607,7 @@ export default function SignupPage() {
           }}
         >
           Sign in →
-        </a>
+        </Link>
       </p>
     </div>
   );

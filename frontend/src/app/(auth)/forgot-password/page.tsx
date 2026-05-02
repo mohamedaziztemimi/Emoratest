@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -52,9 +53,9 @@ export default function ForgotPasswordPage() {
           marginBottom: "40px",
         }}
       >
-        <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+        <Link href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
           <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
-        </a>
+        </Link>
         <span
           style={{
             fontSize: "24px",
@@ -278,7 +279,7 @@ export default function ForgotPasswordPage() {
           }}
         >
           Sign in →
-        </a>
+        </Link>
       </p>
     </div>
   );

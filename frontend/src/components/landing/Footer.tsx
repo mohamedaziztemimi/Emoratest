@@ -4,6 +4,8 @@
 
 "use client";
 
+import Link from "next/link";
+
 const FOOTER_LINKS = {
   product: [
     { label: "Features", href: "/#features" },
@@ -31,9 +33,9 @@ export function Footer() {
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
             {/* Logo */}
-            <a href="/" className="flex items-center gap-2.5 mb-4">
+            <Link href="/" className="flex items-center gap-2.5 mb-4">
               <img src="/logo2.png" alt="EmoraTest" className="h-10 w-auto" />
-            </a>
+            </Link>
 
             {/* Tagline */}
             <p className="text-sm text-[#6B7280] mb-6 max-w-xs">

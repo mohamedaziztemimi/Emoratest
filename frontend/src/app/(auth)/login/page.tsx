@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { authLogin } from "@/lib/api";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -54,9 +55,9 @@ export default function LoginPage() {
           marginBottom: "40px",
         }}
       >
-        <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+        <Link href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
           <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
-        </a>
+        </Link>
         <span
           style={{
             fontSize: "24px",
@@ -193,7 +194,7 @@ export default function LoginPage() {
                 }}
               >
                 Forgot password?
-              </a>
+              </Link>
             </div>
             <input
               id="password"
@@ -281,7 +282,7 @@ export default function LoginPage() {
           }}
         >
           Start free →
-        </a>
+        </Link>
       </p>
     </div>
   );

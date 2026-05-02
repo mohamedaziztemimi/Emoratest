@@ -6,6 +6,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 function VerifyEmailForm() {
   const searchParams = useSearchParams();
@@ -215,7 +216,7 @@ function VerifyEmailForm() {
               }}
             >
               Go to Login
-            </a>
+            </Link>
           </>
         );
 
@@ -278,7 +279,7 @@ function VerifyEmailForm() {
               }}
             >
               Go to Login
-            </a>
+            </Link>
           </>
         );
 
@@ -299,9 +300,9 @@ function VerifyEmailForm() {
           marginBottom: "40px",
         }}
       >
-        <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+        <Link href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
           <img src="/logo2.png" alt="EmoraTest" style={{ height: "80px", width: "auto" }} />
-        </a>
+        </Link>
         <span
           style={{
             fontSize: "24px",
@@ -355,9 +356,9 @@ export default function VerifyEmailPage() {
               marginBottom: "32px",
             }}
           >
-            <a href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
+            <Link href="/" style={{ textDecoration: "none", lineHeight: 0 }}>
               <img src="/logo2.png" alt="EmoraTest" style={{ height: "64px", width: "auto" }} />
-            </a>
+            </Link>
             <span
               style={{
                 fontSize: "20px",
