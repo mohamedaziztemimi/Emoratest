@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@/lib/hooks";
 import { fetchFeedbackSummary, FeedbackSummaryResponse } from "@/lib/api";
-import Card from "@/components/ui/Card";
+import { Card } from "@/components/ui";
 
 // ── Components ─────────────────────────────────────────────────
 
