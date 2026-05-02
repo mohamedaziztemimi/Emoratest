@@ -938,6 +938,7 @@ export interface DiagnosisPageItem {
   total_sessions: number;
   issue_count: number;
   critical_count: number;
+  warning_count: number;
   issues: DiagnosisIssueItem[];
 }
 
