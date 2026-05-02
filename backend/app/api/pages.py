@@ -562,11 +562,11 @@ async def get_page_detail_query(
     )
     avg_duration = duration_result.scalar() or 0
 
-    # Get behavioral signals from session_features
+    # Get behavioral signals from session_features and session
     features_result = await db.execute(
         select(
             func.avg(SessionFeatures.hesitation_score).label("avg_hesitation"),
-            func.avg(SessionFeatures.friction_score).label("avg_friction"),
+            func.avg(Session.friction_score).label("avg_friction"),
             func.avg(SessionFeatures.scroll_retreat_count).label("avg_scroll_retreats"),
             func.avg(SessionFeatures.exit_intent_count).label("avg_exit_intents"),
         )
@@ -841,11 +841,11 @@ async def get_page_detail(
     )
     avg_duration = duration_result.scalar() or 0
 
-    # Get behavioral signals from session_features
+    # Get behavioral signals from session_features and session
     features_result = await db.execute(
         select(
             func.avg(SessionFeatures.hesitation_score).label("avg_hesitation"),
-            func.avg(SessionFeatures.friction_score).label("avg_friction"),
+            func.avg(Session.friction_score).label("avg_friction"),
             func.avg(SessionFeatures.scroll_retreat_count).label("avg_scroll_retreats"),
             func.avg(SessionFeatures.exit_intent_count).label("avg_exit_intents"),
         )

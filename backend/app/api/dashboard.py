@@ -2419,6 +2419,8 @@ async def get_pages_diagnosis(
             "total_sessions": total_sessions,
             "issue_count": len(issues),
             "critical_count": critical_count,
+            "warning_count": warning_count,
+            "info_count": info_count,
             "issues": issues,
         })
 
