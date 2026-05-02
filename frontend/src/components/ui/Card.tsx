@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-interface CardProps {
+export interface CardProps {
   children: React.ReactNode;
   className?: string;
 }
