@@ -552,11 +552,27 @@ export default function DiagnosisPage() {
     );
   }
 
-  // Show "All clear" state when there are sessions but no negative emotions detected
+  // Show "All clear" state when there are 10+ sessions but no negative emotions detected
   if (!isDemoMode && diagnosis && diagnosis.summary && diagnosis.summary.affected_users_pct === 0) {
     const pageStats = diagnosis?.supporting_charts?.page_stats as Record<string, unknown> | undefined;
     const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
     const topEmotion = pageStats?.top_emotion as string | undefined;
+
+    // Not enough sessions yet - show collecting state instead of "all clear"
+    if (sessionCount < 10) {
+      return (
+        <div className="max-w-5xl mx-auto">
+          <PageHeader
+            onTimeRangeChange={setTimeRange}
+            timeRange={timeRange}
+            showDemoToggle
+            isDemoMode={false}
+            onToggleDemo={() => setIsDemoMode(true)}
+          />
+          <NoDataState sessionCount={sessionCount} onTryDemo={() => setIsDemoMode(true)} />
+        </div>
+      );
+    }
 
     return (
       <div className="max-w-5xl mx-auto">

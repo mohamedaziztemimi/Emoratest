@@ -435,6 +435,20 @@ async def get_primary_diagnosis(
         Session.started_at >= datetime.utcnow() - timedelta(hours=hours),
     ).scalar() or 0
 
+    # DEBUG: Log diagnosis state
+    print(f"[DEBUG] Diagnosis: merchant={merchant.id}, hours={hours}")
+    print(f"[DEBUG] Diagnosis: total_sessions={total_sessions_result}, aggregates_count={len(aggregates) if aggregates else 0}")
+
+    # Check if sessions have features (helpful for debugging)
+    from app.models.session_features import SessionFeatures
+    features_count = db.query(func.count(SessionFeatures.id)).join(
+        Session, Session.id == SessionFeatures.session_id
+    ).filter(
+        Session.merchant_id == merchant.id,
+        Session.started_at >= datetime.utcnow() - timedelta(hours=hours),
+    ).scalar() or 0
+    print(f"[DEBUG] Diagnosis: sessions_with_features={features_count}")
+
     if not aggregates:
         # Return neutral "no issues" state with actual session count
         return DiagnosisResponse(
