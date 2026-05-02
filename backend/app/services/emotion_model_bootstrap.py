@@ -51,6 +51,7 @@ def generate_synthetic_features(n: int = 2000) -> tuple[np.ndarray, np.ndarray]:
     """Generate synthetic training data for the 8 behavioral features.
 
     Uses the 4-emotion system: frustrated, confused, engaged, disengaged.
+    Adds 20-25% noise/overlap between profiles to prevent overconfidence.
     """
     np.random.seed(42)
 
@@ -63,55 +64,174 @@ def generate_synthetic_features(n: int = 2000) -> tuple[np.ndarray, np.ndarray]:
         start_idx = emotion_idx * samples_per_emotion
         end_idx = start_idx + samples_per_emotion
 
+        # Base profiles - with intentional overlap
         for i in range(start_idx, end_idx):
+            # Add 25% noise: 1 in 4 samples gets "confused" features from another emotion
+            noise_sample = np.random.random() < 0.25
+
             if emotion == 'frustrated':
-                # High rage clicks, high velocity variance, high hesitation
-                X[i] = [
-                    np.random.uniform(0.5, 0.9),   # hesitation_score (high)
-                    np.random.uniform(0, 5),       # price_dwell_time_s
-                    np.random.uniform(0.3, 0.8),   # rage_click_score (high)
-                    np.random.uniform(0, 2),       # scroll_retreat_count
-                    np.random.uniform(0, 1),       # exit_intent_count
-                    np.random.uniform(0, 10),      # checkout_hesitation_s
-                    np.random.uniform(10000, 80000), # velocity_variance (high)
-                    np.random.uniform(60, 600),    # session_duration_s
-                ]
+                if noise_sample:
+                    # 25% chance: looks more like confused or engaged (overlap)
+                    overlap_type = np.random.choice(['confused_overlap', 'engaged_overlap'])
+                    if overlap_type == 'confused_overlap':
+                        # High hesitation but moderate rage (confused-like)
+                        X[i] = [
+                            np.random.uniform(0.5, 0.8),   # hesitation_score
+                            np.random.uniform(1, 6),       # price_dwell_time_s
+                            np.random.uniform(0.15, 0.5),  # rage_click_score (moderate - overlap)
+                            np.random.uniform(2, 6),       # scroll_retreat_count (overlap)
+                            np.random.uniform(0, 2),       # exit_intent_count
+                            np.random.uniform(2, 15),      # checkout_hesitation_s
+                            np.random.uniform(8000, 50000), # velocity_variance (overlap)
+                            np.random.uniform(45, 300),    # session_duration_s
+                        ]
+                    else:  # engaged_overlap
+                        # Longer duration but still frustrated
+                        X[i] = [
+                            np.random.uniform(0.3, 0.7),   # hesitation_score (lower overlap)
+                            np.random.uniform(5, 15),      # price_dwell_time_s (engaged-like)
+                            np.random.uniform(0.2, 0.6),   # rage_click_score
+                            np.random.uniform(0, 3),       # scroll_retreat_count
+                            np.random.uniform(0, 2),       # exit_intent_count
+                            np.random.uniform(0, 8),       # checkout_hesitation_s
+                            np.random.uniform(5000, 30000), # velocity_variance (overlap)
+                            np.random.uniform(120, 480),   # session_duration_s (engaged-like)
+                        ]
+                else:
+                    # Classic frustrated: high rage, high velocity, high hesitation
+                    X[i] = [
+                        np.random.uniform(0.45, 0.9),  # hesitation_score (high, with lower overlap)
+                        np.random.uniform(0, 6),       # price_dwell_time_s (overlap range)
+                        np.random.uniform(0.25, 0.85),  # rage_click_score (high)
+                        np.random.uniform(0, 4),       # scroll_retreat_count (overlap)
+                        np.random.uniform(0, 2),       # exit_intent_count
+                        np.random.uniform(0, 12),      # checkout_hesitation_s
+                        np.random.uniform(8000, 80000), # velocity_variance (high)
+                        np.random.uniform(45, 480),    # session_duration_s (overlap)
+                    ]
+
             elif emotion == 'confused':
-                # High scroll retreats, moderate hesitation, low rage
-                X[i] = [
-                    np.random.uniform(0.4, 0.8),   # hesitation_score (moderate-high)
-                    np.random.uniform(0, 5),       # price_dwell_time_s
-                    np.random.uniform(0, 0.3),     # rage_click_score (low)
-                    np.random.uniform(3, 10),      # scroll_retreat_count (high)
-                    np.random.uniform(1, 4),       # exit_intent_count
-                    np.random.uniform(5, 30),      # checkout_hesitation_s
-                    np.random.uniform(1000, 20000), # velocity_variance (low-moderate)
-                    np.random.uniform(30, 300),    # session_duration_s
-                ]
+                if noise_sample:
+                    # 25% chance: looks like frustrated or disengaged
+                    overlap_type = np.random.choice(['frustrated_overlap', 'disengaged_overlap'])
+                    if overlap_type == 'frustrated_overlap':
+                        # Higher rage, less scroll retreat
+                        X[i] = [
+                            np.random.uniform(0.4, 0.75),  # hesitation_score
+                            np.random.uniform(1, 5),       # price_dwell_time_s
+                            np.random.uniform(0.2, 0.55),  # rage_click_score (frustrated-like)
+                            np.random.uniform(1, 5),       # scroll_retreat_count (lower)
+                            np.random.uniform(0, 3),       # exit_intent_count
+                            np.random.uniform(3, 20),      # checkout_hesitation_s
+                            np.random.uniform(3000, 45000), # velocity_variance (overlap)
+                            np.random.uniform(25, 240),    # session_duration_s
+                        ]
+                    else:  # disengaged_overlap
+                        # Lower activity but still confused
+                        X[i] = [
+                            np.random.uniform(0.25, 0.65), # hesitation_score (lower)
+                            np.random.uniform(0, 4),       # price_dwell_time_s
+                            np.random.uniform(0, 0.25),    # rage_click_score (low)
+                            np.random.uniform(2, 6),       # scroll_retreat_count
+                            np.random.uniform(0, 2),       # exit_intent_count
+                            np.random.uniform(2, 15),      # checkout_hesitation_s
+                            np.random.uniform(500, 15000), # velocity_variance (disengaged-like)
+                            np.random.uniform(15, 120),    # session_duration_s (shorter)
+                        ]
+                else:
+                    # Classic confused: high scroll retreats, moderate hesitation
+                    X[i] = [
+                        np.random.uniform(0.35, 0.8),  # hesitation_score (with overlap)
+                        np.random.uniform(0, 6),       # price_dwell_time_s (overlap)
+                        np.random.uniform(0, 0.4),     # rage_click_score (low-moderate)
+                        np.random.uniform(3, 10),      # scroll_retreat_count (high)
+                        np.random.uniform(1, 5),       # exit_intent_count
+                        np.random.uniform(5, 35),      # checkout_hesitation_s
+                        np.random.uniform(1000, 30000), # velocity_variance (with overlap)
+                        np.random.uniform(25, 320),    # session_duration_s (overlap)
+                    ]
+
             elif emotion == 'engaged':
-                # Low hesitation, low rage, good duration, smooth velocity
-                X[i] = [
-                    np.random.uniform(0, 0.3),     # hesitation_score (low)
-                    np.random.uniform(5, 25),      # price_dwell_time_s (reading)
-                    np.random.uniform(0, 0.15),    # rage_click_score (very low)
-                    np.random.uniform(0, 3),       # scroll_retreat_count (low)
-                    np.random.uniform(0, 1),       # exit_intent_count (low)
-                    np.random.uniform(0, 5),       # checkout_hesitation_s (low)
-                    np.random.uniform(3000, 35000), # velocity_variance (smooth)
-                    np.random.uniform(120, 900),   # session_duration_s (long)
-                ]
+                if noise_sample:
+                    # 25% chance: looks like confused or has shorter duration
+                    overlap_type = np.random.choice(['confused_overlap', 'shorter_engaged'])
+                    if overlap_type == 'confused_overlap':
+                        # More hesitation, some scroll retreats
+                        X[i] = [
+                            np.random.uniform(0.15, 0.5), # hesitation_score (higher overlap)
+                            np.random.uniform(4, 20),     # price_dwell_time_s
+                            np.random.uniform(0.05, 0.3), # rage_click_score (slightly higher)
+                            np.random.uniform(1, 5),      # scroll_retreat_count (overlap)
+                            np.random.uniform(0, 2),      # exit_intent_count
+                            np.random.uniform(1, 10),     # checkout_hesitation_s
+                            np.random.uniform(2500, 28000), # velocity_variance
+                            np.random.uniform(80, 480),   # session_duration_s
+                        ]
+                    else:  # shorter_engaged
+                        # Shorter but still engaged
+                        X[i] = [
+                            np.random.uniform(0.05, 0.35), # hesitation_score
+                            np.random.uniform(3, 15),      # price_dwell_time_s
+                            np.random.uniform(0, 0.2),     # rage_click_score
+                            np.random.uniform(0, 4),       # scroll_retreat_count
+                            np.random.uniform(0, 2),       # exit_intent_count
+                            np.random.uniform(0, 8),       # checkout_hesitation_s
+                            np.random.uniform(2000, 25000), # velocity_variance
+                            np.random.uniform(50, 200),    # session_duration_s (shorter - overlap)
+                        ]
+                else:
+                    # Classic engaged: low hesitation, low rage, long duration
+                    X[i] = [
+                        np.random.uniform(0, 0.35),    # hesitation_score (low, with overlap)
+                        np.random.uniform(4, 28),      # price_dwell_time_s (overlap)
+                        np.random.uniform(0, 0.2),     # rage_click_score (low)
+                        np.random.uniform(0, 4),       # scroll_retreat_count (overlap)
+                        np.random.uniform(0, 2),       # exit_intent_count
+                        np.random.uniform(0, 8),       # checkout_hesitation_s
+                        np.random.uniform(2500, 38000), # velocity_variance (with overlap)
+                        np.random.uniform(70, 900),    # session_duration_s (wide range)
+                    ]
+
             else:  # disengaged
-                # Very short sessions, low activity, low velocity
-                X[i] = [
-                    np.random.uniform(0, 0.2),     # hesitation_score (low)
-                    np.random.uniform(0, 3),       # price_dwell_time_s
-                    np.random.uniform(0, 0.2),     # rage_click_score (low)
-                    np.random.uniform(0, 2),       # scroll_retreat_count (low)
-                    np.random.uniform(0, 1),       # exit_intent_count (low)
-                    np.random.uniform(0, 2),       # checkout_hesitation_s (low)
-                    np.random.uniform(500, 5000),  # velocity_variance (very low)
-                    np.random.uniform(5, 60),      # session_duration_s (very short)
-                ]
+                if noise_sample:
+                    # 25% chance: looks like confused or has slightly more activity
+                    overlap_type = np.random.choice(['confused_overlap', 'mild_activity'])
+                    if overlap_type == 'confused_overlap':
+                        # More like confused but still short
+                        X[i] = [
+                            np.random.uniform(0.1, 0.4),  # hesitation_score (higher)
+                            np.random.uniform(1, 5),      # price_dwell_time_s
+                            np.random.uniform(0, 0.25),   # rage_click_score
+                            np.random.uniform(1, 4),      # scroll_retreat_count (overlap)
+                            np.random.uniform(0, 2),      # exit_intent_count
+                            np.random.uniform(0, 5),      # checkout_hesitation_s
+                            np.random.uniform(800, 12000), # velocity_variance (overlap)
+                            np.random.uniform(8, 80),     # session_duration_s (overlap)
+                        ]
+                    else:  # mild_activity
+                        # Slightly more activity but still disengaged
+                        X[i] = [
+                            np.random.uniform(0.05, 0.35), # hesitation_score
+                            np.random.uniform(1, 6),       # price_dwell_time_s (more)
+                            np.random.uniform(0, 0.25),    # rage_click_score
+                            np.random.uniform(0, 3),       # scroll_retreat_count
+                            np.random.uniform(0, 2),       # exit_intent_count
+                            np.random.uniform(0, 4),       # checkout_hesitation_s
+                            np.random.uniform(600, 8000),  # velocity_variance (higher)
+                            np.random.uniform(5, 90),      # session_duration_s (overlap)
+                        ]
+                else:
+                    # Classic disengaged: very short, low activity
+                    X[i] = [
+                        np.random.uniform(0, 0.3),     # hesitation_score (with overlap)
+                        np.random.uniform(0, 5),       # price_dwell_time_s (overlap)
+                        np.random.uniform(0, 0.25),    # rage_click_score (with overlap)
+                        np.random.uniform(0, 3),       # scroll_retreat_count (overlap)
+                        np.random.uniform(0, 2),       # exit_intent_count
+                        np.random.uniform(0, 3),       # checkout_hesitation_s
+                        np.random.uniform(400, 7000),  # velocity_variance (with overlap)
+                        np.random.uniform(4, 75),      # session_duration_s (with overlap)
+                    ]
 
             y[i] = emotion
 
