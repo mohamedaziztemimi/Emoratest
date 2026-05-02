@@ -983,6 +983,9 @@ export interface FeedbackSummaryResponse {
   positive: number;
   neutral: number;
   negative: number;
+  positive_pct: number;
+  neutral_pct: number;
+  negative_pct: number;
   by_page: FeedbackPageItem[];
   ml_comparison: MLComparisonItem[];
 }
