@@ -8,13 +8,16 @@ interface PageInsightItem {
   session_count: number;
   dominant_emotion: string;
   dominant_emotion_pct: number;
-  rage_clicks: number;
   avg_duration_seconds: number;
-  top_signals: string[];
+  frustration_rate: number;
+  rage_click_count: number;
+  bounce_rate: number;
+  trend: string | null;
 }
 
 const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
   frustrated: { color: "#EF4444", label: "Frustrated" },
+  confusion: { color: "#F59E0B", label: "Confusion" },
   confused: { color: "#F59E0B", label: "Confused" },
   engaged: { color: "#10B981", label: "Engaged" },
   disengaged: { color: "#6B7280", label: "Disengaged" },
@@ -79,8 +82,19 @@ export default function PageInsightsPage() {
     return EMOTION_CONFIG[emotion] || EMOTION_CONFIG.unknown;
   };
 
+  const getFrustrationColor = (rate: number) => {
+    if (rate >= 20) return "text-red-600 bg-red-50";
+    if (rate >= 10) return "text-amber-600 bg-amber-50";
+    return "text-green-600 bg-green-50";
+  };
+
+  const getTrendIcon = (trend: string | null) => {
+    if (trend === "up") return <span className="text-red-500">↑</span>;
+    if (trend === "down") return <span className="text-green-500">↓</span>;
+    return <span className="text-gray-400">→</span>;
+  };
+
   const handlePageClick = (pageUrl: string) => {
-    // Use query parameter to avoid issues with slashes in URLs
     router.push(`/dashboard/pages/detail?page=${encodeURIComponent(pageUrl)}`);
   };
 
@@ -100,12 +114,12 @@ export default function PageInsightsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="max-w-7xl mx-auto p-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Page insights</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Page Insights</h1>
         <p className="text-sm text-gray-500 mt-1">
-          See which pages cause the most emotional friction
+          Pages with highest emotional friction shown first
         </p>
       </div>
 
@@ -140,79 +154,85 @@ export default function PageInsightsPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                     Page
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                     Sessions
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Frustration Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Rage Clicks
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Bounce Rate
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                     Dominant Emotion
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                     Avg Duration
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                    Signals
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Trend
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {pages.map((page) => {
                   const emotionInfo = getEmotionInfo(page.dominant_emotion);
-                  const isNegative = ["frustrated", "confused", "disengaged"].includes(
-                    page.dominant_emotion
-                  );
+                  const frustrationColor = getFrustrationColor(page.frustration_rate);
 
                   return (
                     <tr
                       key={page.page_url}
                       onClick={() => handlePageClick(page.page_url)}
-                      className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                        isNegative ? "bg-red-50/30" : ""
-                      }`}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
                           <div
-                            className="w-2 h-2 rounded-full"
+                            className="w-2 h-2 rounded-full flex-shrink-0"
                             style={{ backgroundColor: emotionInfo.color }}
                           />
-                          <div>
-                            <p className="font-medium text-gray-900">{getPagePath(page.page_url)}</p>
-                            {page.rage_clicks > 0 && (
-                              <p className="text-xs text-red-600">{page.rage_clicks} rage clicks</p>
-                            )}
-                          </div>
+                          <span className="font-medium text-gray-900 truncate max-w-[150px]">
+                            {getPagePath(page.page_url)}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-4 py-4 text-sm text-gray-600">
                         {page.session_count}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${frustrationColor}`}>
+                          {page.frustration_rate}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`text-sm font-medium ${page.rage_click_count > 0 ? "text-red-600" : "text-gray-400"}`}>
+                          {page.rage_click_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        {page.bounce_rate}%
+                      </td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <span
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: emotionInfo.color }}
                           />
                           <span className="text-sm capitalize">{emotionInfo.label}</span>
-                          <span className="text-sm font-semibold">{page.dominant_emotion_pct}%</span>
+                          <span className="text-xs text-gray-500">{page.dominant_emotion_pct}%</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-4 py-4 text-sm text-gray-600">
                         {formatDuration(page.avg_duration_seconds)}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
-                          {page.top_signals.slice(0, 2).map((signal) => (
-                            <span
-                              key={signal}
-                              className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600"
-                            >
-                              {signal}
-                            </span>
-                          ))}
-                        </div>
+                      <td className="px-4 py-4">
+                        {getTrendIcon(page.trend)}
                       </td>
                     </tr>
                   );
