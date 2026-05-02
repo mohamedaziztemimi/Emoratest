@@ -320,7 +320,11 @@ class DiagnosisService:
 def _fetch_page_aggregates(
     db: DBSession, merchant_id: str, hours: int = 24
 ) -> list[dict[str, Any]]:
-    """Aggregate behavioral signals by page."""
+    """Aggregate behavioral signals by page.
+
+    Uses LEFT OUTER JOIN to include sessions even if they don't have
+    SessionFeatures yet (feature extraction may not have run).
+    """
 
     since = datetime.utcnow() - timedelta(hours=hours)
 
@@ -339,7 +343,7 @@ def _fetch_page_aggregates(
             ).label("abandon_rate"),
             func.max(Session.primary_emotion).label("top_emotion"),  # Simplified: use max as proxy
         )
-        .join(SessionFeatures, Session.id == SessionFeatures.session_id)
+        .outerjoin(SessionFeatures, Session.id == SessionFeatures.session_id)  # LEFT JOIN: include sessions without features
         .filter(
             and_(
                 Session.merchant_id == merchant_id,
@@ -357,13 +361,13 @@ def _fetch_page_aggregates(
         results.append({
             "page_url": row.page_url,
             "total_sessions": row.total_sessions,
-            "avg_rage": float(row.avg_rage) if row.avg_rage else 0,
-            "avg_hesitation": float(row.avg_hesitation) if row.avg_hesitation else 0,
-            "avg_scroll_retreat": float(row.avg_scroll_retreat) if row.avg_scroll_retreat else 0,
-            "avg_exit_intent": float(row.avg_exit_intent) if row.avg_exit_intent else 0,
-            "avg_checkout_hesitation": float(row.avg_checkout_hesitation) if row.avg_checkout_hesitation else 0,
-            "avg_friction": float(row.avg_friction) if row.avg_friction else 0,
-            "abandon_rate": float(row.abandon_rate) if row.abandon_rate else 0,
+            "avg_rage": float(row.avg_rage) if row.avg_rage is not None else 0,
+            "avg_hesitation": float(row.avg_hesitation) if row.avg_hesitation is not None else 0,
+            "avg_scroll_retreat": float(row.avg_scroll_retreat) if row.avg_scroll_retreat is not None else 0,
+            "avg_exit_intent": float(row.avg_exit_intent) if row.avg_exit_intent is not None else 0,
+            "avg_checkout_hesitation": float(row.avg_checkout_hesitation) if row.avg_checkout_hesitation is not None else 0,
+            "avg_friction": float(row.avg_friction) if row.avg_friction is not None else 0,
+            "abandon_rate": float(row.abandon_rate) if row.abandon_rate is not None else 0,
             "top_emotion": row.top_emotion,
         })
 
