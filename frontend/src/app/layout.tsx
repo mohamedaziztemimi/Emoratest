@@ -88,10 +88,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon.png", sizes: "64x64", type: "image/png" },
-      { url: "/favicon.png", sizes: "128x128", type: "image/png" },
-      { url: "/favicon.png", sizes: "256x256", type: "image/png" },
+      { url: "/favicon.png", sizes: "192x192", type: "image/png" },
       { url: "/favicon.png", sizes: "512x512", type: "image/png" },
     ],
     shortcut: "/favicon.png",

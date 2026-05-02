@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#007BFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circle background filling entire viewBox -->
+  <circle cx="50" cy="50" r="50" fill="url(#grad)"/>
+
+  <!-- Brain/Emotion icon - simplified and large -->
+  <g fill="#FFFFFF">
+    <!-- Brain outline - simplified path -->
+    <path d="M50 15 C35 15 25 25 25 40 C25 43 25.5 46 26.5 49 C24 51 22 54 22 58 C22 63 25 67 29 69 C28 71 28 73 29 75 C31 79 35 82 40 82 C43 85 46 86 50 86 C54 86 57 85 60 82 C65 82 69 79 71 75 C72 73 72 71 71 69 C75 67 78 63 78 58 C78 54 76 51 73.5 49 C74.5 46 75 43 75 40 C75 25 65 15 50 15 Z M50 78 C47 78 44 77 42 75 C42 75 38 73 36 70 C34 69 33 67 33 64 C33 62 33.5 60 34.5 58 C33 56 32 53 32 50 C32 35 38 25 50 25 C62 25 68 35 68 50 C68 53 67 56 65.5 58 C66.5 60 67 62 67 64 C67 67 66 69 64 70 C62 73 58 75 58 75 C56 77 53 78 50 78 Z" opacity="0.9"/>
+
+    <!-- Emotion indicators - dots representing the 4 behavioral states -->
+    <circle cx="38" cy="45" r="4" opacity="0.95"/>
+    <circle cx="62" cy="45" r="4" opacity="0.95"/>
+    <circle cx="50" cy="58" r="4" opacity="0.95"/>
+    <circle cx="42" cy="68" r="3" opacity="0.8"/>
+    <circle cx="58" cy="68" r="3" opacity="0.8"/>
+
+    <!-- Connection lines between emotion dots -->
+    <path d="M38 45 L50 58 L62 45" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.6"/>
+    <path d="M50 58 L42 68" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.5"/>
+    <path d="M50 58 L58 68" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.5"/>
+  </g>
+</svg>

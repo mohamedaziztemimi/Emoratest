@@ -51,6 +51,39 @@ interface UsageData {
   reset_date: string;
 }
 
+// ── Emotion Colors (4 behavioral states) ─────────────────────────────────────────
+const EMOTION_COLORS = {
+  frustrated: "#EF4444",  // red
+  confused: "#F59E0B",    // amber
+  engaged: "#10B981",     // green
+  disengaged: "#6B7280",  // gray
+} as const;
+
+// Also support old emotion names for backward compatibility with API
+const LEGACY_EMOTION_COLORS = {
+  frustration: "#EF4444",
+  confusion: "#F59E0B",
+  delight: "#10B981",
+  satisfaction: "#059669",
+  focus: "#3B82F6",
+  anxiety: "#F97316",
+  hesitation: "#8B5CF6",
+  boredom: "#6B7280",
+} as const;
+
+const getEmotionColor = (emotion: string): string => {
+  const normalized = emotion.toLowerCase();
+  // Check new 4 emotions first
+  if (normalized in EMOTION_COLORS) {
+    return EMOTION_COLORS[normalized as keyof typeof EMOTION_COLORS];
+  }
+  // Fall back to legacy colors
+  if (normalized in LEGACY_EMOTION_COLORS) {
+    return LEGACY_EMOTION_COLORS[normalized as keyof typeof LEGACY_EMOTION_COLORS];
+  }
+  return "#6B7280";
+};
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
@@ -65,6 +98,10 @@ export default function OverviewPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [dismissedUsageBanner, setDismissedUsageBanner] = useState(false);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [sdkKey, setSdkKey] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -83,6 +120,20 @@ export default function OverviewPage() {
 
         if (sessionsRes.ok) {
           const sessionsData = await sessionsRes.json();
+          setTotalSessions(sessionsData.total || 0);
+
+          // Fetch SDK key for onboarding card
+          try {
+            const sdkRes = await fetch(`${apiUrl}/api/v1/merchant/sdk-key`, {
+              credentials: "include",
+            });
+            if (sdkRes.ok) {
+              const sdkData = await sdkRes.json();
+              setSdkKey(sdkData.sdk_key || sdkData.key || null);
+            }
+          } catch {
+            // Silent fail
+          }
 
           // Fetch all dashboard data in parallel
           const [pulseRes, issueRes, pagesRes, sessionsListRes, usageRes] = await Promise.all([
@@ -128,6 +179,29 @@ export default function OverviewPage() {
     fetchDashboardData();
   }, [router]);
 
+  // Verify installation by checking if sessions exist
+  const handleVerifyInstallation = async () => {
+    setVerifying(true);
+    try {
+      const apiUrl = API_BASE;
+      const res = await fetch(`${apiUrl}/api/v1/dashboard/sessions?page=1&page_size=1`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.total > 0) {
+          setVerified(true);
+          // Reload data after verification
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   // Format time ago
   const getTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -141,26 +215,11 @@ export default function OverviewPage() {
 
   // Format duration
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return ". ";
+    if (!seconds) return ".";
     if (seconds < 60) return `${Math.round(seconds)}s`;
     const mins = Math.floor(seconds / 60);
     const secs = Math.round(seconds % 60);
     return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
-  };
-
-  // Get emotion color
-  const getEmotionColor = (emotion: string) => {
-    const colors: Record<string, string> = {
-      frustration: "#EF4444",
-      confusion: "#F59E0B",
-      anxiety: "#F97316",
-      hesitation: "#8B5CF6",
-      satisfaction: "#059669",
-      delight: "#10B981",
-      focus: "#3B82F6",
-      boredom: "#6B7280",
-    };
-    return colors[emotion] || "#6B7280";
   };
 
   return (
@@ -168,7 +227,7 @@ export default function OverviewPage() {
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="type-page-title mb-1">Overview</h1>
-        <p className="text-sm text-secondary">Your emotion intelligence command center</p>
+        <p className="text-sm text-secondary">Your behavioral intelligence command center</p>
       </div>
 
       {/* Loading State */}
@@ -184,8 +243,13 @@ export default function OverviewPage() {
         </>
       )}
 
-      {/* Session Limit Warning Banner - Prompt 13 */}
-      {!loading && usage && !dismissedUsageBanner && (
+      {/* Empty State / Onboarding Card - Show when total sessions = 0 */}
+      {!loading && totalSessions === 0 && (
+        <OnboardingCard sdkKey={sdkKey} onVerify={handleVerifyInstallation} verifying={verifying} verified={verified} />
+      )}
+
+      {/* Session Limit Warning Banner */}
+      {!loading && usage && !dismissedUsageBanner && totalSessions > 0 && (
         <div
           className="mb-6 rounded-xl p-4 flex items-center justify-between"
           style={{
@@ -248,8 +312,8 @@ export default function OverviewPage() {
         </div>
       )}
 
-      {/* Stat Cards - Prompt 14 */}
-      {!loading && (
+      {/* Stat Cards - Only show when we have data */}
+      {!loading && totalSessions > 0 && (
         <div className="stat-grid mb-8">
           <StatCard
             label="Emotion Score"
@@ -261,6 +325,7 @@ export default function OverviewPage() {
             }
             dotColor={pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#9CA3AF"}
             valueColor={pulse ? (pulse.emotion_score > 60 ? "#10B981" : pulse.emotion_score > 40 ? "#F59E0B" : "#EF4444") : "#9CA3AF"}
+            tooltip="Average behavioral state across all sessions. Higher = more positive engagement. Calculated from emotion predictions and session outcomes."
           />
           <StatCard
             label="Sessions Today"
@@ -286,36 +351,27 @@ export default function OverviewPage() {
         </div>
       )}
 
-      {/* Top Issue Card - Prompt 15 */}
-      {!loading && topIssue && (
+      {/* Top Issue Card - Only show when we have data */}
+      {!loading && totalSessions > 0 && topIssue && (
         <TopIssueCard topIssue={topIssue} />
       )}
 
-      {/* Pages Needing Attention - Prompt 16 */}
-      {!loading && pagesAttention.length > 0 && (
+      {/* Pages Needing Attention - Only show when we have data */}
+      {!loading && totalSessions > 0 && pagesAttention.length > 0 && (
         <PagesAttentionCard pages={pagesAttention} />
       )}
 
-      {/* Problem Sessions - Prompt 17 */}
-      {!loading && problemSessions.length > 0 && (
+      {/* Problem Sessions - Only show when we have data */}
+      {!loading && totalSessions > 0 && problemSessions.length > 0 && (
         <ProblemSessionsCard
           sessions={problemSessions}
           getTimeAgo={getTimeAgo}
           formatDuration={formatDuration}
-          getEmotionColor={getEmotionColor}
         />
       )}
 
-      {!loading && problemSessions.length === 0 && (
-        <div className="card" style={{ padding: "20px" }}>
-          <p className="type-body" style={{ textAlign: "center", color: "#059669" }}>
-            ✓ No frustrated sessions detected — your users are happy!
-          </p>
-        </div>
-      )}
-
-      {/* Supporting Insights */}
-      {!loading && (
+      {/* Supporting Insights - Only show when we have data */}
+      {!loading && totalSessions > 0 && (
         <SupportingInsights>
           <SupportingCard title="Emotion Trends" subtitle="Last 7 days">
             <EmotionTrendsCompact />
@@ -333,7 +389,186 @@ export default function OverviewPage() {
   );
 }
 
-// ── Stat Card Component ───────────────────────────────────────────────────────
+// ── Onboarding Card Component ─────────────────────────────────────────────────────
+
+function OnboardingCard({ sdkKey, onVerify, verifying, verified }: {
+  sdkKey: string | null;
+  onVerify: () => void;
+  verifying: boolean;
+  verified: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const codeSnippet = sdkKey
+    ? `<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+<script>
+  EmoraTest.init({ sdkKey: "${sdkKey}" });
+</script>`
+    : `<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+<script>
+  EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
+</script>`;
+
+  return (
+    <div className="card" style={{ padding: "32px", background: "linear-gradient(135deg, #EEF5FF 0%, #F3EEFF 100%)" }}>
+      <div style={{ textAlign: "center", marginBottom: "24px" }}>
+        <div style={{
+          width: "64px",
+          height: "64px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #007BFF 0%, #7C3AED 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: "0 auto 16px",
+        }}>
+          <svg style={{ width: "32px", height: "32px", color: "white" }} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111318", margin: "0 0 8px 0" }}>
+          Get started — install the SDK
+        </h2>
+        <p style={{ fontSize: "15px", color: "#6B7280", margin: 0 }}>
+          Add this snippet to your website and start tracking behavioral states
+        </p>
+      </div>
+
+      {/* SDK Key */}
+      <div style={{ marginBottom: "20px" }}>
+        <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "8px" }}>
+          Your SDK Key
+        </label>
+        <div style={{
+          display: "flex",
+          gap: "8px",
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "8px",
+          padding: "12px",
+        }}>
+          <code style={{
+            flex: 1,
+            fontFamily: "monospace",
+            fontSize: "13px",
+            color: "#374151",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {sdkKey || "Sign in to see your SDK key"}
+          </code>
+          <button
+            onClick={() => sdkKey && copyToClipboard(sdkKey)}
+            disabled={!sdkKey}
+            style={{
+              padding: "6px 12px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "white",
+              background: copied ? "#10B981" : "#007BFF",
+              border: "none",
+              borderRadius: "6px",
+              cursor: sdkKey ? "pointer" : "not-allowed",
+            }}
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
+
+      {/* Installation Code */}
+      <div style={{ marginBottom: "20px" }}>
+        <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "8px" }}>
+          Installation Code (add before &lt;/body&gt; tag)
+        </label>
+        <div style={{ position: "relative" }}>
+          <pre style={{
+            background: "#1E293B",
+            color: "#10B981",
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "12px",
+            overflow: "auto",
+            margin: 0,
+          }}>
+            {codeSnippet}
+          </pre>
+          <button
+            onClick={() => copyToClipboard(codeSnippet)}
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              padding: "4px 8px",
+              fontSize: "11px",
+              color: "white",
+              background: copied ? "#10B981" : "rgba(255,255,255,0.1)",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            {copied ? "✓" : "Copy"}
+          </button>
+        </div>
+      </div>
+
+      {/* Links and Verify */}
+      <div style={{
+        display: "flex",
+        gap: "12px",
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}>
+        <a
+          href="/docs"
+          style={{
+            fontSize: "13px",
+            color: "#007BFF",
+            textDecoration: "underline",
+          }}
+        >
+          View full documentation →
+        </a>
+        <button
+          onClick={onVerify}
+          disabled={verifying || verified}
+          style={{
+            padding: "10px 20px",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "white",
+            background: verified ? "#10B981" : "#007BFF",
+            border: "none",
+            borderRadius: "8px",
+            cursor: verifying || verified ? "default" : "pointer",
+          }}
+        >
+          {verified ? "✓ Data received!" : verifying ? "Checking..." : "Verify Installation"}
+        </button>
+      </div>
+
+      {verified && (
+        <p style={{
+          marginTop: "12px",
+          fontSize: "13px",
+          color: "#10B981",
+          textAlign: "center",
+        }}>
+          ✓ Installation verified! Reloading dashboard...
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Stat Card Component ───────────────────────────────────────────────────────────
 
 function StatCard({
   label,
@@ -341,18 +576,30 @@ function StatCard({
   subtext,
   dotColor,
   valueColor,
+  tooltip,
 }: {
   label: string;
   value: string;
   subtext: string;
   dotColor: string;
   valueColor: string;
+  tooltip?: string;
 }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   return (
-    <div className="stat-card border-blue">
+    <div
+      className="stat-card border-blue"
+      style={{ position: "relative" }}
+      onMouseEnter={() => tooltip && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
       <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dotColor }} />
         {label}
+        {tooltip && (
+          <span style={{ fontSize: "12px", color: "#9CA3AF", marginLeft: "2px" }}>ⓘ</span>
+        )}
       </div>
 
       <div className="stat-value" style={{ color: valueColor }}>
@@ -360,11 +607,30 @@ function StatCard({
       </div>
 
       <div className="stat-subtext">{subtext}</div>
+
+      {tooltip && showTooltip && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          marginTop: "8px",
+          padding: "8px 12px",
+          fontSize: "12px",
+          color: "#6B7280",
+          background: "#1F2937",
+          borderRadius: "6px",
+          zIndex: 10,
+          lineHeight: 1.4,
+        }}>
+          {tooltip}
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Top Issue Card - Prompt 15 ───────────────────────────────────────────────────
+// ── Top Issue Card ───────────────────────────────────────────────────────────────
 
 function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
   const showAllClear = !topIssue?.has_issue;
@@ -449,24 +715,10 @@ function TopIssueCard({ topIssue }: { topIssue: TopIssue | null }) {
   );
 }
 
-// ── Pages Attention Card - Prompt 16 ─────────────────────────────────────────────
+// ── Pages Attention Card ─────────────────────────────────────────────────────────
 
 function PagesAttentionCard({ pages }: { pages: PageAttention[] }) {
   const displayPages = pages;
-
-  const getEmotionColor = (emotion: string) => {
-    const colors: Record<string, string> = {
-      frustration: "#EF4444",
-      confusion: "#F59E0B",
-      anxiety: "#F97316",
-      hesitation: "#8B5CF6",
-      satisfaction: "#059669",
-      delight: "#10B981",
-      focus: "#3B82F6",
-      boredom: "#6B7280",
-    };
-    return colors[emotion] || "#6B7280";
-  };
 
   return (
     <div className="card">
@@ -521,18 +773,16 @@ function PagesAttentionCard({ pages }: { pages: PageAttention[] }) {
   );
 }
 
-// ── Problem Sessions Card - Prompt 17 ────────────────────────────────────────────
+// ── Problem Sessions Card ───────────────────────────────────────────────────────
 
 function ProblemSessionsCard({
   sessions,
   getTimeAgo,
   formatDuration,
-  getEmotionColor,
 }: {
   sessions: ProblemSession[];
   getTimeAgo: (date: string) => string;
   formatDuration: (seconds: number | null) => string;
-  getEmotionColor: (emotion: string) => string;
 }) {
   const displaySessions = sessions;
 
@@ -543,7 +793,7 @@ function ProblemSessionsCard({
           <h2 className="card-title">Sessions needing attention</h2>
         </div>
         <p className="type-body" style={{ textAlign: "center", padding: "20px 0", color: "#059669" }}>
-          ✓ No frustrated sessions detected .  your users are happy!
+          ✓ No frustrated sessions detected — your users are happy!
         </p>
       </div>
     );
@@ -614,7 +864,7 @@ function SkeletonCard({ height = "140px" }: { height?: string }) {
 }
 
 function EmotionTrendsCompact() {
-  const [data, setData] = useState<{ day: string; confusion: number; frustration: number; delight: number }[]>([]);
+  const [data, setData] = useState<{ day: string; frustrated: number; confused: number; engaged: number; disengaged: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
 
@@ -628,9 +878,10 @@ function EmotionTrendsCompact() {
             setHasData(true);
             const chartData = trendData.map((d: any) => ({
               day: d.label,
-              confusion: d.friction,
-              frustration: d.risk,
-              delight: Math.max(0, 100 - d.friction - d.risk / 2),
+              frustrated: d.risk || 0,
+              confused: d.friction || 0,
+              engaged: Math.max(0, 100 - (d.friction || 0) - (d.risk || 0) / 2),
+              disengaged: Math.max(0, (d.risk || 0) / 4),
             }));
             setData(chartData);
           }
@@ -648,7 +899,7 @@ function EmotionTrendsCompact() {
     return <div style={{ padding: "20px 0", textAlign: "center" }}><SkeletonCard height="120px" /></div>;
   }
 
-  if (data.length === 0) {
+  if (!hasData || data.length === 0) {
     return <p style={{ fontSize: "13px", color: "#9CA3AF", textAlign: "center", padding: "20px 0" }}>Trend data being collected...</p>;
   }
 
@@ -657,25 +908,28 @@ function EmotionTrendsCompact() {
       <svg viewBox="0 0 300 100" style={{ width: "100%", height: "120px" }}>
         {data.map((d, i) => {
           const x = 30 + i * 40;
-          const yConfusion = 80 - (d.confusion / 100) * 60;
-          const yFrustration = 80 - (d.frustration / 100) * 60;
-          const yDelight = 80 - (d.delight / 100) * 60;
+          const yFrustrated = 80 - (d.frustrated / 100) * 60;
+          const yConfused = 80 - (d.confused / 100) * 60;
+          const yEngaged = 80 - (d.engaged / 100) * 60;
+          const yDisengaged = 80 - (d.disengaged / 100) * 60;
 
           return (
             <g key={i}>
               <line x1={x} y1={80} x2={x} y2={20} stroke="#E5E7EB" strokeWidth="1" />
-              <circle cx={x} cy={yConfusion} r="3" fill="#F59E0B" />
-              <circle cx={x} cy={yFrustration} r="3" fill="#EF4444" />
-              <circle cx={x} cy={yDelight} r="3" fill="#10B981" />
+              <circle cx={x} cy={yFrustrated} r="3" fill={EMOTION_COLORS.frustrated} />
+              <circle cx={x} cy={yConfused} r="3" fill={EMOTION_COLORS.confused} />
+              <circle cx={x} cy={yEngaged} r="3" fill={EMOTION_COLORS.engaged} />
+              <circle cx={x} cy={yDisengaged} r="3" fill={EMOTION_COLORS.disengaged} />
               <text x={x} y="92" fontSize="8" fill="#9CA3AF" textAnchor="middle">{d.day.slice(0, 3)}</text>
             </g>
           );
         })}
       </svg>
-      <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "8px" }}>
-        <LegendItem color="#F59E0B" label="Confusion" />
-        <LegendItem color="#EF4444" label="Frustration" />
-        <LegendItem color="#10B981" label="Delight" />
+      <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
+        <LegendItem color={EMOTION_COLORS.frustrated} label="Frustrated" />
+        <LegendItem color={EMOTION_COLORS.confused} label="Confused" />
+        <LegendItem color={EMOTION_COLORS.engaged} label="Engaged" />
+        <LegendItem color={EMOTION_COLORS.disengaged} label="Disengaged" />
       </div>
     </div>
   );

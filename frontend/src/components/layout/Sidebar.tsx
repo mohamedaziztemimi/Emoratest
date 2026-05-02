@@ -155,7 +155,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             {user?.email || "merchant@emoratest.com"}
           </p>
           <span className="text-xs text-[hsl(var(--muted-foreground))]">
-            {user?.plan || "Trial"} Plan
+            {user?.plan || "trial"} plan
           </span>
         </div>
         <button
