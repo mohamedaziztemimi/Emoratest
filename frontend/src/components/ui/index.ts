@@ -21,3 +21,6 @@ export { StarRating } from "./StarRating";
 export type { StarRatingProps } from "./StarRating";
 
 export { DeleteModal } from "./DeleteModal";
+
+export { Card, CardHeader, CardBody } from "./Card";
+export type { CardProps } from "./Card";
