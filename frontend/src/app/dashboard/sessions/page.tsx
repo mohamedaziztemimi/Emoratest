@@ -535,7 +535,13 @@ const OUTCOME_OPTIONS = [
   { value: "", label: "All Results" },
   { value: "purchase", label: "Converted" },
   { value: "abandon", label: "Abandoned" },
-  { value: "browse", label: "Active" },
+  { value: "browse", label: "Left" },
+  { value: "unknown", label: "Bounced" },
+  { value: "signup", label: "Signed Up" },
+  { value: "trial_started", label: "Trial Started" },
+  { value: "lead_generated", label: "Lead" },
+  { value: "demo_booked", label: "Demo Booked" },
+  { value: "checkout_completed", label: "Checkout Done" },
 ];
 
 const DEVICE_OPTIONS = [
