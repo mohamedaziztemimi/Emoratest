@@ -21,7 +21,7 @@ const PRICING_TIERS = [
     features: [
       "Up to 500 sessions per month",
       "1 active experiment",
-      "Basic emotion detection (8 emotions)",
+      "Basic emotion detection (4 behaviors)",
       "Session explorer with filters",
       "Email support",
     ],

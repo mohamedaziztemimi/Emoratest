@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
   },
 
-  description: "EmoraTest uses ML to detect 8 emotions including frustration, confusion, and delight from mouse behavior. Find conversion killers with emotion-based A/B testing. Free plan available.",
+  description: "EmoraTest uses ML to detect 4 behavioral states from mouse patterns: frustrated, confused, engaged, and disengaged. Find conversion killers with emotion-based A/B testing. Free plan available.",
   keywords: [
     "emotion analytics",
     "user emotion detection",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "EmoraTest — Detect User Emotions from Mouse Behavior",
-    description: "EmoraTest uses ML to detect 8 emotions including frustration, confusion, and delight from mouse behavior. Find conversion killers with emotion-based A/B testing. Free plan available.",
+    description: "EmoraTest uses ML to detect 4 behavioral states from mouse patterns: frustrated, confused, engaged, and disengaged. Find conversion killers with emotion-based A/B testing. Free plan available.",
     type: "website",
     url: BASE_URL,
     siteName: "EmoraTest",
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "EmoraTest — Detect User Emotions from Mouse Behavior",
-    description: "EmoraTest uses ML to detect 8 emotions including frustration, confusion, and delight from mouse behavior. Find conversion killers with emotion-based A/B testing.",
+    description: "EmoraTest uses ML to detect 4 behavioral states from mouse patterns: frustrated, confused, engaged, and disengaged. Find conversion killers with emotion-based A/B testing.",
     images: [`${BASE_URL}/og-image.png`],
     creator: "@emoratest",
   },
@@ -144,7 +144,7 @@ export default function RootLayout({
                 price: "0",
                 priceCurrency: "USD",
               },
-              description: "Detect 8 emotions from mouse behavior on your website using ML",
+              description: "Detect 4 behavioral states from mouse patterns on your website using ML",
               url: BASE_URL,
             }),
           }}

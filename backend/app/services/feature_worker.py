@@ -208,6 +208,8 @@ def _adjust_emotion_scores(scores: dict, features: dict) -> dict:
 
     When behavior signals clearly indicate an emotional state that
     the ML model missed, we boost/reduce scores accordingly.
+
+    Works with 4 emotions: frustrated, confused, engaged, disengaged.
     """
     adjusted = dict(scores)  # copy
 
@@ -215,41 +217,34 @@ def _adjust_emotion_scores(scores: dict, features: dict) -> dict:
     exit_intents = features.get("exit_intent_count", 0)
     scroll_retreats = features.get("scroll_retreat_count", 0)
     hesitation = features.get("hesitation_score", 0)
-    checkout_hesitation = features.get("checkout_hesitation_s", 0)
     velocity_variance = features.get("velocity_variance", 0)
+    session_duration = features.get("session_duration_s", 0)
 
-    # Rule 1: High rage clicks → boost frustration
+    # Rule 1: High rage clicks → boost frustrated, reduce engaged
     if rage_clicks > 0.3:
         boost = min(rage_clicks * 0.3, 0.25)
-        adjusted["frustration"] = min(1.0, adjusted.get("frustration", 0) + boost)
-        adjusted["delight"] = max(0.0, adjusted.get("delight", 0) - boost * 0.5)
+        adjusted["frustrated"] = min(1.0, adjusted.get("frustrated", 0) + boost)
+        adjusted["engaged"] = max(0.0, adjusted.get("engaged", 0) - boost * 0.5)
 
-    # Rule 2: Many exit intents → boost anxiety
-    if exit_intents >= 3:
-        boost = min(exit_intents / 15.0, 0.2)
-        adjusted["anxiety"] = min(1.0, adjusted.get("anxiety", 0) + boost)
-        adjusted["delight"] = max(0.0, adjusted.get("delight", 0) - boost * 0.5)
-
-    # Rule 3: Scroll retreats → boost confusion
+    # Rule 2: Scroll retreats → boost confused
     if scroll_retreats >= 3:
         boost = min(scroll_retreats / 10.0, 0.2)
-        adjusted["confusion"] = min(1.0, adjusted.get("confusion", 0) + boost)
+        adjusted["confused"] = min(1.0, adjusted.get("confused", 0) + boost)
 
-    # Rule 4: High hesitation score → boost hesitation emotion
-    if hesitation > 0.3:
-        boost = min(hesitation * 0.25, 0.2)
-        adjusted["hesitation"] = min(1.0, adjusted.get("hesitation", 0) + boost)
+    # Rule 3: High hesitation score → boost confused
+    if hesitation > 0.5:
+        boost = min(hesitation * 0.2, 0.2)
+        adjusted["confused"] = min(1.0, adjusted.get("confused", 0) + boost)
 
-    # Rule 5: Checkout hesitation > 10s → boost anxiety + hesitation
-    if checkout_hesitation > 10:
-        boost = min(checkout_hesitation / 60.0, 0.15)
-        adjusted["anxiety"] = min(1.0, adjusted.get("anxiety", 0) + boost)
-        adjusted["hesitation"] = min(1.0, adjusted.get("hesitation", 0) + boost)
+    # Rule 4: Very short session → boost disengaged
+    if session_duration < 10:
+        boost = 0.2
+        adjusted["disengaged"] = min(1.0, adjusted.get("disengaged", 0) + boost)
 
-    # Rule 6: Very erratic movement (high velocity variance) → boost frustration
-    if velocity_variance > 50000:
-        boost = min(0.15, velocity_variance / 500000.0)
-        adjusted["frustration"] = min(1.0, adjusted.get("frustration", 0) + boost)
+    # Rule 5: Very erratic movement (high velocity variance) → boost frustrated
+    if velocity_variance > 500000:
+        boost = min(0.15, velocity_variance / 2000000.0)
+        adjusted["frustrated"] = min(1.0, adjusted.get("frustrated", 0) + boost)
 
     # Renormalize so scores sum to ~1.0
     total = sum(adjusted.values())
@@ -286,16 +281,15 @@ def _score_session_sync(
         # Emotion-based risk adjustment (0.3 weight)
         emotion_risk = 0.0
         if emotion_scores:
-            frustration = emotion_scores.get("frustration", 0)
-            confusion = emotion_scores.get("confusion", 0)
-            anxiety = emotion_scores.get("anxiety", 0)
-            delight = emotion_scores.get("delight", 0)
-            satisfaction = emotion_scores.get("satisfaction", 0)
+            frustrated = emotion_scores.get("frustrated", 0)
+            confused = emotion_scores.get("confused", 0)
+            engaged = emotion_scores.get("engaged", 0)
+            disengaged = emotion_scores.get("disengaged", 0)
 
             # Negative emotions increase risk
-            negative = max(frustration, confusion, anxiety)
-            # Positive emotions decrease risk
-            positive = max(delight, satisfaction)
+            negative = max(frustrated, confused, disengaged)
+            # Positive emotion decreases risk
+            positive = engaged
 
             emotion_risk = (negative * 0.3) - (positive * 0.15)
             emotion_risk = max(0.0, emotion_risk)
@@ -419,8 +413,28 @@ async def process_session(session_id: str) -> dict:
             'session_duration_s': features.get('session_duration_s', 0),
         }
 
-        emotion_result = EmotionModel.predict(feature_dict)
-        emotion_scores = emotion_result.get('all_scores') if emotion_result else None
+        # Data quality check: skip emotion prediction if insufficient data
+        # Requirements: session >= 10 seconds AND >= 5 events
+        session_duration = features.get('session_duration_s', 0)
+        event_count = len(events)
+
+        if session_duration < 10 or event_count < 5:
+            # Mark as insufficient data for reliable emotion classification
+            emotion_result = {
+                'primary_emotion': 'insufficient_data',
+                'confidence': 0.0,
+                'all_scores': None,
+                'valence': 0.5,
+                'arousal': 0.5,
+            }
+            emotion_scores = None
+            logger.debug(
+                f"Session {session_id} skipped emotion classification: "
+                f"duration={session_duration:.1f}s, events={event_count}"
+            )
+        else:
+            emotion_result = EmotionModel.predict(feature_dict)
+            emotion_scores = emotion_result.get('all_scores') if emotion_result else None
 
         # Post-processing: adjust emotion scores based on behavioral signals
         if emotion_scores:

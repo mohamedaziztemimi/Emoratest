@@ -29,12 +29,13 @@ const NAV_GROUPS = [
     items: [
       { href: "/dashboard/pages", label: "Page insights", icon: FireIcon },
       { href: "/dashboard/diagnosis", label: "Diagnosis", icon: SearchIcon },
+      { href: "/dashboard/feedback", label: "User Feedback", icon: FeedbackIcon },
     ],
   },
   {
     label: "ACT",
     items: [
-      { href: "/dashboard/experiments", label: "Experiments", icon: FlaskIcon },
+      { href: "/dashboard/experiments", label: "Experiments (Beta)", icon: FlaskIcon },
     ],
   },
   {
@@ -264,6 +265,14 @@ function AlertIcon() {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 018.835-2.535m0 14.857a23.848 23.848 0 01-8.835-2.535m8.835.069c.296-1.468.59-3.007.59-4.59 0-1.586-.205-3.124-.59-4.59m0 9.18a23.848 23.848 0 01-2.679-5.18M20.25 7.5a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0zM12 9a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function FeedbackIcon() {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9 3h9m5.5-9H12a2.25 2.25 0 00-2.25-2.25h-1.372c-.521 0-.966.351-1.091.852l-.316 1.264a1.875 1.875 0 01-1.8 1.289H5.25A2.25 2.25 0 003 11.25v7.5A2.25 2.25 0 005.25 21h1.372c.54 0 .992-.414 1.091-.952l.316-1.264a1.875 1.875 0 011.8-1.289h5.628c.54 0 .992.414 1.091.952l.316 1.264a1.875 1.875 0 001.8 1.289h1.372a2.25 2.25 0 002.25-2.25v-7.5A2.25 2.25 0 0018.75 3h-1.372c-.521 0-.966.351-1.091.852l-.316 1.264a1.875 1.875 0 01-1.8 1.289z" />
     </svg>
   );
 }

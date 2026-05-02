@@ -25,14 +25,10 @@ interface PageDetailInsight {
 }
 
 const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
-  frustration: { color: "#EF4444", label: "Frustrated" },
-  confusion: { color: "#F59E0B", label: "Confused" },
-  anxiety: { color: "#F97316", label: "Anxious" },
-  hesitation: { color: "#8B5CF6", label: "Hesitating" },
-  satisfaction: { color: "#10B981", label: "Satisfied" },
-  delight: { color: "#059669", label: "Delighted" },
-  boredom: { color: "#6B7280", label: "Bored" },
-  focus: { color: "#3B82F6", label: "Focused" },
+  frustrated: { color: "#EF4444", label: "Frustrated" },
+  confused: { color: "#F59E0B", label: "Confused" },
+  engaged: { color: "#10B981", label: "Engaged" },
+  disengaged: { color: "#6B7280", label: "Disengaged" },
 };
 
 export default function PageDetailPage() {

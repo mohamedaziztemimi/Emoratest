@@ -10,10 +10,8 @@ import { useEffect, useRef } from "react";
 const EMOTIONS = [
   { type: "confusion", color: "#F59E0B", label: "Confusion" },
   { type: "frustration", color: "#EF4444", label: "Frustration" },
-  { type: "delight", color: "#10B981", label: "Delight" },
-  { type: "anxiety", color: "#F97316", label: "Anxiety" },
-  { type: "satisfaction", color: "#059669", label: "Satisfaction" },
-  { type: "hesitation", color: "#8B5CF6", label: "Hesitation" },
+  { type: "engaged", color: "#10B981", label: "Engaged" },
+  { type: "disengaged", color: "#6B7280", label: "Disengaged" },
 ] as const;
 
 type EmotionType = typeof EMOTIONS[number]["type"];
@@ -234,20 +232,25 @@ export function HeroHeatmap() {
         style={{ aspectRatio: "600/360" }}
       />
 
-      <div className="mt-3 flex items-center justify-center gap-4 text-xs text-gray-500">
+      <div className="mt-3 flex items-center justify-center gap-3 text-xs text-gray-500">
         <span className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-          Frustration
+          Frustrated
         </span>
         <span className="w-1 h-1 bg-gray-300 rounded-full" />
         <span className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-          Confusion
+          Confused
         </span>
         <span className="w-1 h-1 bg-gray-300 rounded-full" />
         <span className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-          Delight
+          Engaged
+        </span>
+        <span className="w-1 h-1 bg-gray-300 rounded-full" />
+        <span className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#6B7280]" />
+          Disengaged
         </span>
       </div>
     </div>

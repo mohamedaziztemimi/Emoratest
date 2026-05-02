@@ -26,6 +26,7 @@ from app.models.event import Event, EventEnriched
 from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
+from app.models.session_feedback import SessionFeedback
 from app.schemas.dashboard import (
     AlertCountResponse,
     AlertResponse,
@@ -78,30 +79,34 @@ async def get_emotion_pulse(
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_ago = now - timedelta(days=7)
 
-    # Count sessions with emotions for today
+    # Count sessions with emotions for today (exclude insufficient_data)
     today_result = await db.execute(
         select(func.count()).where(
             Session.merchant_id == merchant.id,
             Session.started_at >= today_start,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     sessions_today = today_result.scalar() or 0
 
-    # Count sessions with negative emotions today
+    # Count sessions with negative emotions today (exclude insufficient_data)
     negative_result = await db.execute(
         select(func.count()).where(
             Session.merchant_id == merchant.id,
             Session.started_at >= today_start,
-            Session.primary_emotion.in_(["frustration", "confusion", "anxiety"]),
+            Session.primary_emotion.in_(["frustrated", "confused", "disengaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     sessions_with_issues = negative_result.scalar() or 0
 
-    # Count active experiments (all experiments for merchant)
+    # Count active experiments (experiments without a completed result)
+    # Experiments is in beta - only count experiments that haven't concluded
     exp_result = await db.execute(
         select(func.count()).where(
             Experiment.merchant_id == merchant.id,
+            Experiment.result.is_(None),  # Active = no result yet
         )
     )
     active_experiments = exp_result.scalar() or 0
@@ -116,14 +121,15 @@ async def get_emotion_pulse(
     )
     frustration_alerts = pages_result.scalar() or 0
 
-    # Calculate emotion score from all sessions
-    # Positive emotions: satisfaction, delight, focus
-    # Negative emotions: frustration, confusion, anxiety, hesitation, boredom
+    # Calculate emotion score from all sessions (exclude insufficient_data)
+    # Positive emotions: engaged
+    # Negative emotions: frustrated, confused, disengaged
     pos_emotions = await db.execute(
         select(func.count()).where(
             Session.merchant_id == merchant.id,
             Session.started_at >= today_start,
-            Session.primary_emotion.in_(["satisfaction", "delight", "focus"]),
+            Session.primary_emotion.in_(["engaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     pos_count = pos_emotions.scalar() or 0
@@ -132,7 +138,8 @@ async def get_emotion_pulse(
         select(func.count()).where(
             Session.merchant_id == merchant.id,
             Session.started_at >= today_start,
-            Session.primary_emotion.in_(["frustration", "confusion", "anxiety", "hesitation", "boredom"]),
+            Session.primary_emotion.in_(["frustrated", "confused", "disengaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     neg_count = neg_emotions.scalar() or 0
@@ -151,7 +158,8 @@ async def get_emotion_pulse(
             Session.merchant_id == merchant.id,
             Session.started_at >= yesterday_start,
             Session.started_at < yesterday_end,
-            Session.primary_emotion.in_(["satisfaction", "delight", "focus"]),
+            Session.primary_emotion.in_(["engaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     pos_yest = pos_yesterday.scalar() or 0
@@ -161,7 +169,8 @@ async def get_emotion_pulse(
             Session.merchant_id == merchant.id,
             Session.started_at >= yesterday_start,
             Session.started_at < yesterday_end,
-            Session.primary_emotion.in_(["frustration", "confusion", "anxiety", "hesitation", "boredom"]),
+            Session.primary_emotion.in_(["frustrated", "confused", "disengaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
     )
     neg_yest = neg_yesterday.scalar() or 0
@@ -200,17 +209,18 @@ async def get_top_issue(
     now = datetime.now(UTC)
     day_ago = now - timedelta(hours=24)
 
-    # Get all pages with sessions in last 24h
+    # Get all pages with sessions in last 24h (exclude insufficient_data)
     # Count sessions distinctly to avoid counting multiple events per session
     pages_result = await db.execute(
         select(
             Session.page_url,
             func.count(func.distinct(Session.id)).label("total"),
-            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration_count"),
+            func.sum(case((Session.primary_emotion == "frustrated", 1), else_=0)).label("frustrated_count"),
         )
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= day_ago,
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.page_url)
         .having(func.count(func.distinct(Session.id)) >= 3)  # Minimum 3 sessions
@@ -226,7 +236,7 @@ async def get_top_issue(
 
     for page in pages:
         total = page.total or 0
-        frustration_pct = (page.frustration_count or 0) / total * 100 if total > 0 else 0
+        frustration_pct = (page.frustrated_count or 0) / total * 100 if total > 0 else 0
 
         if frustration_pct > worst_pct and frustration_pct >= 20:  # Minimum 20% threshold
             worst_pct = frustration_pct
@@ -294,22 +304,22 @@ async def get_pages_attention(
     now = datetime.now(UTC)
     week_ago = now - timedelta(days=7)
 
-    # Negative emotions: frustration, confusion, anxiety, hesitation
-    negative_emotions = ["frustration", "confusion", "anxiety", "hesitation"]
+    # Negative emotions: frustrated, confused, disengaged
+    negative_emotions = ["frustrated", "confused", "disengaged"]
 
     result = await db.execute(
         select(
             Session.page_url,
             func.count().label("total_sessions"),
-            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration"),
-            func.sum(case((Session.primary_emotion == "confusion", 1), else_=0)).label("confusion"),
-            func.sum(case((Session.primary_emotion == "anxiety", 1), else_=0)).label("anxiety"),
-            func.sum(case((Session.primary_emotion == "hesitation", 1), else_=0)).label("hesitation"),
+            func.sum(case((Session.primary_emotion == "frustrated", 1), else_=0)).label("frustrated"),
+            func.sum(case((Session.primary_emotion == "confused", 1), else_=0)).label("confused"),
+            func.sum(case((Session.primary_emotion == "disengaged", 1), else_=0)).label("disengaged"),
         )
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= week_ago,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.page_url)
         .having(func.count() >= 3)
@@ -321,17 +331,15 @@ async def get_pages_attention(
     pages_list = []
     for page in pages:
         total = page.total_sessions or 0
-        frust = page.frustration or 0
-        conf = page.confusion or 0
-        anx = page.anxiety or 0
-        hes = page.hesitation or 0
+        frust = page.frustrated or 0
+        conf = page.confused or 0
+        diseng = page.disengaged or 0
 
         # Find dominant negative emotion
         neg_counts = {
-            "frustration": frust,
-            "confusion": conf,
-            "anxiety": anx,
-            "hesitation": hes,
+            "frustrated": frust,
+            "confused": conf,
+            "disengaged": diseng,
         }
         dominant_emotion = max(neg_counts, key=neg_counts.get)
         emotion_pct = neg_counts[dominant_emotion] / total * 100 if total > 0 else 0
@@ -362,13 +370,14 @@ async def get_problem_sessions(
 
     Returns sessions where primary_emotion is frustration, confusion, or anxiety.
     """
-    negative_emotions = ["frustration", "confusion", "anxiety"]
+    negative_emotions = ["frustrated", "confused"]
 
     result = await db.execute(
         select(Session)
         .where(
             Session.merchant_id == merchant.id,
             Session.primary_emotion.in_(negative_emotions),
+            Session.primary_emotion != "insufficient_data",
         )
         .order_by(Session.started_at.desc())
         .limit(limit)
@@ -1172,6 +1181,7 @@ async def get_confusion_pages(
             Session.merchant_id == merchant.id,
             Session.friction_score.isnot(None),
             Session.friction_score > 0.1,  # Only pages with meaningful friction
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.page_url)
         .order_by(func.avg(Session.friction_score).desc())
@@ -1394,10 +1404,11 @@ async def get_emotion_conversion(
     For each emotion, shows total sessions, converted vs abandoned counts,
     conversion rate, and average friction/risk scores.
     """
-    # Base query: sessions with primary_emotion for this merchant
+    # Base query: sessions with primary_emotion for this merchant (exclude insufficient_data)
     base_query = select(Session).where(
         Session.merchant_id == merchant.id,
         Session.primary_emotion.isnot(None),
+        Session.primary_emotion != "insufficient_data",
     )
     if date_from:
         base_query = base_query.where(Session.started_at >= date_from)
@@ -1417,7 +1428,7 @@ async def get_emotion_conversion(
             overall_conversion_rate=0.0,
         )
 
-    # Group by emotion and aggregate metrics
+    # Group by emotion and aggregate metrics (exclude insufficient_data)
     query = (
         select(
             Session.primary_emotion,
@@ -1430,6 +1441,7 @@ async def get_emotion_conversion(
         .where(
             Session.merchant_id == merchant.id,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
         .order_by(func.count().desc())
@@ -1489,10 +1501,11 @@ async def get_drop_off_reasons(
     Only includes abandoned sessions (outcome != 'purchase').
     Groups by page_url and primary_emotion to identify friction patterns.
     """
-    # Count total abandoned sessions with emotion
+    # Count total abandoned sessions with emotion (exclude insufficient_data)
     base_abandoned = select(Session).where(
         Session.merchant_id == merchant.id,
         Session.primary_emotion.isnot(None),
+        Session.primary_emotion != "insufficient_data",
         Session.outcome != "purchase",
     )
     if date_from:
@@ -1511,7 +1524,7 @@ async def get_drop_off_reasons(
             total_patterns=0,
         )
 
-    # Group by page_url and emotion, filter to groups with >= 2 sessions
+    # Group by page_url and emotion, filter to groups with >= 2 sessions (exclude insufficient_data)
     query = (
         select(
             Session.page_url,
@@ -1523,6 +1536,7 @@ async def get_drop_off_reasons(
         .where(
             Session.merchant_id == merchant.id,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
             Session.outcome != "purchase",
         )
         .group_by(Session.page_url, Session.primary_emotion)
@@ -1601,7 +1615,7 @@ async def get_why_analysis_summary(
     converted = converted_result.scalar() or 0
     overall_conversion_rate = converted / total_sessions if total_sessions > 0 else 0.0
 
-    # Per-emotion conversion rates (for finding top/bottom)
+    # Per-emotion conversion rates (for finding top/bottom, exclude insufficient_data)
     emotion_query = (
         select(
             Session.primary_emotion,
@@ -1611,6 +1625,7 @@ async def get_why_analysis_summary(
         .where(
             Session.merchant_id == merchant.id,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
     )
@@ -1731,7 +1746,7 @@ async def get_emotion_trend(
     else:
         start_date = end_date - timedelta(days=days)
 
-    # Query: group by date and primary_emotion
+    # Query: group by date and primary_emotion (exclude insufficient_data)
     result = await db.execute(
         select(
             cast(Session.started_at, Date).label("date"),
@@ -1744,6 +1759,7 @@ async def get_emotion_trend(
             Session.started_at >= start_date,
             Session.started_at <= end_date,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(cast(Session.started_at, Date), Session.primary_emotion)
         .order_by(cast(Session.started_at, Date))
@@ -1921,16 +1937,17 @@ async def get_primary_diagnosis(
     )
     total_sessions = sessions_result.scalar() or 0
 
-    # Group by page_url and calculate frustration rate
+    # Group by page_url and calculate frustration rate (exclude insufficient_data)
     pages_result = await db.execute(
         select(
             Session.page_url,
             func.count().label("total"),
-            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration_count"),
+            func.sum(case((Session.primary_emotion == "frustrated", 1), else_=0)).label("frustrated_count"),
         )
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.page_url)
         .having(func.count() >= 1)
@@ -1971,7 +1988,7 @@ async def get_primary_diagnosis(
 
     for page in pages:
         total = page.total or 0
-        frustration_pct = (page.frustration_count or 0) / total * 100 if total > 0 else 0
+        frustration_pct = (page.frustrated_count or 0) / total * 100 if total > 0 else 0
 
         if frustration_pct > worst_pct:
             worst_pct = frustration_pct
@@ -2081,37 +2098,38 @@ async def get_diagnosis_issues(
     )
     total_sessions = total_result.scalar() or 0
 
-    # Group by page and emotion to find issues
+    # Group by page and emotion to find issues (exclude insufficient_data)
     pages_result = await db.execute(
         select(
             Session.page_url,
             func.count().label("total"),
-            func.sum(case((Session.primary_emotion == "frustration", 1), else_=0)).label("frustration"),
-            func.sum(case((Session.primary_emotion == "confusion", 1), else_=0)).label("confusion"),
-            func.sum(case((Session.primary_emotion == "anxiety", 1), else_=0)).label("anxiety"),
+            func.sum(case((Session.primary_emotion == "frustrated", 1), else_=0)).label("frustrated"),
+            func.sum(case((Session.primary_emotion == "confused", 1), else_=0)).label("confused"),
+            func.sum(case((Session.primary_emotion == "disengaged", 1), else_=0)).label("disengaged"),
         )
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
-            Session.primary_emotion.in_(["frustration", "confusion", "anxiety"]),
+            Session.primary_emotion.in_(["frustrated", "confused", "disengaged"]),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.page_url)
-        .having(func.sum(case((Session.primary_emotion.in_(["frustration", "confusion", "anxiety"]), 1), else_=0)) > 0)
+        .having(func.sum(case((Session.primary_emotion.in_(["frustrated", "confused", "disengaged"]), 1), else_=0)) > 0)
     )
     pages = pages_result.all()
 
     issues = []
     for page in pages:
         total = page.total or 0
-        frustration = page.frustration or 0
-        confusion = page.confusion or 0
-        anxiety = page.anxiety or 0
+        frustrated = page.frustrated or 0
+        confused = page.confused or 0
+        disengaged = page.disengaged or 0
 
         # Find dominant negative emotion
         emotion_counts = {
-            "frustration": frustration,
-            "confusion": confusion,
-            "anxiety": anxiety,
+            "frustrated": frustrated,
+            "confused": confused,
+            "disengaged": disengaged,
         }
         dominant_emotion = max(emotion_counts, key=emotion_counts.get)
         emotion_count = emotion_counts[dominant_emotion]
@@ -2153,7 +2171,7 @@ async def get_diagnosis_issues(
             "id": str(len(issues) + 1),
             "title": f"High {dominant_emotion} on {page_name}",
             "page_url": page.page_url,
-            "emotion": dominant_emotion + "d",  # frustration -> frustrated
+            "emotion": dominant_emotion,  # already includes "-ed" suffix
             "percentage": emotion_pct,
             "session_count": emotion_count,
             "severity": severity,
@@ -2165,4 +2183,402 @@ async def get_diagnosis_issues(
         "issues": issues,
         "total_issues": len(issues),
         "high_severity_count": sum(1 for i in issues if i["severity"] == "high"),
+    }
+
+
+@router.get("/diagnosis")
+@limiter.limit("60/minute")
+async def get_pages_diagnosis(
+    request: Request,
+    days: int = Query(7, ge=1, le=90, description="Lookback period in days"),
+    limit: int = Query(20, ge=1, le=100, description="Max pages to return"),
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get diagnosis for all pages with detected issues.
+
+    Returns pages with issues sorted by severity (critical first).
+    Each issue includes type, severity, title, description with specific numbers,
+    affected sessions, percentage, and recommendation.
+    """
+    from datetime import timedelta
+    from sqlalchemy import select, func, and_
+    from sqlalchemy.ext.asyncio import AsyncSession as AsyncSess
+
+    from app.models.session import Session
+    from app.models.session_features import SessionFeatures
+
+    now = datetime.now(UTC)
+    since = now - timedelta(days=days)
+
+    # Get all pages with sessions in the time window
+    pages_result = await db.execute(
+        select(Session.page_url)
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= since,
+        )
+        .group_by(Session.page_url)
+        .order_by(func.count(Session.id).desc())
+        .limit(limit)
+    )
+    page_urls = [row[0] for row in pages_result.all()]
+
+    if not page_urls:
+        return {
+            "pages": [],
+            "total_pages": 0,
+            "critical_issues": 0,
+            "warning_issues": 0,
+            "info_issues": 0,
+        }
+
+    pages_with_issues = []
+    total_critical = 0
+    total_warning = 0
+    total_info = 0
+
+    for page_url in page_urls:
+        # Get session count for this page
+        total_sessions_result = await db.execute(
+            select(func.count(Session.id)).where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+            )
+        )
+        total_sessions = total_sessions_result.scalar() or 0
+
+        if total_sessions < 5:  # Minimum sessions for reliable diagnosis
+            continue
+
+        # Get feature aggregates for this page
+        features_agg = await db.execute(
+            select(
+                func.avg(SessionFeatures.rage_click_score).label("avg_rage"),
+                func.avg(SessionFeatures.hesitation_score).label("avg_hesitation"),
+                func.avg(SessionFeatures.scroll_retreat_count).label("avg_scroll_retreat"),
+                func.avg(SessionFeatures.exit_intent_count).label("avg_exit_intent"),
+                func.avg(SessionFeatures.session_duration_s).label("avg_duration"),
+            )
+            .join(Session, SessionFeatures.session_id == Session.id)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+            )
+        )
+        features_row = features_agg.first()
+
+        if not features_row:
+            continue
+
+        avg_rage = float(features_row.avg_rage) if features_row.avg_rage else 0
+        avg_hesitation = float(features_row.avg_hesitation) if features_row.avg_hesitation else 0
+        avg_scroll_retreat = float(features_row.avg_scroll_retreat) if features_row.avg_scroll_retreat else 0
+        avg_exit_intent = float(features_row.avg_exit_intent) if features_row.avg_exit_intent else 0
+        avg_duration = float(features_row.avg_duration) if features_row.avg_duration else 0
+
+        # Count sessions with rage clicks (> 0.3 threshold)
+        rage_sessions_result = await db.execute(
+            select(func.count(Session.id))
+            .join(SessionFeatures, SessionFeatures.session_id == Session.id)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+                SessionFeatures.rage_click_score > 0.3,
+            )
+        )
+        rage_sessions = rage_sessions_result.scalar() or 0
+
+        # Count short sessions (< 10 seconds)
+        short_sessions_result = await db.execute(
+            select(func.count(Session.id))
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+                Session.ended_at.isnot(None),
+                func.extract("epoch", Session.ended_at - Session.started_at) < 10,
+            )
+        )
+        short_sessions = short_sessions_result.scalar() or 0
+
+        # Count sessions with exit intent
+        exit_sessions_result = await db.execute(
+            select(func.count(Session.id))
+            .join(SessionFeatures, SessionFeatures.session_id == Session.id)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+                SessionFeatures.exit_intent_count > 0,
+            )
+        )
+        exit_sessions = exit_sessions_result.scalar() or 0
+
+        # Count sessions with hesitation
+        hesitation_sessions_result = await db.execute(
+            select(func.count(Session.id))
+            .join(SessionFeatures, SessionFeatures.session_id == Session.id)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= since,
+                SessionFeatures.hesitation_score > 0.3,
+            )
+        )
+        hesitation_sessions = hesitation_sessions_result.scalar() or 0
+
+        # Detect issues
+        issues = []
+
+        # 1. Rage Click Cluster
+        rage_percentage = (rage_sessions / total_sessions * 100) if total_sessions else 0
+        if rage_percentage >= 15:
+            severity = "critical" if rage_percentage >= 30 else "warning"
+            issues.append({
+                "type": "rage_click_cluster",
+                "severity": severity,
+                "title": f"Rage clicks detected on {_extract_page_name(page_url)}",
+                "description": f"{rage_percentage:.1f}% of sessions ({rage_sessions} sessions) show rage clicking behavior. Users are clicking repeatedly on elements that don't respond as expected.",
+                "affected_sessions": rage_sessions,
+                "affected_percentage": round(rage_percentage, 1),
+                "recommendation": "Check for broken buttons, slow-loading elements, or misleading clickable-looking elements on this page.",
+            })
+
+        # 2. High Bounce / Short Sessions
+        bounce_percentage = (short_sessions / total_sessions * 100) if total_sessions else 0
+        if bounce_percentage >= 25:
+            severity = "critical" if bounce_percentage >= 50 else "warning"
+            issues.append({
+                "type": "high_bounce",
+                "severity": severity,
+                "title": f"High bounce rate on {_extract_page_name(page_url)}",
+                "description": f"{bounce_percentage:.1f}% of visitors leave within 10 seconds. ({short_sessions} of {total_sessions} sessions)",
+                "affected_sessions": short_sessions,
+                "affected_percentage": round(bounce_percentage, 1),
+                "recommendation": "Review page load speed, above-the-fold content, and whether the page matches user expectations from the referring link.",
+            })
+
+        # 3. Scroll Confusion
+        if avg_scroll_retreat > 3:
+            issues.append({
+                "type": "scroll_confusion",
+                "severity": "warning",
+                "title": f"Users scroll back and forth on {_extract_page_name(page_url)}",
+                "description": f"Users reverse scroll direction an average of {avg_scroll_retreat:.1f} times per session, suggesting they can't find what they're looking for.",
+                "affected_sessions": total_sessions,
+                "affected_percentage": 100.0,
+                "recommendation": "Review content structure and navigation. Consider adding anchor links or a table of contents.",
+            })
+
+        # 4. Form Abandonment (exit_intent proxy)
+        abandon_percentage = (exit_sessions / total_sessions * 100) if total_sessions else 0
+        if abandon_percentage >= 15:
+            severity = "critical" if abandon_percentage >= 30 else "warning"
+            issues.append({
+                "type": "form_abandonment",
+                "severity": severity,
+                "title": f"Form abandonment detected on {_extract_page_name(page_url)}",
+                "description": f"{abandon_percentage:.1f}% of users start interacting but exit unexpectedly. ({exit_sessions} of {total_sessions} sessions)",
+                "affected_sessions": exit_sessions,
+                "affected_percentage": round(abandon_percentage, 1),
+                "recommendation": "Simplify the form, reduce required fields, add progress indicators, or break into multiple steps.",
+            })
+
+        # 5. Hesitation Before Action
+        if avg_hesitation > 0.35:
+            severity = "critical" if avg_hesitation >= 0.5 else "warning"
+            hesitation_pct = round(avg_hesitation * 100, 1)
+            issues.append({
+                "type": "hesitation",
+                "severity": severity,
+                "title": f"Users hesitate before taking action on {_extract_page_name(page_url)}",
+                "description": f"Users pause for extended periods before clicking. Average hesitation score: {hesitation_pct}%.",
+                "affected_sessions": hesitation_sessions,
+                "affected_percentage": hesitation_pct,
+                "recommendation": "Clarify your call-to-action. Make pricing, terms, or next steps more transparent.",
+            })
+
+        if not issues:
+            continue
+
+        critical_count = sum(1 for i in issues if i["severity"] == "critical")
+        warning_count = sum(1 for i in issues if i["severity"] == "warning")
+        info_count = sum(1 for i in issues if i["severity"] == "info")
+
+        total_critical += critical_count
+        total_warning += warning_count
+        total_info += info_count
+
+        pages_with_issues.append({
+            "page_url": page_url,
+            "page_name": _extract_page_name(page_url),
+            "total_sessions": total_sessions,
+            "issue_count": len(issues),
+            "critical_count": critical_count,
+            "issues": issues,
+        })
+
+    # Sort by severity: critical first, then warnings
+    pages_with_issues.sort(key=lambda p: (-p["critical_count"], -p["warning_count"]))
+
+    return {
+        "pages": pages_with_issues,
+        "total_pages": len(pages_with_issues),
+        "critical_issues": total_critical,
+        "warning_issues": total_warning,
+        "info_issues": total_info,
+    }
+
+
+def _extract_page_name(url: str) -> str:
+    """Extract human-readable page name from URL."""
+    try:
+        from urllib.parse import urlparse
+        path = urlparse(url).path
+        parts = [p for p in path.split("/") if p and not p.isdigit()]
+        if parts:
+            return " ".join(p.replace("-", " ").replace("_", " ").title() for p in parts[-2:])
+        return "Homepage"
+    except Exception:
+        return "Page"
+
+
+# ── GET /dashboard/feedback ─────────────────────────────────────────
+
+
+@router.get("/feedback")
+@limiter.limit("50/minute")
+async def get_feedback_analytics(
+    request: Request,
+    days: int | None = Query(None, ge=1, le=90, description="Days to look back (default: 30)"),
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get user feedback summary from micro-survey widget.
+
+    Args:
+        days: Number of days to look back (1-90, default: 30)
+    """
+    # Default to 30 days if not specified
+    if days is None:
+        days = 30
+
+    # Calculate cutoff date
+    cutoff_date = datetime.now(UTC) - timedelta(days=days)
+
+    # Get total counts by rating
+    summary_result = await db.execute(
+        select(
+            func.count().label("total"),
+            func.sum(case((SessionFeedback.rating == "positive", 1), else_=0)).label("positive"),
+            func.sum(case((SessionFeedback.rating == "neutral", 1), else_=0)).label("neutral"),
+            func.sum(case((SessionFeedback.rating == "negative", 1), else_=0)).label("negative"),
+        )
+        .where(
+            SessionFeedback.merchant_id == merchant.id,
+            SessionFeedback.created_at >= cutoff_date,
+        )
+    )
+    row = summary_result.one()
+
+    total = row.total or 0
+    positive = row.positive or 0
+    neutral = row.neutral or 0
+    negative = row.negative or 0
+
+    summary = {
+        "total": total,
+        "positive": positive,
+        "neutral": neutral,
+        "negative": negative,
+        "positive_pct": round(positive / total * 100) if total > 0 else 0,
+        "neutral_pct": round(neutral / total * 100) if total > 0 else 0,
+        "negative_pct": round(negative / total * 100) if total > 0 else 0,
+    }
+
+    # Get breakdown by page
+    pages_result = await db.execute(
+        select(
+            SessionFeedback.page_url,
+            func.count().label("total"),
+            func.sum(case((SessionFeedback.rating == "positive", 1), else_=0)).label("positive"),
+            func.sum(case((SessionFeedback.rating == "neutral", 1), else_=0)).label("neutral"),
+            func.sum(case((SessionFeedback.rating == "negative", 1), else_=0)).label("negative"),
+        )
+        .where(
+            SessionFeedback.merchant_id == merchant.id,
+            SessionFeedback.created_at >= cutoff_date,
+        )
+        .group_by(SessionFeedback.page_url)
+        .order_by(func.count().desc())
+        .limit(20)
+    )
+    by_page = [
+        {
+            "page_url": p.page_url,
+            "total": p.total,
+            "positive": p.positive or 0,
+            "neutral": p.neutral or 0,
+            "negative": p.negative or 0,
+            "positive_pct": round((p.positive or 0) / p.total * 100) if p.total > 0 else 0,
+            "neutral_pct": round((p.neutral or 0) / p.total * 100) if p.total > 0 else 0,
+            "negative_pct": round((p.negative or 0) / p.total * 100) if p.total > 0 else 0,
+        }
+        for p in pages_result.all()
+    ]
+
+    # Get ML vs User Feedback comparison
+    # For each emotion, count how many users said positive/neutral/negative
+    ml_comparison_result = await db.execute(
+        select(
+            Session.primary_emotion,
+            SessionFeedback.rating,
+            func.count().label("count"),
+        )
+        .join(SessionFeedback, Session.id == SessionFeedback.session_id)
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.primary_emotion.isnot(None),
+            Session.created_at >= cutoff_date,
+        )
+        .group_by(Session.primary_emotion, SessionFeedback.rating)
+    )
+
+    # Group by emotion with positive/neutral/negative counts
+    ml_comparison_map: dict[str, dict[str, int]] = {}
+    for row in ml_comparison_result.all():
+        emotion = row.primary_emotion
+        rating = row.rating
+        count = row.count
+
+        if emotion not in ml_comparison_map:
+            ml_comparison_map[emotion] = {"positive": 0, "neutral": 0, "negative": 0}
+        ml_comparison_map[emotion][rating] = count
+
+    # Convert to list format
+    ml_comparison = [
+        {
+            "predicted_emotion": emotion,
+            "positive_count": counts["positive"],
+            "neutral_count": counts["neutral"],
+            "negative_count": counts["negative"],
+            "total": counts["positive"] + counts["neutral"] + counts["negative"],
+        }
+        for emotion, counts in sorted(ml_comparison_map.items())
+    ]
+
+    # Sort by total count descending
+    ml_comparison.sort(key=lambda x: x["total"], reverse=True)
+
+    return {
+        "total": total,
+        "positive": positive,
+        "neutral": neutral,
+        "negative": negative,
+        "by_page": by_page,
+        "ml_comparison": ml_comparison,
     }

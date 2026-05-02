@@ -25,6 +25,8 @@ from app.schemas.sdk import (
     SessionCreateRequest,
     SessionCreateResponse,
     SessionOutcomeRequest,
+    SessionFeedbackRequest,
+    SurveyConfigResponse,
 )
 
 
@@ -304,7 +306,20 @@ async def create_session(
 
     await db.commit()
 
-    return SessionCreateResponse(session_id=str(session_id))
+    # Build survey config if enabled
+    survey_config: SurveyConfigResponse | None = None
+    if merchant.survey_enabled:
+        survey_config = SurveyConfigResponse(
+            enabled=True,
+            trigger=merchant.survey_trigger,
+            sample_rate=merchant.survey_sample_rate,
+            pages=list(merchant.survey_pages) if merchant.survey_pages else None,
+        )
+
+    return SessionCreateResponse(
+        session_id=str(session_id),
+        survey=survey_config
+    )
 
 
 @router.put("/sessions/{session_id}/end")
@@ -429,6 +444,46 @@ async def close_session(
     enqueue_session_processing(session_id)
 
     return {"status": "closed"}
+
+
+@router.post("/sessions/{session_id}/feedback")
+@limiter.limit("2000/minute")
+async def submit_feedback(
+    request: Request,
+    session_id: str,
+    body: SessionFeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_from_sdk_key),
+):
+    """Submit user feedback from the micro-survey widget."""
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
+
+    # Verify session exists and belongs to merchant
+    result = await db.execute(
+        select(Session.id).where(
+            Session.id == sid,
+            Session.merchant_id == merchant.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Store feedback
+    from app.models.session_feedback import SessionFeedback
+
+    feedback = SessionFeedback(
+        session_id=sid,
+        merchant_id=merchant.id,
+        rating=body.rating,
+        page_url=body.page_url,
+    )
+    db.add(feedback)
+    await db.commit()
+
+    return {"status": "recorded"}
 
 
 # ── Event ingestion ────────────────────────────────────────────

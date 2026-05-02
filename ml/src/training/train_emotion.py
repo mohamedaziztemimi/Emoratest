@@ -35,9 +35,7 @@ FEATURE_NAMES = [
 ]
 
 EMOTIONS = [
-    'confusion', 'frustration', 'delight',
-    'anxiety', 'hesitation', 'focus',
-    'boredom', 'satisfaction'
+    'frustrated', 'confused', 'engaged', 'disengaged'
 ]
 
 def train():
@@ -145,7 +143,7 @@ def train():
             'checkout_hesitation_s': 5,
             'velocity_variance': 900,
             'session_duration_s': 35,
-        }, 'frustration'),
+        }, 'frustrated'),
         ("Confused user", {
             'hesitation_score': 0.75,
             'price_dwell_time_s': 28,
@@ -155,8 +153,8 @@ def train():
             'checkout_hesitation_s': 22,
             'velocity_variance': 380,
             'session_duration_s': 130,
-        }, 'confusion'),
-        ("Delighted user", {
+        }, 'confused'),
+        ("Engaged user", {
             'hesitation_score': 0.06,
             'price_dwell_time_s': 9,
             'rage_click_score': 0.00,
@@ -165,17 +163,17 @@ def train():
             'checkout_hesitation_s': 2,
             'velocity_variance': 170,
             'session_duration_s': 260,
-        }, 'delight'),
-        ("Hesitating user", {
-            'hesitation_score': 0.85,
-            'price_dwell_time_s': 58,
-            'rage_click_score': 0.03,
-            'scroll_retreat_count': 5,
-            'exit_intent_count': 2,
-            'checkout_hesitation_s': 65,
-            'velocity_variance': 130,
-            'session_duration_s': 220,
-        }, 'hesitation'),
+        }, 'engaged'),
+        ("Disengaged user", {
+            'hesitation_score': 0.3,
+            'price_dwell_time_s': 2,
+            'rage_click_score': 0.05,
+            'scroll_retreat_count': 1,
+            'exit_intent_count': 0,
+            'checkout_hesitation_s': 1,
+            'velocity_variance': 100,
+            'session_duration_s': 5,
+        }, 'disengaged'),
     ]
 
     all_passed = True

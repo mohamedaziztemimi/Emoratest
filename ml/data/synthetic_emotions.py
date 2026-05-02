@@ -6,7 +6,7 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
     rng = np.random.default_rng(seed)
 
     profiles = {
-        'confusion': {
+        'confused': {
             'hesitation_score': (0.70, 0.10, 0, 1),
             'price_dwell_time_s': (25.0, 10.0, 0, 120),
             'rage_click_score': (0.10, 0.05, 0, 1),
@@ -16,7 +16,7 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
             'velocity_variance': (400.0, 100.0, 0, 2000),
             'session_duration_s': (120.0, 40.0, 10, 600),
         },
-        'frustration': {
+        'frustrated': {
             'hesitation_score': (0.50, 0.15, 0, 1),
             'price_dwell_time_s': (5.0, 3.0, 0, 30),
             'rage_click_score': (0.75, 0.15, 0, 1),
@@ -26,7 +26,7 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
             'velocity_variance': (850.0, 200.0, 0, 2000),
             'session_duration_s': (40.0, 20.0, 5, 180),
         },
-        'delight': {
+        'engaged': {
             'hesitation_score': (0.08, 0.05, 0, 0.3),
             'price_dwell_time_s': (8.0, 3.0, 0, 30),
             'rage_click_score': (0.00, 0.02, 0, 0.1),
@@ -36,37 +36,7 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
             'velocity_variance': (180.0, 60.0, 0, 600),
             'session_duration_s': (250.0, 60.0, 60, 900),
         },
-        'anxiety': {
-            'hesitation_score': (0.60, 0.15, 0, 1),
-            'price_dwell_time_s': (40.0, 15.0, 5, 180),
-            'rage_click_score': (0.15, 0.10, 0, 0.5),
-            'scroll_retreat_count': (5.0, 2.0, 0, 20),
-            'exit_intent_count': (4.0, 1.5, 0, 12),
-            'checkout_hesitation_s': (50.0, 15.0, 10, 180),
-            'velocity_variance': (600.0, 150.0, 0, 2000),
-            'session_duration_s': (180.0, 60.0, 30, 600),
-        },
-        'hesitation': {
-            'hesitation_score': (0.82, 0.08, 0.5, 1),
-            'price_dwell_time_s': (55.0, 20.0, 10, 240),
-            'rage_click_score': (0.04, 0.03, 0, 0.2),
-            'scroll_retreat_count': (5.0, 2.0, 0, 15),
-            'exit_intent_count': (2.0, 1.0, 0, 6),
-            'checkout_hesitation_s': (60.0, 20.0, 10, 180),
-            'velocity_variance': (140.0, 50.0, 0, 500),
-            'session_duration_s': (210.0, 70.0, 60, 800),
-        },
-        'focus': {
-            'hesitation_score': (0.12, 0.06, 0, 0.3),
-            'price_dwell_time_s': (15.0, 5.0, 0, 40),
-            'rage_click_score': (0.01, 0.01, 0, 0.05),
-            'scroll_retreat_count': (1.0, 1.0, 0, 4),
-            'exit_intent_count': (0.1, 0.3, 0, 1),
-            'checkout_hesitation_s': (3.0, 2.0, 0, 15),
-            'velocity_variance': (95.0, 35.0, 0, 300),
-            'session_duration_s': (320.0, 80.0, 90, 900),
-        },
-        'boredom': {
+        'disengaged': {
             'hesitation_score': (0.28, 0.10, 0, 0.6),
             'price_dwell_time_s': (2.0, 1.0, 0, 10),
             'rage_click_score': (0.04, 0.03, 0, 0.2),
@@ -75,16 +45,6 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
             'checkout_hesitation_s': (1.0, 1.0, 0, 8),
             'velocity_variance': (45.0, 20.0, 0, 150),
             'session_duration_s': (28.0, 12.0, 5, 80),
-        },
-        'satisfaction': {
-            'hesitation_score': (0.05, 0.03, 0, 0.15),
-            'price_dwell_time_s': (10.0, 4.0, 0, 30),
-            'rage_click_score': (0.00, 0.01, 0, 0.05),
-            'scroll_retreat_count': (0.5, 0.5, 0, 3),
-            'exit_intent_count': (0.0, 0.2, 0, 1),
-            'checkout_hesitation_s': (1.5, 1.0, 0, 8),
-            'velocity_variance': (160.0, 50.0, 0, 400),
-            'session_duration_s': (290.0, 70.0, 90, 900),
         },
     }
 
@@ -100,9 +60,7 @@ def generate_emotion_samples(emotion, n=1000, seed=None):
 
 def generate_all(n_per_class=1000, seed=42):
     emotions = [
-        'confusion', 'frustration', 'delight',
-        'anxiety', 'hesitation', 'focus',
-        'boredom', 'satisfaction'
+        'confused', 'frustrated', 'engaged', 'disengaged'
     ]
     dfs = [
         generate_emotion_samples(e, n_per_class, seed=seed+i)

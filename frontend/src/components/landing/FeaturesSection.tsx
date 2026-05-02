@@ -15,8 +15,8 @@ const FEATURES = [
   },
   {
     icon: "🧠",
-    title: "8-Emotion ML Classifier",
-    description: "Our XGBoost model detects confusion, frustration, delight, anxiety, hesitation, focus, boredom, and satisfaction from mouse behavior with 80%+ accuracy. No cameras. No surveys. Just behavior.",
+    title: "Behavioral Emotion Detection",
+    description: "Our ML model detects frustration, confusion, engagement, and disengagement from mouse behavior patterns. No cameras. No surveys. Just behavior.",
   },
   {
     icon: "🔍",

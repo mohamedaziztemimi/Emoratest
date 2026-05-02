@@ -11,16 +11,23 @@ import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 import { DeleteModal } from "@/components/ui/DeleteModal";
 
-const TYPE_OPTIONS = [
+// Integrations that are fully working
+const AVAILABLE_INTEGRATIONS = [
   { value: "slack", label: "Slack", icon: "💬", desc: "Get emotion alerts in Slack channels" },
   { value: "webhook", label: "Webhook", icon: "🔗", desc: "Send events to any URL endpoint" },
   { value: "zapier", label: "Zapier", icon: "⚡", desc: "Connect to 5000+ apps via Zapier" },
   { value: "jira", label: "Jira", icon: "📋", desc: "Create tickets from frustration alerts" },
+];
+
+// Integrations coming soon
+const COMING_SOON_INTEGRATIONS = [
   { value: "amplitude", label: "Amplitude", icon: "📊", desc: "Sync emotion data to Amplitude" },
   { value: "posthog", label: "PostHog", icon: "🦔", desc: "Send emotion events to PostHog" },
   { value: "snowflake", label: "Snowflake", icon: "❄️", desc: "Export data to Snowflake warehouse" },
   { value: "bigquery", label: "BigQuery", icon: "🔍", desc: "Stream events to Google BigQuery" },
 ];
+
+const ALL_TYPE_OPTIONS = [...AVAILABLE_INTEGRATIONS, ...COMING_SOON_INTEGRATIONS];
 
 const TYPE_COLORS: Record<string, string> = {
   slack: "bg-purple-100 text-purple-700",
@@ -32,6 +39,8 @@ const TYPE_COLORS: Record<string, string> = {
   snowflake: "bg-sky-100 text-sky-700",
   bigquery: "bg-green-100 text-green-700",
 };
+
+const COMING_SOON_TYPES = new Set(COMING_SOON_INTEGRATIONS.map((t) => t.value));
 
 const EVENT_OPTIONS = [
   { value: "session.end", label: "Session End" },
@@ -46,6 +55,8 @@ export default function IntegrationsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifySuccess, setNotifySuccess] = useState(false);
   const fetcher = useCallback(() => fetchIntegrations(), []);
   const { data, error, loading, refetch } = useQuery(fetcher, []);
 
@@ -67,6 +78,14 @@ export default function IntegrationsPage() {
     } finally {
       setDeleteLoading(false);
     }
+  }
+
+  async function handleNotifyMe(email: string) {
+    // In a real implementation, this would call an API to save the email
+    // For now, just show success message
+    setNotifyEmail(email);
+    setNotifySuccess(true);
+    setTimeout(() => setNotifySuccess(false), 3000);
   }
 
   return (
@@ -105,10 +124,13 @@ export default function IntegrationsPage() {
       ) : !data || data.integrations.length === 0 ? (
         <div className="space-y-6">
           <EmptyState title="No integrations" description="Connect your first tool to start syncing emotion data." />
+
+          {/* Available Now */}
           <div>
-            <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))] mb-4">Available Integrations</h2>
+            <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))] mb-2">Available Now</h2>
+            <p className="text-[13px] text-[hsl(var(--muted-foreground))] mb-4">Fully functional integrations ready to connect</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {TYPE_OPTIONS.map((t) => (
+              {AVAILABLE_INTEGRATIONS.map((t) => (
                 <button
                   key={t.value}
                   onClick={() => setShowCreate(true)}
@@ -118,6 +140,27 @@ export default function IntegrationsPage() {
                   <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]">{t.label}</span>
                   <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{t.desc}</span>
                 </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Coming Soon */}
+          <div>
+            <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))] mb-2">Coming Soon</h2>
+            <p className="text-[13px] text-[hsl(var(--muted-foreground))] mb-4">We're working on these integrations. Get notified when they're ready.</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {COMING_SOON_INTEGRATIONS.map((t) => (
+                <div
+                  key={t.value}
+                  className="flex flex-col items-start gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 p-4 text-left opacity-75"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-2xl">{t.icon}</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">Coming Soon</span>
+                  </div>
+                  <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]">{t.label}</span>
+                  <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{t.desc}</span>
+                </div>
               ))}
             </div>
           </div>
@@ -144,8 +187,9 @@ function IntegrationCard({
   integration: Integration;
   onDelete: () => void;
 }) {
-  const typeInfo = TYPE_OPTIONS.find((t) => t.value === intg.integration_type);
+  const typeInfo = ALL_TYPE_OPTIONS.find((t) => t.value === intg.integration_type);
   const typeColor = TYPE_COLORS[intg.integration_type] || "bg-gray-100 text-gray-700";
+  const isComingSoon = COMING_SOON_TYPES.has(intg.integration_type);
 
   return (
     <Card className="transition-all hover:shadow-md">
@@ -154,17 +198,27 @@ function IntegrationCard({
           <div className="flex items-start gap-3 flex-1">
             <span className="text-2xl mt-0.5">{typeInfo?.icon || "🔌"}</span>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">{intg.name}</h3>
                 <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium capitalize ${typeColor}`}>
                   {intg.integration_type}
                 </span>
+                {isComingSoon && (
+                  <span className="rounded-md px-2 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-700">
+                    Coming Soon
+                  </span>
+                )}
                 <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${
                   intg.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                 }`}>
                   {intg.is_active ? "Connected" : "Paused"}
                 </span>
               </div>
+              {isComingSoon && (
+                <p className="mt-2 text-[12px] text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+                  ⚠️ This integration is not yet available. We're working on it and will notify you when it's ready.
+                </p>
+              )}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {intg.events && intg.events.length > 0 && intg.events.map((ev) => (
                   <Badge key={ev} variant="outline">{ev}</Badge>
@@ -190,7 +244,7 @@ function IntegrationCard({
 function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; integration_type: string; config: Record<string, any>; events: string[] }) => Promise<void> }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [selectedType, setSelectedType] = useState("webhook");
+  const [selectedType, setSelectedType] = useState("slack"); // Default to working integration
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
   function toggleEvent(ev: string) {
@@ -210,7 +264,14 @@ function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; int
           ? { webhook_url: fd.get("webhook_url") as string }
           : selectedType === "slack"
             ? { webhook_url: fd.get("slack_webhook") as string, channel: fd.get("slack_channel") as string }
-            : { api_key: fd.get("api_key") as string },
+            : selectedType === "jira"
+              ? {
+                  base_url: fd.get("jira_base_url") as string,
+                  email: fd.get("jira_email") as string,
+                  api_token: fd.get("jira_api_token") as string,
+                  project_key: fd.get("jira_project_key") as string,
+                }
+              : { api_key: fd.get("api_key") as string },
         events: selectedEvents,
       });
     } catch (err) {
@@ -226,6 +287,9 @@ function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; int
 
   const inputCls = "rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--card))] px-4 py-2.5 text-[13px] text-[hsl(var(--foreground))] outline-none transition-colors focus:border-[hsl(var(--ring))] focus:ring-2 focus:ring-[hsl(var(--ring)/0.2)]";
 
+  // Filter out coming soon integrations from type selector
+  const availableTypes = ALL_TYPE_OPTIONS.filter((t) => !COMING_SOON_TYPES.has(t.value));
+
   return (
     <Card className="animate-scale-in">
       <CardBody>
@@ -236,11 +300,11 @@ function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; int
             </div>
           )}
 
-          {/* Type selector */}
+          {/* Type selector - only show available integrations */}
           <div>
             <span className="text-[12px] font-semibold text-[hsl(var(--muted-foreground))]">Integration Type</span>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {TYPE_OPTIONS.map((t) => (
+              {availableTypes.map((t) => (
                 <button
                   key={t.value}
                   type="button"
@@ -260,7 +324,7 @@ function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; int
 
           <label className="flex flex-col gap-1.5 text-[12px]">
             <span className="font-semibold text-[hsl(var(--muted-foreground))]">Name *</span>
-            <input name="name" required maxLength={255} className={inputCls} placeholder={`e.g. ${selectedType === "slack" ? "Alerts Channel" : "My " + selectedType + " integration"}`} />
+            <input name="name" required maxLength={255} className={inputCls} placeholder={`e.g. ${selectedType === "slack" ? "Alerts Channel" : selectedType === "jira" ? "Jira Issues" : "My " + selectedType + " integration"}`} />
           </label>
 
           {/* Type-specific config */}
@@ -282,11 +346,25 @@ function CreateIntegrationForm({ onSubmit }: { onSubmit: (f: { name: string; int
               </label>
             </div>
           )}
-          {selectedType !== "webhook" && selectedType !== "slack" && (
-            <label className="flex flex-col gap-1.5 text-[12px]">
-              <span className="font-semibold text-[hsl(var(--muted-foreground))]">API Key *</span>
-              <input name="api_key" required className={inputCls} placeholder="Enter your API key" />
-            </label>
+          {selectedType === "jira" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-[12px]">
+                <span className="font-semibold text-[hsl(var(--muted-foreground))]">Jira Base URL *</span>
+                <input name="jira_base_url" required type="url" className={inputCls} placeholder="https://your-domain.atlassian.net" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-[12px]">
+                <span className="font-semibold text-[hsl(var(--muted-foreground))]">Email *</span>
+                <input name="jira_email" required type="email" className={inputCls} placeholder="you@company.com" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-[12px]">
+                <span className="font-semibold text-[hsl(var(--muted-foreground))]">API Token *</span>
+                <input name="jira_api_token" required className={inputCls} placeholder="Your Jira API token" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-[12px]">
+                <span className="font-semibold text-[hsl(var(--muted-foreground))]">Project Key *</span>
+                <input name="jira_project_key" required className={inputCls} placeholder="PROJ" />
+              </label>
+            </div>
           )}
 
           {/* Event subscriptions */}

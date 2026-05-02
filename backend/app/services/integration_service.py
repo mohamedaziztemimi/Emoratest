@@ -251,36 +251,17 @@ class IntegrationService:
             elif integration.integration_type in (
                 IntegrationType.AMPLITUDE,
                 IntegrationType.POSTHOG,
+                IntegrationType.SNOWFLAKE,
+                IntegrationType.BIGQUERY,
             ):
-                await self._queue_analytics_event(
-                    integration, event_type, payload
-                )
+                # These integrations are not yet implemented
                 return WebhookDispatchResult(
                     integration_id=str(integration.id),
                     event_type=event_type,
-                    success=True,
-                    status_code=202,  # Accepted (queued)
+                    success=False,
+                    status_code=501,
                     duration_ms=int((time.monotonic() - start_time) * 1000),
-                )
-
-            elif integration.integration_type == IntegrationType.SNOWFLAKE:
-                await self._sync_to_warehouse(integration, payload, "snowflake")
-                return WebhookDispatchResult(
-                    integration_id=str(integration.id),
-                    event_type=event_type,
-                    success=True,
-                    status_code=200,
-                    duration_ms=int((time.monotonic() - start_time) * 1000),
-                )
-
-            elif integration.integration_type == IntegrationType.BIGQUERY:
-                await self._sync_to_warehouse(integration, payload, "bigquery")
-                return WebhookDispatchResult(
-                    integration_id=str(integration.id),
-                    event_type=event_type,
-                    success=True,
-                    status_code=200,
-                    duration_ms=int((time.monotonic() - start_time) * 1000),
+                    error=f"The {integration.integration_type} integration is not yet available. This feature is coming soon.",
                 )
 
             else:
@@ -451,6 +432,10 @@ class IntegrationService:
         Creates issue in project specified by config['project_key'].
         Type is Task, title is auto-generated from event payload.
         Returns issue URL.
+
+        Raises:
+            ValueError: If configuration is incomplete.
+            httpx.HTTPStatusError: If Jira API request fails with detailed error.
         """
         client = await self.get_http_client()
 
@@ -459,9 +444,20 @@ class IntegrationService:
         api_token = config.get("api_token")
         project_key = config.get("project_key")
 
+        # Validate configuration
         if not all([base_url, email, api_token, project_key]):
-            logger.warning("Jira configuration incomplete")
-            raise ValueError("Incomplete Jira configuration")
+            missing = []
+            if not base_url:
+                missing.append("base_url")
+            if not email:
+                missing.append("email")
+            if not api_token:
+                missing.append("api_token")
+            if not project_key:
+                missing.append("project_key")
+            raise ValueError(
+                f"Incomplete Jira configuration. Missing: {', '.join(missing)}"
+            )
 
         # Build Jira API URL
         issue_url = f"{base_url}/rest/api/3/issue"
@@ -491,8 +487,47 @@ class IntegrationService:
             "Accept": "application/json",
         }
 
-        response = await client.post(issue_url, json=jira_payload, auth=auth, headers=headers)
-        response.raise_for_status()
+        try:
+            response = await client.post(
+                issue_url,
+                json=jira_payload,
+                auth=auth,
+                headers=headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Parse Jira error response for helpful message
+            error_detail = f"Jira API error: {e.response.status_code}"
+            try:
+                error_json = e.response.json()
+                if "errors" in error_json:
+                    errors = error_json["errors"]
+                    error_messages = [
+                        f"{k}: {v}" for k, v in errors.items()
+                    ]
+                    error_detail = f"Jira API error: {', '.join(error_messages)}"
+                elif "message" in error_json:
+                    error_detail = f"Jira API error: {error_json['message']}"
+            except Exception:
+                pass
+
+            logger.error(
+                "Jira issue creation failed",
+                status_code=e.response.status_code,
+                error=error_detail,
+            )
+            raise httpx.HTTPStatusError(
+                error_detail,
+                request=e.request,
+                response=e.response,
+            ) from e
+        except httpx.RequestError as e:
+            logger.error("Jira connection error", error=str(e))
+            raise ValueError(
+                f"Could not connect to Jira at {base_url}. "
+                f"Please check the URL and your network connection."
+            ) from e
 
         issue_data = response.json()
         issue_key = issue_data.get("key", "")
@@ -547,6 +582,13 @@ h3. Recommended Action
         Batches up to ANALYTICS_BATCH_SIZE events before sending.
         Flushes every ANALYTICS_FLUSH_INTERVAL seconds.
         """
+        # Amplitude and PostHog integrations are not yet implemented
+        if integration.integration_type in (IntegrationType.AMPLITUDE, IntegrationType.POSTHOG):
+            raise NotImplementedError(
+                f"The {integration.integration_type} integration is not yet available. "
+                "This feature is coming soon."
+            )
+
         integration_id = str(integration.id)
 
         # Initialize batch for this integration
@@ -688,58 +730,24 @@ h3. Recommended Action
     ) -> None:
         """Sync rows to Snowflake data warehouse.
 
-        TODO: Implement with snowflake-connector-python
-        For now, this is a stub that logs the intent.
+        Raises:
+            NotImplementedError: Snowflake integration is not yet available.
         """
-        account = config.get("account")
-        user = config.get("user")
-        password = config.get("password")
-        database = config.get("database")
-        schema = config.get("schema", "public")
-
-        logger.info(
-            "Snowflake sync (stub)",
-            table=table,
-            schema=schema,
-            rows=len(rows),
+        raise NotImplementedError(
+            "The Snowflake integration is not yet available. This feature is coming soon."
         )
-
-        # In production:
-        # import snowflake.connector
-        # conn = snowflake.connector.connect(
-        #     account=account, user=user, password=password, database=database
-        # )
-        # cursor = conn.cursor()
-        # cursor.execute(f"INSERT INTO {schema}.{table} ...")
-        # conn.commit()
 
     async def _sync_to_bigquery(
         self, config: dict, table: str, rows: list[dict]
     ) -> None:
         """Sync rows to Google BigQuery via streaming insert.
 
-        TODO: Implement with google-cloud-bigquery
-        For now, this is a stub that logs the intent.
+        Raises:
+            NotImplementedError: BigQuery integration is not yet available.
         """
-        project_id = config.get("project_id")
-        dataset_id = config.get("dataset_id")
-        credentials = config.get("credentials_json")
-
-        logger.info(
-            "BigQuery sync (stub)",
-            table=table,
-            dataset=dataset_id,
-            project=project_id,
-            rows=len(rows),
+        raise NotImplementedError(
+            "The BigQuery integration is not yet available. This feature is coming soon."
         )
-
-        # In production:
-        # from google.cloud import bigquery
-        # client = bigquery.Client.from_service_account_json(credentials)
-        # table_ref = f"{project_id}.{dataset_id}.{table}"
-        # errors = client.insert_rows_json(table_ref, rows)
-        # if errors:
-        #     raise Exception(f"BigQuery insert errors: {errors}")
 
     # ── Generic Webhook ────────────────────────────────────
 

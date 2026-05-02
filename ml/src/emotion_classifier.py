@@ -1,7 +1,7 @@
 """Emotion classifier for behavioral signals.
 
-Classifies 8 emotions (confusion, frustration, delight, boredom, anxiety,
-focus, hesitation, satisfaction) from extracted behavioral features.
+Classifies 4 scientifically-grounded emotions (frustrated, confused, engaged, disengaged)
+from extracted behavioral features.
 """
 
 from __future__ import annotations
@@ -30,16 +30,19 @@ if TYPE_CHECKING:
 
 
 class Emotion(str, Enum):
-    """8 emotion categories for classification."""
+    """4 emotion categories for classification.
 
-    CONFUSION = "confusion"
-    FRUSTRATION = "frustration"
-    DELIGHT = "delight"
-    BOREDOM = "boredom"
-    ANXIETY = "anxiety"
-    FOCUS = "focus"
-    HESITATION = "hesitation"
-    SATISFACTION = "satisfaction"
+    These emotions are scientifically distinguishable from mouse behavior alone:
+    - FRUSTRATED: High rage clicks, high velocity variance, erratic movement
+    - CONFUSED: High scroll retreats, direction changes, hesitation
+    - ENGAGED: Steady interaction, good session duration, CTA clicks
+    - DISENGAGED: Very short sessions, low event count, high idle ratio
+    """
+
+    FRUSTRATED = "frustrated"
+    CONFUSED = "confused"
+    ENGAGED = "engaged"
+    DISENGAGED = "disengaged"
 
     @classmethod
     def all_emotions(cls) -> list[str]:
@@ -51,14 +54,10 @@ class Emotion(str, Enum):
 
 # Hardcoded valence (-1 to 1) and arousal (0 to 1) for each emotion
 VALENCE_AROUSAL = {
-    Emotion.CONFUSION: (-0.3, 0.6),
-    Emotion.FRUSTRATION: (-0.7, 0.8),
-    Emotion.DELIGHT: (0.8, 0.7),
-    Emotion.BOREDOM: (-0.2, 0.1),
-    Emotion.ANXIETY: (-0.5, 0.9),
-    Emotion.FOCUS: (0.3, 0.7),
-    Emotion.HESITATION: (-0.1, 0.4),
-    Emotion.SATISFACTION: (0.7, 0.3),
+    Emotion.FRUSTRATED: (-0.7, 0.8),   # Negative valence, high arousal (agitated)
+    Emotion.CONFUSED: (-0.3, 0.6),     # Slightly negative valence, medium-high arousal (uncertain)
+    Emotion.ENGAGED: (0.7, 0.5),       # Positive valence, medium arousal (focused)
+    Emotion.DISENGAGED: (-0.4, 0.1),   # Negative valence, low arousal (withdrawn)
 }
 
 
@@ -127,7 +126,7 @@ class EmotionClassifier:
                 max_depth=6,
                 learning_rate=0.1,
                 objective="multi:softprob",
-                num_class=8,
+                num_class=4,
                 random_state=42,
                 eval_metric="mlogloss",
             )
@@ -326,14 +325,10 @@ def generate_synthetic_training_data(n: int = 5000) -> tuple[np.ndarray, np.ndar
     """Generate synthetic training data for bootstrapping.
 
     Creates labeled samples based on rule patterns:
-    - Rage clicks → frustration
-    - High scroll reversals + idle → confusion
-    - Long session + high entropy → delight
-    - Low activity + dead clicks → boredom
-    - High burst activity → anxiety
-    - Smooth reading pauses → focus
-    - High hover on CTA + low velocity → hesitation
-    - Balanced engagement → satisfaction
+    - Frustrated: High rage clicks, high velocity variance, high hesitation
+    - Confused: High scroll retreat count, medium hesitation, many direction changes
+    - Engaged: Steady velocity, good session duration, low rage clicks, CTA clicks present
+    - Disengaged: Very short sessions, low event count, high idle ratio, minimal interaction
 
     Args:
         n: Number of samples to generate.
@@ -384,8 +379,8 @@ def generate_synthetic_training_data(n: int = 5000) -> tuple[np.ndarray, np.ndar
         "session_cta_click_count",
     ]
 
-    # Generate samples for each emotion
-    samples_per_emotion = n // 8
+    # Generate samples for each emotion (4 emotions)
+    samples_per_emotion = n // 4
 
     for emotion_idx, emotion in enumerate(Emotion.all_emotions()):
         start_idx = emotion_idx * samples_per_emotion
@@ -393,30 +388,18 @@ def generate_synthetic_training_data(n: int = 5000) -> tuple[np.ndarray, np.ndar
 
         # Generate features based on emotion patterns
         for i in range(start_idx, end_idx):
-            if emotion == Emotion.FRUSTRATION.value:
-                # High rage clicks, high velocity, high backtrack
-                X[i] = _generate_frustration_features()
-            elif emotion == Emotion.CONFUSION.value:
-                # High scroll reversals, high idle, low velocity
-                X[i] = _generate_confusion_features()
-            elif emotion == Emotion.DELIGHT.value:
-                # Long session, high entropy, balanced metrics
-                X[i] = _generate_delight_features()
-            elif emotion == Emotion.BOREDOM.value:
-                # Low velocity, high dead clicks, high idle
-                X[i] = _generate_boredom_features()
-            elif emotion == Emotion.ANXIETY.value:
-                # High burst activity, high form abandonment
-                X[i] = _generate_anxiety_features()
-            elif emotion == Emotion.FOCUS.value:
-                # Smooth movement, reading pauses, low rage clicks
-                X[i] = _generate_focus_features()
-            elif emotion == Emotion.HESITATION.value:
-                # High hover on CTA, low velocity
-                X[i] = _generate_hesitation_features()
-            else:  # SATISFACTION
-                # Balanced engagement, smooth movement
-                X[i] = _generate_satisfaction_features()
+            if emotion == Emotion.FRUSTRATED.value:
+                # High rage clicks, high velocity variance, high hesitation
+                X[i] = _generate_frustrated_features()
+            elif emotion == Emotion.CONFUSED.value:
+                # High scroll reversals, medium hesitation, many direction changes
+                X[i] = _generate_confused_features()
+            elif emotion == Emotion.ENGAGED.value:
+                # Steady velocity, good session duration, low rage clicks, CTA clicks
+                X[i] = _generate_engaged_features()
+            else:  # DISENGAGED
+                # Very short sessions, low event count, high idle ratio
+                X[i] = _generate_disengaged_features()
 
             y[i] = emotion
 
@@ -426,106 +409,65 @@ def generate_synthetic_training_data(n: int = 5000) -> tuple[np.ndarray, np.ndar
 # ── Synthetic Feature Generators ─────────────────────────────────────────
 
 
-def _generate_frustration_features() -> np.ndarray:
-    """Generate features for frustration emotion."""
+def _generate_frustrated_features() -> np.ndarray:
+    """Generate features for frustrated emotion."""
     features = np.random.randn(28) * 0.1
     # High rage clicks (index 8)
     features[8] = np.random.randint(3, 8)
-    # High velocity (indices 0-2)
-    features[0:3] += np.random.uniform(50, 100, 3)
-    # High backtrack (index 6)
+    # High velocity variance (index 1)
+    features[1] += np.random.uniform(50, 100)
+    # High backtrack ratio (index 6)
     features[6] = np.random.uniform(0.4, 0.8)
+    # Short to medium session (index 16)
+    features[16] = np.random.uniform(10, 120)
     # Normalize
     return np.abs(features)
 
 
-def _generate_confusion_features() -> np.ndarray:
-    """Generate features for confusion emotion."""
+def _generate_confused_features() -> np.ndarray:
+    """Generate features for confused emotion."""
     features = np.random.randn(28) * 0.1
     # High scroll reversals (index 12)
     features[12] = np.random.randint(5, 15)
-    # High idle ratio (index 5)
-    features[5] = np.random.uniform(0.6, 0.9)
-    # Low velocity (indices 0-2)
-    features[0:3] -= np.random.uniform(20, 40, 3)
-    return np.abs(features)
-
-
-def _generate_delight_features() -> np.ndarray:
-    """Generate features for delight emotion."""
-    features = np.random.randn(28) * 0.1
-    # Long session (index 16)
-    features[16] = np.random.uniform(200, 600)
-    # High entropy (index 10)
-    features[10] = np.random.uniform(0.7, 0.95)
-    # Balanced metrics
-    features[8] = np.random.uniform(0, 1)  # Low rage clicks
-    return np.abs(features)
-
-
-def _generate_boredom_features() -> np.ndarray:
-    """Generate features for boredom emotion."""
-    features = np.random.randn(28) * 0.1
-    # Low velocity (indices 0-2)
-    features[0:3] -= np.random.uniform(30, 60, 3)
-    # High dead clicks (index 9)
-    features[9] = np.random.randint(3, 10)
-    # High idle ratio (index 5)
-    features[5] = np.random.uniform(0.7, 0.95)
-    # Low event rate (index 17)
-    features[17] = np.random.uniform(0.1, 0.5)
-    return np.abs(features)
-
-
-def _generate_anxiety_features() -> np.ndarray:
-    """Generate features for anxiety emotion."""
-    features = np.random.randn(28) * 0.1
-    # High burst activity (index 22)
-    features[22] = np.random.randint(5, 15)
-    # High form abandonment (index 19)
-    features[19] = np.random.randint(2, 8)
-    # High scroll variance (index 13)
-    features[13] = np.random.uniform(50, 200)
-    return np.abs(features)
-
-
-def _generate_focus_features() -> np.ndarray:
-    """Generate features for focus emotion."""
-    features = np.random.randn(28) * 0.1
-    # Smooth movement (low std, index 1)
-    features[1] = np.random.uniform(5, 20)
-    # Reading pauses (index 15)
-    features[15] = np.random.randint(5, 12)
-    # Low rage clicks (index 8)
-    features[8] = np.random.uniform(0, 1)
-    # High engagement ratio (index 17)
-    features[17] = np.random.uniform(0.7, 0.95)
-    return np.abs(features)
-
-
-def _generate_hesitation_features() -> np.ndarray:
-    """Generate features for hesitation emotion."""
-    features = np.random.randn(28) * 0.1
-    # High hover on CTA (index 4)
-    features[4] = np.random.uniform(3000, 8000)
-    # Low velocity (indices 0-2)
-    features[0:3] -= np.random.uniform(20, 50, 3)
     # High direction changes (index 3)
     features[3] = np.random.uniform(2, 5)
+    # Medium idle ratio (index 5)
+    features[5] = np.random.uniform(0.4, 0.7)
+    # Low to medium velocity (indices 0-2)
+    features[0:3] -= np.random.uniform(10, 30, 3)
     return np.abs(features)
 
 
-def _generate_satisfaction_features() -> np.ndarray:
-    """Generate features for satisfaction emotion."""
+def _generate_engaged_features() -> np.ndarray:
+    """Generate features for engaged emotion."""
     features = np.random.randn(28) * 0.1
-    # Balanced metrics
-    features[0:28] = np.abs(features)
-    # Moderate velocity (indices 0-2)
-    features[0:3] = np.random.uniform(30, 70, 3)
-    # Low double-click rate (index 11)
-    features[11] = np.random.uniform(0, 0.1)
-    # High engagement (index 17)
-    features[17] = np.random.uniform(0.8, 0.95)
+    # Steady velocity (low std, index 1)
+    features[1] = np.random.uniform(10, 40)
+    # Long session (index 16)
+    features[16] = np.random.uniform(100, 600)
+    # Low rage clicks (index 8)
+    features[8] = np.random.uniform(0, 1)
+    # CTA clicks present (index 27)
+    features[27] = np.random.randint(1, 5)
+    # High engagement ratio (index 17)
+    features[17] = np.random.uniform(0.7, 0.95)
     # Low idle ratio (index 5)
-    features[5] = np.random.uniform(0.1, 0.3)
-    return features
+    features[5] = np.random.uniform(0.1, 0.4)
+    return np.abs(features)
+
+
+def _generate_disengaged_features() -> np.ndarray:
+    """Generate features for disengaged emotion."""
+    features = np.random.randn(28) * 0.1
+    # Very short session (index 16)
+    features[16] = np.random.uniform(1, 15)
+    # Low event count (index 17)
+    features[17] = np.random.uniform(0.05, 0.3)
+    # High idle ratio (index 5)
+    features[5] = np.random.uniform(0.7, 0.95)
+    # Low velocity overall (indices 0-2)
+    features[0:3] -= np.random.uniform(20, 50, 3)
+    # Few interactions
+    features[8] = np.random.uniform(0, 1)  # Low rage clicks
+    features[27] = 0  # No CTA clicks
+    return np.abs(features)

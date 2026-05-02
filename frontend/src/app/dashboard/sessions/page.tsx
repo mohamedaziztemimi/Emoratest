@@ -128,38 +128,28 @@ const OUTCOME_VARIANT: Record<string, "default" | "success" | "warning" | "destr
 };
 
 const EMOTION_COLORS: Record<string, string> = {
-  confusion: "#F59E0B",
-  frustration: "#EF4444",
-  delight: "#10B981",
-  anxiety: "#F97316",
-  hesitation: "#8B5CF6",
-  focus: "#3B82F6",
-  boredom: "#6B7280",
-  satisfaction: "#059669",
+  frustrated: "#EF4444",
+  confused: "#F59E0B",
+  engaged: "#10B981",
+  disengaged: "#6B7280",
+  insufficient_data: "#D1D5DB",
 };
 
 const EMOTION_DISPLAY: Record<string, string> = {
-  confusion: "Confused",
-  frustration: "Frustrated",
-  delight: "Delighted",
-  anxiety: "Anxious",
-  hesitation: "Hesitating",
-  focus: "Focused",
-  boredom: "Bored",
-  satisfaction: "Satisfied",
+  frustrated: "Frustrated",
+  confused: "Confused",
+  engaged: "Engaged",
+  disengaged: "Disengaged",
+  insufficient_data: "N/A",
 };
 
-// Prompt 19: Emotion filter options
+// Emotion filter options
 const EMOTION_FILTERS = [
   { value: null, label: "All", color: "#6B7280" },
-  { value: "frustration", label: "Frustrated", color: "#EF4444" },
-  { value: "confusion", label: "Confused", color: "#F59E0B" },
-  { value: "anxiety", label: "Anxious", color: "#F97316" },
-  { value: "hesitation", label: "Hesitating", color: "#8B5CF6" },
-  { value: "satisfaction", label: "Satisfied", color: "#059669" },
-  { value: "delight", label: "Delighted", color: "#10B981" },
-  { value: "boredom", label: "Bored", color: "#6B7280" },
-  { value: "focus", label: "Focused", color: "#3B82F6" },
+  { value: "frustrated", label: "Frustrated", color: "#EF4444" },
+  { value: "confused", label: "Confused", color: "#F59E0B" },
+  { value: "engaged", label: "Engaged", color: "#10B981" },
+  { value: "disengaged", label: "Disengaged", color: "#6B7280" },
 ];
 
 export default function SessionsPage() {
@@ -429,7 +419,10 @@ export default function SessionsPage() {
                             className="h-2 w-2 rounded-full"
                             style={{ backgroundColor: EMOTION_COLORS[s.primary_emotion] || "#9CA3AF" }}
                           />
-                          <span className="text-[13px] font-medium text-[hsl(var(--foreground))]">
+                          <span
+                            className="text-[13px] font-medium text-[hsl(var(--foreground))]"
+                            title={s.primary_emotion === "insufficient_data" ? "Session too short for reliable classification (< 10s or < 5 events)" : undefined}
+                          >
                             {EMOTION_DISPLAY[s.primary_emotion] || s.primary_emotion}
                           </span>
                         </div>

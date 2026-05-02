@@ -443,6 +443,156 @@ If you didn't create an account, you can safely ignore this email.
 
         return await self.send_email(to, subject, html_content, text_content)
 
+    async def send_alert_notification(
+        self,
+        to: str,
+        alert_name: str,
+        emotion: str,
+        trigger_value: float,
+        threshold: float,
+        page_url: str,
+        time_window: str,
+    ) -> bool:
+        """Send alert notification email when emotion threshold is exceeded."""
+        # Emoji mapping for emotions
+        emotion_emojis = {
+            "confusion": "😕",
+            "frustration": "😤",
+            "delight": "😊",
+            "anxiety": "😰",
+            "hesitation": "🤔",
+            "focus": "🎯",
+            "boredom": "😴",
+            "satisfaction": "😌",
+        }
+        emoji = emotion_emojis.get(emotion, "⚠️")
+
+        # Emotion colors
+        emotion_colors = {
+            "confusion": "#F59E0B",
+            "frustration": "#EF4444",
+            "delight": "#10B981",
+            "anxiety": "#F97316",
+            "hesitation": "#8B5CF6",
+            "focus": "#3B82F6",
+            "boredom": "#6B7280",
+            "satisfaction": "#059669",
+        }
+        color = emotion_colors.get(emotion, "#007BFF")
+
+        dashboard_link = f"{settings.FRONTEND_URL}/dashboard/sessions"
+
+        subject = f"Alert: {emotion.capitalize()} spike detected {emoji}"
+        page_display = page_url if page_url != "all pages" else "All pages"
+
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Fired</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f6fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f6fa; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #007BFF;">EmoraTest Alert</h1>
+                        </td>
+                    </tr>
+                    <!-- Alert Banner -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: {color}; text-align: center;">
+                            <span style="font-size: 48px;">{emoji}</span>
+                            <h2 style="margin: 10px 0 0 0; font-size: 20px; font-weight: 600; color: #ffffff;">
+                                {emotion.capitalize()} Alert Fired
+                            </h2>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111318;">{alert_name}</h3>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #6B7280;">
+                                Your alert rule has triggered because {emotion} exceeded the threshold.
+                            </p>
+                            <!-- Stats Grid -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 16px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 28px; font-weight: 700; color: {color};">{trigger_value:.1f}%</div>
+                                        <div style="font-size: 13px; color: #6B7280; margin-top: 4px;">Current Value</div>
+                                    </td>
+                                    <td style="width: 12px;"></td>
+                                    <td style="padding: 16px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 28px; font-weight: 700; color: #6B7280;">{threshold:.0f}%</div>
+                                        <div style="font-size: 13px; color: #6B7280; margin-top: 4px;">Threshold</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- Details -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="font-size: 13px; color: #6B7280;">Page</span>
+                                        <div style="font-size: 14px; color: #111318; margin-top: 4px;">{page_display}</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="font-size: 13px; color: #6B7280;">Time Window</span>
+                                        <div style="font-size: 14px; color: #111318; margin-top: 4px;">{time_window}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{dashboard_link}" style="display: inline-block; background: #007BFF; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600;">
+                                            View Sessions
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #9CA3AF;">
+                                &copy; 2026 EmoraTest. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        text_content = f"""
+EmoraTest Alert: {emotion.capitalize()} spike detected {emoji}
+
+Alert: {alert_name}
+Current Value: {trigger_value:.1f}%
+Threshold: {threshold:.0f}%
+Page: {page_display}
+Time Window: {time_window}
+
+View sessions: {dashboard_link}
+
+© 2026 EmoraTest. All rights reserved.
+"""
+
+        return await self.send_email(to, subject, html_content, text_content)
+
 
 # Global email service instance
 email_service = EmailService()

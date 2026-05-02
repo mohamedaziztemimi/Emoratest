@@ -13,9 +13,10 @@ import secrets
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Literal, List, Optional
 
 from app.core.auth import get_merchant_flexible
 from app.core.database import get_db
@@ -69,6 +70,36 @@ class UsageSummary(BaseModel):
     active_sessions_today: int
     plan: str
     checked_at: datetime
+
+
+# ── Survey Settings Schemas ──────────────────────────────────────────
+
+
+class SurveySettingsResponse(BaseModel):
+    """Survey configuration response."""
+    enabled: bool
+    trigger: Literal["exit_intent", "scroll_75", "time_30s"]
+    sample_rate: float
+    pages: Optional[List[str]]
+
+
+class SurveySettingsRequest(BaseModel):
+    """Survey configuration update request."""
+    enabled: bool = Field(..., description="Enable or disable the micro-survey")
+    trigger: Literal["exit_intent", "scroll_75", "time_30s"] = Field(
+        default="exit_intent",
+        description="When to show the survey"
+    )
+    sample_rate: float = Field(
+        default=0.1,
+        ge=0.01,
+        le=1.0,
+        description="Percentage of sessions to show survey (0.01 to 1.0)"
+    )
+    pages: Optional[List[str]] = Field(
+        default=None,
+        description="Page paths to show survey on (null = all pages)"
+    )
 
 
 # ── POST / — create merchant + issue initial SDK key (CONV-43) ────
@@ -261,4 +292,57 @@ async def get_usage_summary(
         active_sessions_today=active_today,
         plan=merchant.plan,
         checked_at=datetime.now(UTC),
+    )
+
+
+# ── GET /survey ─────────────────────────────────────────────────────
+
+
+@router.get("/survey", response_model=SurveySettingsResponse)
+@limiter.limit("50/minute")
+async def get_survey_settings(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_flexible),
+):
+    """Get the merchant's micro-survey configuration."""
+
+    return SurveySettingsResponse(
+        enabled=merchant.survey_enabled or False,
+        trigger=merchant.survey_trigger or "exit_intent",
+        sample_rate=merchant.survey_sample_rate or 0.1,
+        pages=list(merchant.survey_pages) if merchant.survey_pages else None,
+    )
+
+
+# ── PUT /survey ─────────────────────────────────────────────────────
+
+
+@router.put("/survey", response_model=SurveySettingsResponse)
+@limiter.limit("20/minute")
+async def update_survey_settings(
+    request: Request,
+    body: SurveySettingsRequest,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_flexible),
+):
+    """Update the merchant's micro-survey configuration."""
+
+    await db.execute(
+        update(Merchant)
+        .where(Merchant.id == merchant.id)
+        .values(
+            survey_enabled=body.enabled,
+            survey_trigger=body.trigger,
+            survey_sample_rate=body.sample_rate,
+            survey_pages=body.pages,
+        )
+    )
+    await db.commit()
+
+    return SurveySettingsResponse(
+        enabled=body.enabled,
+        trigger=body.trigger,
+        sample_rate=body.sample_rate,
+        pages=body.pages,
     )

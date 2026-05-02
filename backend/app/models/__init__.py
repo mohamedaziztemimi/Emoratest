@@ -1,6 +1,7 @@
 from app.models.bandit import Bandit, BanditAlgorithm, BanditStatus
 from app.models.base import Base
 from app.models.emotion_event import EmotionEvent, EmotionSession, EmotionSource
+from app.models.session_feedback import SessionFeedback
 from app.models.event import Event
 from app.models.experiment import Experiment
 from app.models.feature_flag import FeatureFlag, FeatureFlagStatus
@@ -44,4 +45,5 @@ __all__ = [
     "EmotionSession",
     "EmotionSource",
     "WaitlistEntry",
+    "SessionFeedback",
 ]

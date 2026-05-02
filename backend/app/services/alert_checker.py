@@ -9,14 +9,20 @@ Or use a background task scheduler like APScheduler or Celery Beat.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from datetime import datetime, timedelta
 
+import httpx
 from sqlalchemy import and_, case, desc, func, select
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.alert import AlertHistory, AlertRule
+from app.models.merchant import Merchant
 from app.models.session import Session
+
+logger = logging.getLogger(__name__)
 
 
 def check_alerts(db: DBSession) -> int:
@@ -109,41 +115,219 @@ def check_alerts(db: DBSession) -> int:
 
             fired_count += 1
 
-            # Here you would send the actual notification
-            # For email: use SendGrid/AWS SES
-            # For webhook: make HTTP POST to rule.webhook_url
-            _send_notification(rule, emotion_pct)
+            # Send notification
+            _send_notification(rule, emotion_pct, db)
 
     db.commit()
     return fired_count
 
 
-def _send_notification(rule: AlertRule, trigger_value: float) -> None:
+def _send_notification(rule: AlertRule, trigger_value: float, db: DBSession) -> None:
     """Send notification for fired alert.
 
     Args:
         rule: The alert rule that fired
         trigger_value: The actual emotion percentage that triggered it
-
-    Note:
-        This is a placeholder. Implement actual notification logic:
-        - Email: Use SendGrid, AWS SES, or similar
-        - Webhook: Make HTTP POST with alert details
+        db: Database session for fetching merchant info
     """
-    # TODO: Implement actual notification sending
-    # Example webhook:
-    # if rule.channel == "webhook" and rule.webhook_url:
-    #     httpx.post(
-    #         rule.webhook_url,
-    #         json={
-    #             "rule_id": str(rule.id),
-    #             "rule_name": rule.name,
-    #             "emotion": rule.emotion,
-    #             "trigger_value": trigger_value,
-    #             "threshold": rule.threshold,
-    #             "page_url": rule.page_url,
-    #             "timestamp": datetime.utcnow().isoformat(),
-    #         },
-    #         timeout=10,
-    #     )
-    pass
+    try:
+        # Get merchant email for notification
+        merchant = db.execute(
+            select(Merchant).where(Merchant.id == rule.merchant_id)
+        ).scalar_one_or_none()
+
+        if not merchant:
+            logger.warning(f"Merchant {rule.merchant_id} not found for alert {rule.id}")
+            return
+
+        # Build alert payload
+        alert_payload = {
+            "rule_id": str(rule.id),
+            "rule_name": rule.name,
+            "emotion": rule.emotion,
+            "trigger_value": trigger_value,
+            "threshold": rule.threshold,
+            "page_url": rule.page_url or "all pages",
+            "time_window": rule.time_window,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        # Send based on channel
+        if rule.channel == "email":
+            _send_email_notification(rule, trigger_value, merchant.email, db)
+        elif rule.channel == "webhook" and rule.webhook_url:
+            _send_webhook_notification(rule.webhook_url, alert_payload)
+
+        logger.info(f"Notification sent for alert {rule.name} via {rule.channel}")
+    except Exception as e:
+        logger.error(f"Failed to send notification for alert {rule.id}: {e}")
+
+
+def _send_email_notification(
+    rule: AlertRule,
+    trigger_value: float,
+    merchant_email: str,
+    db: DBSession,
+) -> None:
+    """Send email notification for fired alert.
+
+    Uses asyncio.run() to call the async EmailService from sync code.
+    """
+    from app.services.email import email_service
+
+    async def send_email():
+        return await email_service.send_alert_notification(
+            to=merchant_email,
+            alert_name=rule.name,
+            emotion=rule.emotion,
+            trigger_value=trigger_value,
+            threshold=rule.threshold,
+            page_url=rule.page_url or "all pages",
+            time_window=rule.time_window,
+        )
+
+    try:
+        # Run the async email function in the current event loop
+        loop = asyncio.get_event_loop()
+        success = loop.run_until_complete(send_email())
+        if success:
+            logger.info(f"Alert email sent to {merchant_email} for {rule.name}")
+        else:
+            logger.warning(f"Failed to send alert email to {merchant_email}")
+    except RuntimeError:
+        # No event loop running, create a new one
+        success = asyncio.run(send_email())
+        if success:
+            logger.info(f"Alert email sent to {merchant_email} for {rule.name}")
+        else:
+            logger.warning(f"Failed to send alert email to {merchant_email}")
+    except Exception as e:
+        logger.error(f"Error sending alert email: {e}")
+
+
+def _send_webhook_notification(webhook_url: str, payload: dict) -> None:
+    """Send webhook notification for fired alert.
+
+    Supports both generic webhooks and Slack webhooks.
+    """
+    try:
+        # Check if this is a Slack webhook
+        if "hooks.slack.com" in webhook_url:
+            _send_slack_webhook(webhook_url, payload)
+        else:
+            _send_generic_webhook(webhook_url, payload)
+    except Exception as e:
+        logger.error(f"Failed to send webhook to {webhook_url}: {e}")
+
+
+def _send_slack_webhook(webhook_url: str, payload: dict) -> None:
+    """Send formatted Slack webhook notification."""
+    # Emotion emoji mapping
+    emotion_emojis = {
+        "confusion": "😕",
+        "frustration": "😤",
+        "delight": "😊",
+        "anxiety": "😰",
+        "hesitation": "🤔",
+        "focus": "🎯",
+        "boredom": "😴",
+        "satisfaction": "😌",
+    }
+    emoji = emotion_emojis.get(payload.get("emotion", ""), "⚠️")
+
+    # Color based on emotion severity
+    emotion_colors = {
+        "confusion": "warning",
+        "frustration": "danger",
+        "delight": "good",
+        "anxiety": "warning",
+        "hesitation": "warning",
+        "focus": "good",
+        "boredom": "#6B7280",
+        "satisfaction": "good",
+    }
+    color = emotion_colors.get(payload.get("emotion", ""), "warning")
+
+    # Convert color name to hex for Slack
+    color_hex = {
+        "danger": "#EF4444",
+        "warning": "#F59E0B",
+        "good": "#10B981",
+    }.get(color, "#007BFF")
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"{emoji} Alert Fired: {payload.get('rule_name', 'Unknown')}",
+                "emoji": True,
+            },
+        },
+        {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Emotion:*\n{payload.get('emotion', 'Unknown').capitalize()} {emoji}",
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Current Value:*\n{payload.get('trigger_value', 0):.1f}%",
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Threshold:*\n{payload.get('threshold', 0):.0f}%",
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Time Window:*\n{payload.get('time_window', '1h')}",
+                },
+            ],
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Page:*\n{payload.get('page_url', 'all pages')}",
+            },
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Dashboard",
+                        "emoji": True,
+                    },
+                    "url": "https://emoratest.com/dashboard/sessions",
+                    "style": "primary",
+                }
+            ],
+        },
+    ]
+
+    slack_payload = {"blocks": blocks}
+
+    response = httpx.post(
+        webhook_url,
+        json=slack_payload,
+        headers={"Content-Type": "application/json"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    logger.info(f"Slack webhook sent successfully to {webhook_url}")
+
+
+def _send_generic_webhook(webhook_url: str, payload: dict) -> None:
+    """Send generic webhook notification."""
+    response = httpx.post(
+        webhook_url,
+        json=payload,
+        headers={"Content-Type": "application/json"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    logger.info(f"Generic webhook sent successfully to {webhook_url}")

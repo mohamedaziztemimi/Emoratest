@@ -54,7 +54,7 @@ const SLIDE_CONTENT: Record<PersonaId, { before: SlideContent; after: SlideConte
     after: {
       title: "Valence-arousal maps with user quotes",
       description: "See the emotional journey: excitement on discovery → hesitation at checkout → frustration on error. User quotes add context: \"I couldn't find the button.\"",
-      stats: ["8 emotions, not just clicks", "User voice + visual data", "Design backed by feelings"],
+      stats: ["4 behaviors, not just clicks", "User voice + visual data", "Design backed by feelings"],
     },
   },
   cro: {
@@ -74,9 +74,9 @@ const SLIDE_CONTENT: Record<PersonaId, { before: SlideContent; after: SlideConte
 // Feature cards
 const FEATURES = [
   {
-    title: "8 Emotions Detected",
-    description: "Confusion, frustration, delight, anxiety, hesitation, focus, boredom, satisfaction.",
-    badges: ["confusion", "frustration", "delight", "anxiety", "satisfaction", "hesitation", "focus", "boredom"] as const,
+    title: "4 Behaviors Detected",
+    description: "Frustrated, confused, engaged, and disengaged.",
+    badges: ["confusion", "frustration"] as const,
     chip: "Real-time",
   },
   {

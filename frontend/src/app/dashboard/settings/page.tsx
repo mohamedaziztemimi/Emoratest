@@ -47,6 +47,9 @@ export default function SettingsPage() {
   const [regenSuccess, setRegenSuccess] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
 
+  // ML Model health state
+  const [mlHealth, setMlHealth] = useState<{ model_loaded: boolean; using_fallback: boolean } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   // Auto-hide timer for revealed key (30 seconds)
@@ -111,6 +114,26 @@ export default function SettingsPage() {
     };
 
     fetchUsage();
+  }, []);
+
+  // Fetch ML model health on mount
+  useEffect(() => {
+    const fetchMlHealth = async () => {
+      try {
+        const apiUrl = API_BASE;
+        const res = await fetch(`${apiUrl}/api/v1/health/ml`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMlHealth(data);
+        }
+      } catch (err) {
+        // Silently fail - this is optional monitoring
+        console.error("Failed to fetch ML health:", err);
+      }
+    };
+    fetchMlHealth();
   }, []);
 
   // Clear timer on unmount
@@ -218,6 +241,39 @@ export default function SettingsPage() {
             Manage your account and integration settings
           </p>
         </div>
+
+        {/* ML Model Health Warning */}
+        {mlHealth?.using_fallback === true && (
+          <div
+            style={{
+              background: "#FEF3C7",
+              border: "1px solid #F59E0B",
+              borderRadius: "12px",
+              padding: "16px",
+              display: "flex",
+              gap: "12px",
+              alignItems: "flex-start",
+            }}
+          >
+            <svg
+              style={{ width: "20px", height: "20px", color: "#D97706", flexShrink: 0, marginTop: "2px" }}
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div>
+              <p style={{ fontSize: "14px", fontWeight: "600", color: "#92400E", margin: "0 0 4px 0" }}>
+                ML Model Not Loaded
+              </p>
+              <p style={{ fontSize: "13px", color: "#B45309", margin: 0 }}>
+                Predictions are using simplified heuristics instead of the trained XGBoost model. This may reduce accuracy. Contact support if this issue persists.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Usage Section */}
         <Card>

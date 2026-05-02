@@ -4,6 +4,9 @@ FastAPI application entry point. Registers all routers, middleware,
 and error handlers for production deployment.
 """
 
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -47,17 +50,82 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url=f"{settings.API_V1_PREFIX}/docs",
     redoc_url=f"{settings.API_V1_PREFIX}/redoc",
+    lifespan=lifespan,
 )
 
 
-# ── Startup events ────────────────────────────────────────────────────
+# ── Background task for alert checking ─────────────────────────────────
+
+logger = logging.getLogger(__name__)
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize ML models on startup."""
+async def alert_checker_loop():
+    """Background task that checks alert rules every 5 minutes."""
+    from datetime import datetime
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.core.config import settings
+    from app.services.alert_checker import check_alerts
+
+    alert_logger = logging.getLogger(__name__)
+
+    # Create a sync engine for alert checking (runs in background)
+    engine = create_engine(settings.DATABASE_URL.replace("+asyncpg", ""))
+    SessionLocal = sessionmaker(bind=engine)
+
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                fired = check_alerts(db)
+                if fired > 0:
+                    alert_logger.info(f"Alert checker: {fired} alert(s) fired at {datetime.utcnow()}")
+                db.commit()
+            finally:
+                db.close()
+        except Exception as e:
+            alert_logger.error(f"Alert checker error: {e}", exc_info=True)
+
+        # Sleep for 5 minutes
+        await asyncio.sleep(300)
+
+
+# ── Lifespan context manager ───────────────────────────────────────────
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan - startup and shutdown events."""
+    # Startup
+    from app.services.emotion_model import EmotionModel
+
     # Bootstrap emotion model if artifacts don't exist
     bootstrap_emotion_model()
+
+    # Eagerly load the emotion model and log status
+    model_loaded = EmotionModel.load()
+    if model_loaded:
+        logger.info("ML model loaded successfully at startup — using XGBoost for predictions")
+    else:
+        logger.critical("ML MODEL NOT LOADED at startup — all predictions will use heuristic fallback! Check that ml/artifacts is in the Docker image.")
+
+    # Start background alert checker
+    alert_task = asyncio.create_task(alert_checker_loop())
+    logger.info("Alert checker background task started")
+
+    yield
+
+    # Shutdown - cancel background task
+    alert_task.cancel()
+    try:
+        await alert_task
+    except asyncio.CancelledError:
+        logger.info("Alert checker background task stopped")
+
+
+# ── Create FastAPI app with lifespan ───────────────────────────────────
 
 # ── Static files (SDK and test page) ─────────────────────────────
 static_dir = Path(__file__).parent.parent / "static"
@@ -234,3 +302,19 @@ app.include_router(waitlist_router, prefix=settings.API_V1_PREFIX)
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "version": settings.VERSION}
+
+
+@app.get("/api/v1/health/ml")
+async def ml_health_check():
+    """Check ML model status for monitoring and dashboard alerts."""
+    from app.services.emotion_model import EmotionModel
+
+    # Force load attempt to get current status
+    EmotionModel.load()
+
+    return {
+        "model_loaded": EmotionModel.is_available(),
+        "model_path": str(EmotionModel.ARTIFACTS_DIR),
+        "model_type": "xgboost" if EmotionModel.is_available() else "heuristic_fallback",
+        "using_fallback": EmotionModel.using_fallback(),
+    }

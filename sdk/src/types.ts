@@ -61,6 +61,22 @@ export function shouldOverrideOutcome(current: OutcomeType, incoming: OutcomeTyp
   return getOutcomePriority(incoming) > getOutcomePriority(current);
 }
 
+// ── Micro-survey types ───────────────────────────────────────────────
+
+export type SurveyTrigger = "exit_intent" | "scroll_75" | "time_30s";
+export type SurveyPosition = "bottom-right" | "bottom-left";
+
+export interface SurveyConfig {
+  /** When to show the survey */
+  trigger: SurveyTrigger;
+  /** Only show on these page paths (empty = all pages) */
+  pageFilter: string[];
+  /** What % of sessions see the survey (0-1) */
+  sampleRate: number;
+  /** Widget position on screen */
+  position: SurveyPosition;
+}
+
 // ── Auto-detection patterns (strict path matching) ────────────────
 
 export interface OutcomePattern {
@@ -149,6 +165,12 @@ export interface SessionCreatePayload {
 
 export interface SessionCreateResponse {
   session_id: string;
+  survey?: {
+    enabled: boolean;
+    trigger?: "exit_intent" | "scroll_75" | "time_30s";
+    sample_rate?: number;
+    pages?: string[];
+  } | null;
 }
 
 // ── SDK configuration ───────────────────────────────────────────────
@@ -186,6 +208,9 @@ export interface EmoraTestConfig {
 
   /** Custom outcome detection patterns (strict path matching) */
   outcomePatterns?: OutcomePattern[];
+
+  /** Micro-survey configuration (optional) */
+  survey?: SurveyConfig;
 }
 
 // ── Feature Flags ─────────────────────────────────────────────────

@@ -19,9 +19,11 @@ import {
   collectScroll,
   collectVisibility,
 } from "./collectors";
+import { initSurvey } from "./survey";
 import { EventQueue } from "./event-queue";
 import { SessionManager } from "./session";
 import { Transport } from "./transport";
+import type { SurveyTrigger, SurveyPosition } from "./survey";
 import type {
   EmoraTestConfig,
   FlagEvaluationRequest,
@@ -160,6 +162,19 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   const session = await sessionManager.start();
   queue.setSessionId(session.sessionId);
   queue.start();
+
+  // Initialize micro-survey if backend config says it's enabled
+  if (session.fullResponse?.survey?.enabled) {
+    const surveyCfg = session.fullResponse.survey;
+    // Convert backend format to SDK format
+    const surveyConfig = {
+      trigger: (surveyCfg.trigger || "exit_intent") as SurveyTrigger,
+      pageFilter: surveyCfg.pages || [],
+      sampleRate: surveyCfg.sample_rate ?? 0.1,
+      position: "bottom-right" as SurveyPosition,
+    };
+    initSurvey(surveyConfig, config.apiUrl!, config.sdkKey);
+  }
 
   // Attach event collectors
   cleanups = [
@@ -485,6 +500,19 @@ export async function enableTracking(): Promise<void> {
   const session = await sessionManager.start();
   queue.setSessionId(session.sessionId);
   queue.start();
+
+  // Initialize micro-survey if backend config says it's enabled
+  if (session.fullResponse?.survey?.enabled) {
+    const surveyCfg = session.fullResponse.survey;
+    // Convert backend format to SDK format
+    const surveyConfig = {
+      trigger: (surveyCfg.trigger || "exit_intent") as SurveyTrigger,
+      pageFilter: surveyCfg.pages || [],
+      sampleRate: surveyCfg.sample_rate ?? 0.1,
+      position: "bottom-right" as SurveyPosition,
+    };
+    initSurvey(surveyConfig, config.apiUrl!, config.sdkKey);
+  }
 
   // Attach event collectors
   cleanups = [

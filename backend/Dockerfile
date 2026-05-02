@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -e "."
 # Copy application code
 COPY . .
 
+# Copy ML model artifacts
+COPY ml/artifacts /app/ml_artifacts
+
 # Set ownership and switch to non-root user
 RUN chown -R appuser:appuser /app
 USER appuser

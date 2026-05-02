@@ -16,14 +16,11 @@ import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
 
 const EMOTION_COLORS: Record<string, string> = {
-  confusion: "#F59E0B",
-  frustration: "#EF4444",
-  delight: "#10B981",
-  focus: "#3B82F6",
-  anxiety: "#F97316",
-  boredom: "#6B7280",
-  hesitation: "#8B5CF6",
-  satisfaction: "#059669",
+  frustrated: "#EF4444",
+  confused: "#F59E0B",
+  engaged: "#10B981",
+  disengaged: "#6B7280",
+  insufficient_data: "#D1D5DB",
 };
 
 const OUTCOME_LABELS = {
@@ -82,8 +79,9 @@ function capitalize(s: string): string {
 }
 
 function getEmotionVariant(emotion: string): "success" | "danger" | "warning" | "default" {
-  const positive = ["delight", "satisfaction", "focus"];
-  const negative = ["frustration", "confusion", "anxiety"];
+  if (emotion === "insufficient_data") return "default";
+  const positive = ["engaged"];
+  const negative = ["frustrated", "confused", "disengaged"];
   if (positive.includes(emotion)) return "success";
   if (negative.includes(emotion)) return "danger";
   return "default";
@@ -329,7 +327,12 @@ export default function SessionDetailPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricBox label="Page URL" value={formatPageUrl(s.page_url)} />
         <MetricBox label="Duration" value={formatDuration(s.ended_at ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null)} />
-        <MetricBox label="Primary Emotion" value={s.primary_emotion ? capitalize(s.primary_emotion) : "--"} variant={s.primary_emotion ? getEmotionVariant(s.primary_emotion) : undefined} />
+        <MetricBox
+          label="Primary Emotion"
+          value={s.primary_emotion === "insufficient_data" ? "Not enough data" : (s.primary_emotion ? capitalize(s.primary_emotion) : "--")}
+          variant={s.primary_emotion ? getEmotionVariant(s.primary_emotion) : undefined}
+          title={s.primary_emotion === "insufficient_data" ? "Session was too short for reliable classification (< 10s or < 5 events)" : undefined}
+        />
         <MetricBox label="Outcome" value={OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome} variant={outcomeVariant(s.outcome)} />
       </div>
 
@@ -351,11 +354,16 @@ export default function SessionDetailPage() {
                 <span
                   className="mt-2 text-[28px] font-bold capitalize"
                   style={{ color: EMOTION_COLORS[s.primary_emotion] || 'hsl(var(--foreground))' }}
+                  title={s.primary_emotion === "insufficient_data" ? "Session was too short for reliable classification (< 10s or < 5 events)" : undefined}
                 >
-                  {s.primary_emotion}
+                  {s.primary_emotion === "insufficient_data" ? "Not enough data" : s.primary_emotion}
                 </span>
                 <span className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">
-                  {((s.emotion_confidence ?? 0) * 100).toFixed(1)}% confidence
+                  {s.primary_emotion === "insufficient_data" ? (
+                    <span title="Session was too short for reliable classification (< 10s or < 5 events)">N/A</span>
+                  ) : (
+                    `${((s.emotion_confidence ?? 0) * 100).toFixed(1)}% confidence`
+                  )}
                 </span>
                 <div className="mt-4 flex gap-6">
                   <div className="text-center">
@@ -532,7 +540,7 @@ export default function SessionDetailPage() {
   );
 }
 
-const MetricBox = memo(function MetricBox({ label, value, variant }: { label: string; value: string; variant?: string }) {
+const MetricBox = memo(function MetricBox({ label, value, variant, title }: { label: string; value: string; variant?: string; title?: string }) {
   return (
     <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition-shadow hover:shadow-sm">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{label}</p>
@@ -541,7 +549,7 @@ const MetricBox = memo(function MetricBox({ label, value, variant }: { label: st
         variant === "warning" ? "text-[hsl(var(--warning))]" :
         variant === "success" ? "text-[hsl(var(--success))]" :
         "text-[hsl(var(--foreground))]"
-      }`}>
+      }`} title={title}>
         {value}
       </p>
     </div>

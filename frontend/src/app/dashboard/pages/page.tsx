@@ -14,14 +14,11 @@ interface PageInsightItem {
 }
 
 const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
-  frustration: { color: "#EF4444", label: "Frustrated" },
-  confusion: { color: "#F59E0B", label: "Confused" },
-  anxiety: { color: "#F97316", label: "Anxious" },
-  hesitation: { color: "#8B5CF6", label: "Hesitating" },
-  satisfaction: { color: "#10B981", label: "Satisfied" },
-  delight: { color: "#059669", label: "Delighted" },
-  boredom: { color: "#6B7280", label: "Bored" },
-  focus: { color: "#3B82F6", label: "Focused" },
+  frustrated: { color: "#EF4444", label: "Frustrated" },
+  confused: { color: "#F59E0B", label: "Confused" },
+  engaged: { color: "#10B981", label: "Engaged" },
+  disengaged: { color: "#6B7280", label: "Disengaged" },
+  insufficient_data: { color: "#D1D5DB", label: "N/A" },
   unknown: { color: "#9CA3AF", label: "Unknown" },
   none: { color: "#D1D5DB", label: "None" },
 };
@@ -163,7 +160,7 @@ export default function PageInsightsPage() {
               <tbody className="divide-y divide-gray-200">
                 {pages.map((page) => {
                   const emotionInfo = getEmotionInfo(page.dominant_emotion);
-                  const isNegative = ["frustration", "confusion", "anxiety", "hesitation"].includes(
+                  const isNegative = ["frustrated", "confused", "disengaged"].includes(
                     page.dominant_emotion
                   );
 

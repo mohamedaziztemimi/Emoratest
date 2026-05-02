@@ -19,52 +19,34 @@ export interface EmotionConfig {
  * Emotion type to configuration mapping
  */
 export const EMOTION_CONFIG: Record<string, EmotionConfig> = {
-  confusion: {
+  frustrated: {
+    color: "var(--et-frustration)",
+    label: "Frustrated",
+    icon: "😤",
+    gradient: "linear-gradient(135deg, var(--et-frustration) 0%, #DC2626 100%)",
+  },
+  confused: {
     color: "var(--et-confusion)",
-    label: "Confusion",
+    label: "Confused",
     icon: "😕",
     gradient: null,
   },
-  frustration: {
-    color: "var(--et-frustration)",
-    label: "Frustration",
-    icon: "😤",
-    gradient: "linear-gradient(135deg, var(--et-frustration) 0%, var(--et-delight) 100%)",
-  },
-  delight: {
+  engaged: {
     color: "var(--et-delight)",
-    label: "Delight",
+    label: "Engaged",
     icon: "😊",
     gradient: null,
   },
-  anxiety: {
-    color: "var(--et-anxiety)",
-    label: "Anxiety",
-    icon: "😰",
-    gradient: null,
-  },
-  satisfaction: {
-    color: "var(--et-satisfaction)",
-    label: "Satisfaction",
-    icon: "😌",
-    gradient: null,
-  },
-  hesitation: {
-    color: "var(--et-hesitation)",
-    label: "Hesitation",
-    icon: "🤔",
-    gradient: null,
-  },
-  focus: {
-    color: "var(--et-focus)",
-    label: "Focus",
-    icon: "🎯",
-    gradient: null,
-  },
-  "boredom": {
+  disengaged: {
     color: "var(--et-boredom)",
-    label: "Boredom",
+    label: "Disengaged",
     icon: "😑",
+    gradient: null,
+  },
+  insufficient_data: {
+    color: "#D1D5DB",
+    label: "Not enough data",
+    icon: "–",
     gradient: null,
   },
 };
@@ -447,16 +429,14 @@ export const getGlassBackdrop = (): string => {
 export const getEmotionGlow = (emotion: string): string => {
   const config = getEmotionConfig(emotion);
   switch (emotion) {
-    case "delight":
+    case "engaged":
       return "0 0 20px 40px rgba(16, 185, 129, 0.3)";
-    case "satisfaction":
-      return "0 0 15px 30px rgba(16, 185, 129, 0.2)";
-    case "frustration":
+    case "frustrated":
       return "0 0 25px 50px rgba(239, 68, 68, 0.15)";
-    case "anxiety":
-      return "0 0 15px 30px rgba(139, 92, 246, 0.2)";
-    case "confusion":
+    case "confused":
       return "0 0 15px 30px rgba(245, 158, 11, 0.1)";
+    case "disengaged":
+      return "none";
     default:
       return "none";
   }

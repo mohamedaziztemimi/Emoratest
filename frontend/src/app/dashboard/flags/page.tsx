@@ -69,6 +69,11 @@ export default function FeatureFlagsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Beta Banner */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+        <strong>Early Beta:</strong> You can create experiment definitions, but SDK-side variant assignment is coming soon. Currently, experiments track emotion differences between page variants you set up manually.
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

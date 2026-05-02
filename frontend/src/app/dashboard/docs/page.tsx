@@ -148,9 +148,7 @@ export default function DocsPage() {
               <section id="getting-started" className="mb-16 scroll-mt-8">
                 <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
                 <p className="text-[hsl(var(--muted-foreground))] mb-4">
-                  EmoraTest detects 8 emotions from user behavior .  frustration, confusion, delight,
-                  anxiety, hesitation, focus, boredom, and satisfaction. Install the SDK to start
-                  tracking sessions and get emotion insights.
+                  EmoraTest detects 4 behavioral states from user behavior patterns: frustrated, confused, engaged, and disengaged. Install the SDK to start tracking sessions and get emotion insights.
                 </p>
                 <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))]">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
@@ -389,6 +387,10 @@ window.EmoraTest.reportOutcome('trial_started');`, "conversions")}
               {/* A/B Testing */}
               <section id="ab-testing" className="mb-16 scroll-mt-8">
                 <h2 className="text-2xl font-bold mb-4">Running A/B Tests</h2>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 mb-6">
+                  <strong>Early Beta:</strong> The experiment management UI is available, but automatic SDK-side variant assignment is under development. Currently, you can create experiment definitions and track emotion differences between page variants you set up manually. Full A/B testing with automatic variant assignment is coming soon.
+                </div>
 
                 <div className="space-y-6">
                   <StepCard

@@ -12,8 +12,8 @@ interface HeroSectionProps {
 }
 
 const STATS = [
-  { label: "Detect 8 Emotions", value: "Real-Time", delta: "From mouse behavior patterns" },
-  { label: "80%+ Accuracy", value: "XGBoost", delta: "ML classifier" },
+  { label: "Detect 4 Behaviors", value: "Real-Time", delta: "From mouse patterns" },
+  { label: "ML-Powered", value: "Smart Detection", delta: "Beyond clicks and pageviews" },
   { label: "Works Everywhere", value: "One Tag", delta: "Any website" },
 ];
 
@@ -42,7 +42,7 @@ export function HeroSection({ id }: HeroSectionProps) {
 
             {/* Subtext */}
             <p style={{ fontSize: "18px", color: "#4B5563", maxWidth: "480px", lineHeight: 1.7, margin: 0, marginBottom: 0 }}>
-              EmoraTest detects 8 emotions from mouse behavior including frustration, confusion, delight, and more. Find your conversion killer in hours, not weeks.
+              EmoraTest detects 4 behavioral states from mouse patterns: frustrated, confused, engaged, and disengaged. Find your conversion killer in hours, not weeks.
             </p>
 
             {/* CTA Buttons */}
@@ -73,9 +73,9 @@ export function HeroSection({ id }: HeroSectionProps) {
 
             {/* Floating feature highlight card */}
             <div className="absolute -top-3 -left-3 bg-white rounded-2xl p-4 shadow-lg max-w-[180px] z-10 border border-gray-100">
-              <div className="text-[#007BFF] text-[28px] font-bold leading-none">8 Emotions</div>
+              <div className="text-[#007BFF] text-[28px] font-bold leading-none">4 Behaviors</div>
               <div className="text-xs text-[#6B7280] mt-1 leading-tight">
-                Detected from mouse behavior
+                From mouse patterns
               </div>
             </div>
           </div>

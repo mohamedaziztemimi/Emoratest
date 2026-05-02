@@ -1,8 +1,19 @@
 """Pydantic schemas for SDK API endpoints (CONV-34)."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+
+# ── Survey config ──────────────────────────────────────────────────
+
+class SurveyConfigResponse(BaseModel):
+    """Survey configuration returned to SDK on session init."""
+    enabled: bool
+    trigger: Literal["exit_intent", "scroll_75", "time_30s"] | None = None
+    sample_rate: float | None = None
+    pages: list[str] | None = None
 
 # ── Session ────────────────────────────────────────────────────
 
@@ -15,6 +26,7 @@ class SessionCreateRequest(BaseModel):
 
 class SessionCreateResponse(BaseModel):
     session_id: str
+    survey: SurveyConfigResponse | None = None
 
 
 class SessionOutcomeRequest(BaseModel):
@@ -23,6 +35,17 @@ class SessionOutcomeRequest(BaseModel):
         pattern=r"^(purchase|abandon|signup|checkout_completed|demo_booked|lead_generated|trial_started)$",
         description="Conversion outcome type"
     )
+
+
+# ── Session Feedback ─────────────────────────────────────────────
+
+class SessionFeedbackRequest(BaseModel):
+    rating: str = Field(
+        ...,
+        pattern=r"^(negative|neutral|positive)$",
+        description="User feedback rating"
+    )
+    page_url: str
 
 
 # ── Events ─────────────────────────────────────────────────────

@@ -920,4 +920,77 @@ export async function fetchIssuesList(
   return request<IssuesListResponse>(`/dashboard/diagnosis/issues?hours=${hours}`);
 }
 
+// ── New Diagnosis API (pages with issues) ────────────────────────
+
+export interface DiagnosisIssueItem {
+  type: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  description: string;
+  affected_sessions: number;
+  affected_percentage: number;
+  recommendation: string;
+}
+
+export interface DiagnosisPageItem {
+  page_url: string;
+  page_name: string;
+  total_sessions: number;
+  issue_count: number;
+  critical_count: number;
+  issues: DiagnosisIssueItem[];
+}
+
+export interface PagesDiagnosisResponse {
+  pages: DiagnosisPageItem[];
+  total_pages: number;
+  critical_issues: number;
+  warning_issues: number;
+  info_issues: number;
+}
+
+export async function fetchPagesDiagnosis(
+  days = 7,
+  limit = 20
+): Promise<PagesDiagnosisResponse> {
+  return request<PagesDiagnosisResponse>(`/dashboard/diagnosis?days=${days}&limit=${limit}`);
+}
+
+// ── User Feedback ─────────────────────────────────────────────────
+
+export interface FeedbackPageItem {
+  page_url: string;
+  total: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+  positive_pct: number;
+  neutral_pct: number;
+  negative_pct: number;
+}
+
+export interface MLComparisonItem {
+  predicted_emotion: string;
+  positive_count: number;
+  neutral_count: number;
+  negative_count: number;
+  total: number;
+}
+
+export interface FeedbackSummaryResponse {
+  total: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+  by_page: FeedbackPageItem[];
+  ml_comparison: MLComparisonItem[];
+}
+
+export async function fetchFeedbackSummary(
+  days?: number
+): Promise<FeedbackSummaryResponse> {
+  const query = days ? `?days=${days}` : "";
+  return request<FeedbackSummaryResponse>(`/dashboard/feedback${query}`);
+}
+
 export { ApiError };

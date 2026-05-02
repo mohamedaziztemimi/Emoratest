@@ -13,7 +13,7 @@
  */
 
 import type { Transport } from "./transport";
-import type { OutcomeType } from "./types";
+import type { OutcomeType, SessionCreateResponse } from "./types";
 import { detectCountryCode, detectDeviceType, isoNow, uuid4 } from "./utils";
 import { getOutcomePriority, shouldOverrideOutcome } from "./types";
 
@@ -24,6 +24,7 @@ export interface SessionInfo {
   sessionId: string;
   startedAt: string;
   sampledIn: boolean; // Whether this session is being tracked (sampling)
+  fullResponse?: SessionCreateResponse; // Full backend response (includes survey config)
 }
 
 export interface SessionState {
@@ -94,6 +95,7 @@ export class SessionManager {
 
     // Only create session on backend if sampled in
     let sessionId: string;
+    let fullResponse: SessionCreateResponse | undefined;
     const startedAt = isoNow();
 
     if (sampledIn) {
@@ -105,6 +107,7 @@ export class SessionManager {
           device_type: detectDeviceType(),
         });
         sessionId = response.session_id;
+        fullResponse = response; // Store full response for survey config
       } catch (err) {
         // Check if this is a limit reached error
         if (this.transport.limitReached || (err as Error).message.includes("429")) {
@@ -125,7 +128,7 @@ export class SessionManager {
       }
     }
 
-    this.session = { sessionId, startedAt, sampledIn };
+    this.session = { sessionId, startedAt, sampledIn, fullResponse };
     this.saveToStorage(this.session);
 
     if (this.debug) {

@@ -15,7 +15,7 @@ const FAQ_SCHEMA = {
       name: "How is EmoraTest different from Hotjar or FullStory?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW they feel while doing it. Our emotion ML classifies 8 emotional states from behavioral signals like confusion, frustration, and delight.",
+        text: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW they feel while doing it. Our emotion ML classifies behavioral states from signals like confusion, frustration, and engagement.",
       },
     },
     {
@@ -31,7 +31,7 @@ const FAQ_SCHEMA = {
       name: "How accurate is the emotion detection?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Our ML model achieves 80% plus accuracy on confusion and frustration classification using behavioral signals including mouse patterns, rage clicks, scroll hesitation, and dwell time.",
+        text: "Our ML model detects behavioral patterns from mouse movements, rage clicks, scroll hesitation, and dwell time. It's designed to identify trends and patterns across sessions rather than classify individual sessions with perfect accuracy.",
       },
     },
     {

@@ -79,6 +79,10 @@ def _get_dominant_negative(emotions: dict) -> tuple[str, float]:
 
 
 # ── Endpoints ───────────────────────────────────────────────────────
+# IMPORTANT: Route order matters for FastAPI! More specific routes must be
+# defined BEFORE parameterized routes. Otherwise, "/insights/detail" would
+# match "/insights/{encoded_page}" with encoded_page="detail".
+# Always keep: /insights → /insights/detail → /insights/{encoded_page}
 
 
 @router.get("/insights", response_model=PageInsightsResponse, summary="Get page insights")
@@ -127,7 +131,7 @@ async def get_page_insights(
         session_count = row.session_count
         avg_duration = row.avg_duration or 0
 
-        # Get emotions for sessions on this page
+        # Get emotions for sessions on this page (exclude insufficient_data)
         emotion_result = await db.execute(
             select(Session.primary_emotion, func.count().label("cnt"))
             .where(
@@ -135,6 +139,7 @@ async def get_page_insights(
                 Session.page_url == page_url,
                 Session.started_at >= cutoff,
                 Session.primary_emotion.isnot(None),
+                Session.primary_emotion != "insufficient_data",
             )
             .group_by(Session.primary_emotion)
         )
@@ -308,7 +313,7 @@ async def get_page_detail_query(
     if total_sessions == 0:
         raise HTTPException(status_code=404, detail="No data for this page")
 
-    # Get emotion breakdown
+    # Get emotion breakdown (exclude insufficient_data)
     emotion_result = await db.execute(
         select(Session.primary_emotion, func.count().label("cnt"))
         .where(
@@ -316,6 +321,7 @@ async def get_page_detail_query(
             Session.started_at >= cutoff,
             url_condition,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
     )
@@ -338,6 +344,7 @@ async def get_page_detail_query(
             Session.started_at < cutoff,
             url_condition,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
     )
@@ -388,7 +395,12 @@ async def get_page_detail_query(
     )
 
 
-@router.get("/insights/{encoded_page}", response_model=PageDetailInsight, summary="Get page detail")
+@router.get(
+    "/insights/{encoded_page}",
+    response_model=PageDetailInsight,
+    summary="Get page detail (DEPRECATED - use /insights/detail with query param)",
+    deprecated=True,
+)
 @limiter.limit("60/minute")
 async def get_page_detail(
     request: Request,
@@ -397,7 +409,12 @@ async def get_page_detail(
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
-    """Get detailed emotion analysis for a single page."""
+    """Get detailed emotion analysis for a single page.
+
+    DEPRECATED: This endpoint is deprecated because the path parameter approach
+    has issues with URLs containing slashes. Use GET /insights/detail?page=...
+    instead, which handles URLs more reliably.
+    """
     from urllib.parse import unquote, urlparse
     from sqlalchemy import or_
 
@@ -475,7 +492,7 @@ async def get_page_detail(
     if total_sessions == 0:
         raise HTTPException(status_code=404, detail="No data for this page")
 
-    # Get emotion breakdown
+    # Get emotion breakdown (exclude insufficient_data)
     emotion_result = await db.execute(
         select(Session.primary_emotion, func.count().label("cnt"))
         .where(
@@ -483,6 +500,7 @@ async def get_page_detail(
             Session.started_at >= cutoff,
             url_condition,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
     )
@@ -505,6 +523,7 @@ async def get_page_detail(
             Session.started_at < cutoff,
             url_condition,
             Session.primary_emotion.isnot(None),
+            Session.primary_emotion != "insufficient_data",
         )
         .group_by(Session.primary_emotion)
     )
