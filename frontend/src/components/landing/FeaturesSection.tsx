@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: "🔥",
     title: "Page Insights",
-    description: "See which pages cause frustration, confusion, or delight. Every page ranked by emotional friction with actionable breakdowns.",
+    description: "See which pages cause the most friction. Every page ranked by behavioral states (frustrated, confused, engaged, disengaged) with actionable breakdowns.",
   },
   {
     icon: "🧠",
@@ -26,7 +26,7 @@ const FEATURES = [
   {
     icon: "🎯",
     title: "Session Explorer",
-    description: "Browse every user session with emotion labels. Filter by frustrated, confused, or satisfied sessions. Click into any session to see the full emotion breakdown and behavior signals.",
+    description: "Browse every user session with behavioral labels. Filter by frustrated, confused, engaged, or disengaged sessions. Click into any session to see the full breakdown and behavior signals.",
   },
   {
     icon: "📊",

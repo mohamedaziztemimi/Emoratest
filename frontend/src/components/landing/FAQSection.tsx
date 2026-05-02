@@ -9,7 +9,7 @@ import { useState } from "react";
 const FAQ_ITEMS = [
   {
     question: "How is EmoraTest different from Hotjar or FullStory?",
-    answer: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW they feel while doing it. Our emotion ML classifies behavioral states from signals like confusion, frustration, and engagement. No other tool does this automatically.",
+    answer: "Hotjar and FullStory show you WHERE users click and scroll. EmoraTest shows you HOW users feel while doing it. Our ML classifies behavioral states (frustrated, confused, engaged, disengaged) from mouse patterns. No other tool does this automatically.",
   },
   {
     question: "Will the tracking snippet slow down my website?",

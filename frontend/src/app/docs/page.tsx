@@ -141,7 +141,7 @@ export default function DocsPage() {
             <div className="mb-10 bg-gradient-to-r from-[#007BFF] to-[#7C3AED] rounded-2xl p-6 text-white">
               <h2 className="text-lg font-semibold mb-2">Quick Start</h2>
               <p className="text-sm text-white/80 mb-4">
-                Your unique SDK key .  copy this to get started tracking emotions.
+                Your unique SDK key — copy this to get started tracking behavioral states.
               </p>
               <div className="flex items-center gap-3">
                 <code className="flex-1 bg-white/20 backdrop-blur rounded-lg px-4 py-2.5 text-sm font-mono">
@@ -166,14 +166,14 @@ export default function DocsPage() {
             <section id="getting-started" className="mb-12 scroll-mt-20">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Getting Started</h2>
               <p className="text-gray-600 mb-4 leading-relaxed">
-                <strong>EmoraTest</strong> detects user emotions from behavior patterns and helps you optimize conversions.
+                <strong>EmoraTest</strong> detects user behavioral states from behavior patterns and helps you optimize conversions.
                 Add one script to your site to start tracking sessions, emotions, and run A/B tests.
               </p>
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <p className="text-sm text-blue-800 font-medium mb-2">What you&apos;ll need:</p>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Your <strong>SDK Key</strong> .  found in Settings → SDK after signing up</li>
-                  <li>• Access to edit your website&apos;s HTML or JavaScript files</li>
+                  <li>• Your <strong>SDK Key</strong> — found in Settings → SDK after signing up</li>
+                  <li>• Access to edit your website&apos;s HTML, JavaScript, or build configuration</li>
                 </ul>
               </div>
             </section>
@@ -226,7 +226,6 @@ export default function EmoraTracker() {
       window.EmoraTest?.init({ sdkKey: "YOUR_SDK_KEY" });
     };
     document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
   }, []);
   return null;
 }
@@ -237,26 +236,106 @@ export default function EmoraTracker() {
                 />
               </div>
 
-              {/* React Installation */}
+              {/* Vue.js Installation */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">NPM Package</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Vue.js</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Use the onMounted hook in your setup script:
+                </p>
                 <CodeBlock
-                  id="install-npm"
-                  language="bash"
-                  code={`npm install emoratest
-# Coming soon .  use the script tag method for now`}
+                  id="install-vue"
+                  language="vue"
+                  code={`<script setup>
+import { onMounted } from 'vue';
+
+onMounted(() => {
+  const script = document.createElement('script');
+  script.src = 'https://emoratest.com/static/sdk/emoratest.umd.js';
+  script.async = true;
+  script.onload = () => {
+    window.EmoraTest?.init({ sdkKey: 'YOUR_SDK_KEY' });
+  };
+  document.body.appendChild(script);
+});
+</script>`}
                   copiedId={copiedCode}
                   onCopy={copyToClipboard}
                 />
               </div>
 
+              {/* Shopify Installation */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Shopify</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Go to <strong>Online Store → Themes → Edit code</strong>, open <code>theme.liquid</code>, and paste before the closing <code>&lt;/body&gt;</code> tag:
+                </p>
+                <CodeBlock
+                  id="install-shopify"
+                  language="html"
+                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+<script>
+  EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
+</script>`}
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
+
+              {/* WordPress Installation */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">WordPress</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  <strong>Option A:</strong> Use the "WPCode" plugin. Go to <strong>Code Snippets → Add New</strong>, paste the HTML snippet, and set location to "Site Wide Footer".
+                </p>
+                <p className="text-sm text-gray-600 mb-3">
+                  <strong>Option B:</strong> Add to your theme&apos;s <code>functions.php</code>:
+                </p>
+                <CodeBlock
+                  id="install-wordpress"
+                  language="php"
+                  code={`function emoratest_tracking() { ?>
+  <script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+  <script>EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });</script>
+<?php }
+add_action('wp_footer', 'emoratest_tracking');`}
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
+
+              {/* Google Tag Manager */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Google Tag Manager</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Go to <strong>Tags → New → Custom HTML</strong>, paste the snippet, set trigger to "All Pages", then publish:
+                </p>
+                <CodeBlock
+                  id="install-gtm"
+                  language="html"
+                  code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+<script>
+  EmoraTest.init({ sdkKey: "YOUR_SDK_KEY" });
+</script>`}
+                  copiedId={copiedCode}
+                  onCopy={copyToClipboard}
+                />
+              </div>
+
+              {/* NPM Note */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">NPM Package</h3>
+                <p className="text-sm text-gray-600">
+                  Coming soon — use the script tag method for now.
+                </p>
+              </div>
+
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mt-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Important:</strong> Replace <code>emoratest.com</code> with your EmoraTest instance URL and <code>YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="underline font-semibold">Settings → SDK</a>.
+                  <strong>Important:</strong> Replace <code>YOUR_SDK_KEY</code> with the key from <a href="/dashboard/settings" className="underline font-semibold">Settings → SDK</a>.
                 </p>
               </div>
               <p className="text-gray-600 mt-4 text-sm">
-                The SDK automatically handles session persistence across pages .  no additional code needed.
+                The SDK automatically handles session persistence across pages — no additional code needed.
               </p>
             </section>
 
@@ -271,7 +350,7 @@ export default function EmoraTracker() {
 
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 {[
-                  { icon: "🖱️", title: "Mouse movements", desc: "Every cursor movement tracked for emotion analysis" },
+                  { icon: "🖱️", title: "Mouse movements", desc: "Every cursor movement tracked for behavioral analysis" },
                   { icon: "👆", title: "Clicks", desc: "All clicks with element targets and timestamps" },
                   { icon: "📜", title: "Scroll behavior", desc: "Scroll depth, velocity, and patterns" },
                   { icon: "😤", title: "Rage clicks", desc: "Rapid clicking indicates frustration" },
@@ -292,7 +371,7 @@ export default function EmoraTracker() {
 
               <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                 <p className="text-sm text-green-800">
-                  <strong>No extra code needed!</strong> Just install and the dashboard will start showing session data, emotion predictions, and behavior signals within seconds.
+                  <strong>No extra code needed!</strong> Just install and the dashboard will start showing session data, behavioral state predictions, and behavior signals within seconds.
                 </p>
               </div>
             </section>
@@ -309,12 +388,12 @@ export default function EmoraTracker() {
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
                 <p className="text-sm text-blue-800 font-medium mb-2">Available outcome types:</p>
                 <ul className="text-sm text-blue-700 grid grid-cols-2 gap-1">
-                  <li><code className="bg-blue-100 px-1 rounded">purchase</code> .  Completed purchase</li>
-                  <li><code className="bg-blue-100 px-1 rounded">signup</code> .  Signed up / registered</li>
-                  <li><code className="bg-blue-100 px-1 rounded">checkout_completed</code> .  Finished checkout</li>
-                  <li><code className="bg-blue-100 px-1 rounded">demo_booked</code> .  Scheduled a demo</li>
-                  <li><code className="bg-blue-100 px-1 rounded">lead_generated</code> .  Submitted lead form</li>
-                  <li><code className="bg-blue-100 px-1 rounded">trial_started</code> .  Started free trial</li>
+                  <li><code className="bg-blue-100 px-1 rounded">purchase</code> — Completed purchase</li>
+                  <li><code className="bg-blue-100 px-1 rounded">signup</code> — Signed up / registered</li>
+                  <li><code className="bg-blue-100 px-1 rounded">checkout_completed</code> — Finished checkout</li>
+                  <li><code className="bg-blue-100 px-1 rounded">demo_booked</code> — Scheduled a demo</li>
+                  <li><code className="bg-blue-100 px-1 rounded">lead_generated</code> — Submitted lead form</li>
+                  <li><code className="bg-blue-100 px-1 rounded">trial_started</code> — Started free trial</li>
                 </ul>
               </div>
 
@@ -430,6 +509,13 @@ const onCheckoutComplete = () => {
             {/* Running A/B Tests */}
             <section id="running-ab-tests" className="mb-12 scroll-mt-20">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Running A/B Tests</h2>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>⚠️ A/B Testing is in Beta.</strong> Feature flag evaluation works, but full experiment tracking and statistical results are still being finalized.
+                </p>
+              </div>
+
               <p className="text-gray-600 mb-6">
                 EmoraTest includes a full-featured A/B testing platform. Create flags, assign variants, and track which version performs better.
               </p>
@@ -439,8 +525,8 @@ const onCheckoutComplete = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 1: Create a Feature Flag</h3>
                   <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                    <li>Go to <strong>Feature Flags</strong> in the dashboard</li>
-                    <li>Click <strong>New Flag</strong></li>
+                    <li>Go to <strong>Experiments</strong> in the dashboard</li>
+                    <li>Click <strong>New Experiment</strong></li>
                     <li>Enter a key (e.g., <code>hero-headline</code>) and name</li>
                     <li>Add 2 variants: <code>control (50%)</code> and <code>variant_b (50%)</code></li>
                     <li>Click <strong>Activate</strong></li>
@@ -498,7 +584,7 @@ function Headline() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 3: Track Conversions</h3>
                   <p className="text-sm text-gray-600">
-                    Make sure you have <code className="bg-gray-100 px-1 rounded">EmoraTest.track(&apos;purchase&apos;)</code> on your conversion page (see Section 4 above).
+                    Make sure you call <code className="bg-gray-100 px-1 rounded">EmoraTest.reportOutcome('purchase')</code> on your conversion page (see Section 4 above).
                   </p>
                 </div>
 
@@ -506,7 +592,7 @@ function Headline() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Step 4: Check Results</h3>
                   <p className="text-sm text-gray-600">
-                    Go to <strong>Feature Flags</strong> → click <strong>View Results</strong> on your flag. You&apos;ll see how many visitors saw each variant and which one converts better.
+                    Go to <strong>Experiments</strong> → click on your experiment. Statistical significance reporting is being improved and will show detailed results in future updates.
                   </p>
                 </div>
               </div>
@@ -514,7 +600,7 @@ function Headline() {
               <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mt-6">
                 <p className="text-sm text-purple-800">
                   <strong>How it works:</strong> Each visitor automatically gets assigned one variant and always sees the same one.
-                  The SDK handles this deterministically using stable hashing .  you don&apos;t need to manage user assignments.
+                  The SDK handles this deterministically using stable hashing — you don&apos;t need to manage user assignments.
                 </p>
               </div>
             </section>
@@ -542,7 +628,7 @@ if (result.variant === 'control') {
 } else {
   // Variant: Orange with urgency
   button.style.backgroundColor = '#FF6B00';
-  button.textContent = 'Buy Now .  Free Shipping';
+  button.textContent = 'Buy Now — Free Shipping';
 }`}
                     copiedId={copiedCode}
                     onCopy={copyToClipboard}
@@ -583,10 +669,10 @@ const hero = document.getElementById('hero');
 
 switch (result.variant) {
   case 'control':
-    hero.innerHTML = '<h1>Welcome</h1><p>Start your journey</p>';
+    hero.innerHTML = '<h1>Start your free trial</h1><p>No credit card required</p>';
     break;
   case 'variant_b':
-    hero.innerHTML = '<h1>Join 10,000+ Customers</h1><p>Limited time offer</p>';
+    hero.innerHTML = '<h1>Get started today</h1><p>14-day free trial</p>';
     break;
   case 'variant_c':
     hero.innerHTML = '<h1>Free Shipping Today</h1><p>Use code: FREESHIP</p>';
@@ -605,35 +691,45 @@ switch (result.variant) {
             <section id="understanding-dashboard" className="mb-12 scroll-mt-20">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Understanding Your Dashboard</h2>
               <p className="text-gray-600 mb-6">
-                The EmoraTest dashboard gives you deep insights into user behavior and emotions.
+                The EmoraTest dashboard gives you deep insights into user behavior and behavioral states.
               </p>
 
               <div className="space-y-4">
                 {[
                   {
-                    title: "Sessions",
-                    desc: "Every user visit. Shows emotion detected, friction score, abandonment risk, and user intent. Real-time updates.",
+                    title: "Overview",
+                    desc: "Your command center. See session counts, dominant behavioral states, friction scores, and abandonment risks all at a glance.",
                     color: "blue",
                   },
                   {
-                    title: "Why-Analysis",
-                    desc: "Connects emotions to conversions. Shows which emotions lead to purchases and which cause drop-offs. Use this to understand WHY users leave.",
+                    title: "Sessions",
+                    desc: "Every user visit. Shows behavioral state detected (frustrated, confused, engaged, disengaged), friction score, and outcome. Real-time updates.",
                     color: "purple",
                   },
                   {
-                    title: "Heatmap",
-                    desc: "Visual display of where users click, scroll, and move. Shows dominant emotion per page element with color gradients.",
+                    title: "Page Insights",
+                    desc: "See which pages cause the most emotional friction. Session counts, dominant behavioral state, average duration, and behavioral signals for each page.",
                     color: "green",
                   },
                   {
-                    title: "Feature Flags",
-                    desc: "Your A/B tests. Create flags, assign variants, track which version performs better with statistical significance.",
+                    title: "Diagnosis",
+                    desc: "Automatically detects UX issues like rage click clusters, high bounce rates, scroll confusion, form abandonment, and hesitation patterns. Each issue includes severity and specific recommendations.",
                     color: "orange",
                   },
                   {
-                    title: "Emotion Analysis",
-                    desc: "Each session gets an emotion prediction (frustration, delight, confusion, anxiety, boredom, focus) based on mouse behavior patterns. 86%+ accuracy.",
+                    title: "Experiments",
+                    desc: "Your A/B tests. Create experiments, assign variants, track which version performs better. Currently in beta — statistical reporting is being improved.",
                     color: "red",
+                  },
+                  {
+                    title: "Alerts",
+                    desc: "Set up alerts to get notified when emotional friction spikes on any page. Configure rules like 'Alert me when frustration exceeds 30% on /checkout.' Notifications via email or Slack webhook.",
+                    color: "yellow",
+                  },
+                  {
+                    title: "Emotion Analysis",
+                    desc: "Each session gets a behavioral state prediction (frustrated, confused, engaged, disengaged) based on mouse behavior patterns. Predictions are made after the session ends or sufficient data is collected.",
+                    color: "indigo",
                   },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-200">
@@ -643,7 +739,9 @@ switch (result.variant) {
                         backgroundColor: item.color === "blue" ? "#DBEAFE" :
                                        item.color === "purple" ? "#EDE9FE" :
                                        item.color === "green" ? "#D1FAE5" :
-                                       item.color === "orange" ? "#FED7AA" : "#FEE2E2",
+                                       item.color === "orange" ? "#FED7AA" :
+                                       item.color === "red" ? "#FEE2E2" :
+                                       item.color === "yellow" ? "#FEF3C7" : "#E0E7FF",
                       }}
                     >
                       <span className="text-lg">📊</span>
@@ -676,7 +774,7 @@ switch (result.variant) {
                     {[
                       {
                         method: "await EmoraTest.init({ sdkKey, apiUrl })",
-                        desc: "Initialize the SDK. Call once per page load. apiUrl defaults to https://emoratest.com.",
+                        desc: "Initialize the SDK. Call once per page load. apiUrl is optional — defaults to the domain serving the SDK script.",
                       },
                       {
                         method: "await EmoraTest.reportOutcome(outcome)",
@@ -688,7 +786,7 @@ switch (result.variant) {
                       },
                       {
                         method: "await EmoraTest.evaluateFlag(flagKey)",
-                        desc: "Get assigned variant for an A/B test. Returns { variant: string, enabled: boolean }.",
+                        desc: "Get assigned variant for an A/B test. Returns { assigned: boolean, variant: string | null }.",
                       },
                       {
                         method: "await EmoraTest.getVariant(flagKey)",
@@ -699,12 +797,12 @@ switch (result.variant) {
                         desc: "Get the current session ID (changes on each page visit).",
                       },
                       {
-                        method: "EmoraTest.getVisitorId()",
-                        desc: "Get the persistent visitor ID (same across sessions for the same browser).",
-                      },
-                      {
                         method: "EmoraTest.isInitialized()",
                         desc: "Check if the SDK has been initialized and is actively tracking.",
+                      },
+                      {
+                        method: "EmoraTest.isLimitReached()",
+                        desc: "Check if the monthly session limit has been reached.",
                       },
                       {
                         method: "await EmoraTest.destroy()",
@@ -736,7 +834,7 @@ switch (result.variant) {
                 {[
                   {
                     q: "SDK not loading / window.EmoraTest is undefined",
-                    a: "Check that the script src URL is correct: https://emoratest.com/static/sdk/emoratest.umd.js. Open browser DevTools Console to see error messages. For Next.js, make sure your component has 'use client' directive.",
+                    a: "Check that the script src URL is correct. Open browser DevTools Console to see error messages. For Next.js, make sure your component has 'use client' directive.",
                   },
                   {
                     q: "401 Unauthorized errors in console",
@@ -744,19 +842,19 @@ switch (result.variant) {
                   },
                   {
                     q: "Sessions not appearing in dashboard",
-                    a: "Verify the SDK is loaded by typing window.EmoraTest in the browser console. Check that apiUrl points to https://emoratest.com. If using localhost, ensure your backend is running.",
+                    a: "Verify the SDK is loaded by typing window.EmoraTest in the browser console. If using localhost, ensure your backend is running.",
                   },
                   {
                     q: "A/B test always shows the same variant",
                     a: "This is correct! Each visitor always gets the same variant for consistency. Open an incognito window to see the other variant. The SDK uses stable hashing based on visitor ID.",
                   },
                   {
-                    q: "Emotion showing as 'Analyzing...'",
-                    a: "The emotion model runs when the session ends or after sufficient data is collected. Wait for the user to leave the page or spend more time on the page. Results appear within 30 seconds.",
+                    q: "Session shows 'Not enough data'",
+                    a: "Sessions shorter than 10 seconds or with fewer than 5 events will show 'Not enough data' instead of a behavioral prediction. This is by design — very short sessions don't have enough behavioral data for a reliable prediction.",
                   },
                   {
                     q: "Content Security Policy (CSP) errors",
-                    a: "Add https://emoratest.com to your CSP script-src directive. For Next.js, update next.config.js headers() to include 'https://emoratest.com' in script-src.",
+                    a: "Add your EmoraTest instance URL to your CSP script-src directive. For Next.js, update next.config.js headers() to include your instance URL in script-src.",
                   },
                 ].map((item, i) => (
                   <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
