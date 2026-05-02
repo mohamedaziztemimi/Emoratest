@@ -49,6 +49,24 @@ function getCountryName(countryCode: string | null | undefined): string {
   return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode.toUpperCase();
 }
 
+// Map old 8 emotions to new 4 emotions for backward compatibility
+const EMOTION_CONSOLIDATION_MAP: Record<string, string> = {
+  // Old names -> New names
+  frustration: "frustrated",
+  anxiety: "frustrated",
+  confusion: "confused",
+  focus: "engaged",
+  satisfaction: "engaged",
+  delight: "engaged",
+  boredom: "disengaged",
+  hesitation: "disengaged",
+};
+
+// Helper to get the consolidated emotion name
+function getConsolidatedEmotion(emotion: string): string {
+  return EMOTION_CONSOLIDATION_MAP[emotion] || emotion;
+}
+
 // Format IP address - GDPR compliant: hash and show first 8 chars
 // For Germany/EU compliance, never display raw IP addresses
 function formatIpAddress(ip: string | null | undefined): string {
@@ -63,7 +81,7 @@ function formatIpAddress(ip: string | null | undefined): string {
   // Convert to hex and take first 8 characters
   const hashHex = Math.abs(hash).toString(16).padStart(8, '0').slice(0, 8);
 
-  return `Visitor ${hashHex}`;
+  return hashHex;
 }
 
 function formatPageUrl(url: string): string {
@@ -357,7 +375,7 @@ export default function SessionsPage() {
                       className="rounded border-[hsl(var(--border))]"
                     />
                   </th>
-                  {["Visitor", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
+                  {["Identity", "Page", "Emotion", "Confidence", "Duration", "Outcome", "Time", ""].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]"
@@ -416,13 +434,13 @@ export default function SessionsPage() {
                         <div className="flex items-center gap-2">
                           <span
                             className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: EMOTION_COLORS[s.primary_emotion] || "#9CA3AF" }}
+                            style={{ backgroundColor: EMOTION_COLORS[getConsolidatedEmotion(s.primary_emotion)] || "#9CA3AF" }}
                           />
                           <span
                             className="text-[13px] font-medium text-[hsl(var(--foreground))]"
                             title={s.primary_emotion === "insufficient_data" ? "Session too short for reliable classification (< 10s or < 5 events)" : undefined}
                           >
-                            {EMOTION_DISPLAY[s.primary_emotion] || s.primary_emotion}
+                            {EMOTION_DISPLAY[getConsolidatedEmotion(s.primary_emotion)] || getConsolidatedEmotion(s.primary_emotion)}
                           </span>
                         </div>
                       ) : (
