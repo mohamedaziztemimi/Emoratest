@@ -194,7 +194,7 @@ export default function LoginPage() {
                 }}
               >
                 Forgot password?
-              </Link>
+              </a>
             </div>
             <input
               id="password"
@@ -282,7 +282,7 @@ export default function LoginPage() {
           }}
         >
           Start free →
-        </Link>
+        </a>
       </p>
     </div>
   );

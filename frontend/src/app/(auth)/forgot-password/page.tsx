@@ -279,7 +279,7 @@ export default function ForgotPasswordPage() {
           }}
         >
           Sign in →
-        </Link>
+        </a>
       </p>
     </div>
   );

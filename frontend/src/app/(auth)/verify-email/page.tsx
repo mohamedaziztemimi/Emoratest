@@ -216,7 +216,7 @@ function VerifyEmailForm() {
               }}
             >
               Go to Login
-            </Link>
+            </a>
           </>
         );
 
@@ -279,7 +279,7 @@ function VerifyEmailForm() {
               }}
             >
               Go to Login
-            </Link>
+            </a>
           </>
         );
 

@@ -540,7 +540,7 @@ export default function SignupPage() {
                 rel="noopener noreferrer"
               >
                 Privacy Policy
-              </Link>
+              </a>
               {" and "}
               <a
                 href="/terms"
@@ -549,7 +549,7 @@ export default function SignupPage() {
                 rel="noopener noreferrer"
               >
                 Terms of Service
-              </Link>
+              </a>
             </label>
           </div>
 
@@ -607,7 +607,7 @@ export default function SignupPage() {
           }}
         >
           Sign in →
-        </Link>
+        </a>
       </p>
     </div>
   );

@@ -353,7 +353,7 @@ function ResetPasswordForm() {
             }}
           >
             Sign in →
-          </Link>
+          </a>
         </p>
       )}
     </div>
