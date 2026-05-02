@@ -23,154 +23,94 @@ logger = logging.getLogger(__name__)
 
 ARTIFACTS_DIR = Path("/app/ml_artifacts")
 
-# Emotion labels
+# Emotion labels - 4 emotion system (consolidated from 8)
 EMOTIONS = [
-    'confusion',
-    'frustration',
-    'delight',
-    'boredom',
-    'anxiety',
-    'focus',
-    'hesitation',
-    'satisfaction',
+    'frustrated',   # negative, high arousal
+    'confused',     # negative, medium arousal
+    'engaged',      # positive, medium arousal
+    'disengaged',   # negative, low arousal
 ]
 
-# Valence and arousal mappings
+# Valence and arousal mappings - must match emotion_model.py
 VALENCE_MAP = {
-    'confusion': -0.3,
-    'frustration': -0.7,
-    'delight': 0.8,
-    'anxiety': -0.5,
-    'hesitation': -0.1,
-    'focus': 0.3,
-    'boredom': -0.2,
-    'satisfaction': 0.7,
+    'frustrated': -0.7,
+    'confused': -0.3,
+    'engaged': 0.7,
+    'disengaged': -0.4,
 }
 
 AROUSAL_MAP = {
-    'confusion': 0.6,
-    'frustration': 0.8,
-    'delight': 0.7,
-    'anxiety': 0.9,
-    'hesitation': 0.4,
-    'focus': 0.7,
-    'boredom': 0.1,
-    'satisfaction': 0.3,
+    'frustrated': 0.8,
+    'confused': 0.6,
+    'engaged': 0.5,
+    'disengaged': 0.1,
 }
 
 
 def generate_synthetic_features(n: int = 2000) -> tuple[np.ndarray, np.ndarray]:
     """Generate synthetic training data for the 8 behavioral features.
 
-    Simplified version that matches the feature_worker.py feature names.
+    Uses the 4-emotion system: frustrated, confused, engaged, disengaged.
     """
     np.random.seed(42)
 
     X = np.zeros((n, len(FEATURE_NAMES)))
     y = np.zeros(n, dtype=object)
 
-    samples_per_emotion = n // 8
+    samples_per_emotion = n // 4
 
     for emotion_idx, emotion in enumerate(EMOTIONS):
         start_idx = emotion_idx * samples_per_emotion
         end_idx = start_idx + samples_per_emotion
 
         for i in range(start_idx, end_idx):
-            if emotion == 'frustration':
-                # High rage clicks, high velocity variance
+            if emotion == 'frustrated':
+                # High rage clicks, high velocity variance, high hesitation
                 X[i] = [
-                    np.random.uniform(0.5, 0.9),   # hesitation_score (0-1 scale, high for frustration)
+                    np.random.uniform(0.5, 0.9),   # hesitation_score (high)
                     np.random.uniform(0, 5),       # price_dwell_time_s
-                    np.random.uniform(0.3, 0.8),   # rage_click_score
+                    np.random.uniform(0.3, 0.8),   # rage_click_score (high)
                     np.random.uniform(0, 2),       # scroll_retreat_count
                     np.random.uniform(0, 1),       # exit_intent_count
                     np.random.uniform(0, 10),      # checkout_hesitation_s
-                    np.random.uniform(10000, 80000), # velocity_variance
+                    np.random.uniform(10000, 80000), # velocity_variance (high)
                     np.random.uniform(60, 600),    # session_duration_s
                 ]
-            elif emotion == 'confusion':
-                # High scroll retreats, low velocity
+            elif emotion == 'confused':
+                # High scroll retreats, moderate hesitation, low rage
                 X[i] = [
-                    np.random.uniform(0.4, 0.8),   # hesitation_score
+                    np.random.uniform(0.4, 0.8),   # hesitation_score (moderate-high)
                     np.random.uniform(0, 5),       # price_dwell_time_s
-                    np.random.uniform(0, 0.3),     # rage_click_score
+                    np.random.uniform(0, 0.3),     # rage_click_score (low)
                     np.random.uniform(3, 10),      # scroll_retreat_count (high)
                     np.random.uniform(1, 4),       # exit_intent_count
                     np.random.uniform(5, 30),      # checkout_hesitation_s
-                    np.random.uniform(1000, 20000), # velocity_variance
+                    np.random.uniform(1000, 20000), # velocity_variance (low-moderate)
                     np.random.uniform(30, 300),    # session_duration_s
                 ]
-            elif emotion == 'delight':
-                # Balanced, long session
+            elif emotion == 'engaged':
+                # Low hesitation, low rage, good duration, smooth velocity
                 X[i] = [
                     np.random.uniform(0, 0.3),     # hesitation_score (low)
-                    np.random.uniform(5, 20),      # price_dwell_time_s (engaged)
-                    np.random.uniform(0, 0.2),     # rage_click_score (low)
+                    np.random.uniform(5, 25),      # price_dwell_time_s (reading)
+                    np.random.uniform(0, 0.15),    # rage_click_score (very low)
                     np.random.uniform(0, 3),       # scroll_retreat_count (low)
                     np.random.uniform(0, 1),       # exit_intent_count (low)
                     np.random.uniform(0, 5),       # checkout_hesitation_s (low)
-                    np.random.uniform(2000, 30000), # velocity_variance (moderate)
-                    np.random.uniform(180, 900),   # session_duration_s (long)
+                    np.random.uniform(3000, 35000), # velocity_variance (smooth)
+                    np.random.uniform(120, 900),   # session_duration_s (long)
                 ]
-            elif emotion == 'boredom':
-                # Low activity, low velocity
-                X[i] = [
-                    np.random.uniform(0, 0.2),     # hesitation_score
-                    np.random.uniform(0, 3),       # price_dwell_time_s
-                    np.random.uniform(0, 0.2),     # rage_click_score
-                    np.random.uniform(0, 2),       # scroll_retreat_count
-                    np.random.uniform(0, 1),       # exit_intent_count
-                    np.random.uniform(0, 2),       # checkout_hesitation_s
-                    np.random.uniform(500, 5000),  # velocity_variance (low)
-                    np.random.uniform(10, 60),     # session_duration_s (short)
-                ]
-            elif emotion == 'anxiety':
-                # High hesitation, high exit intent
-                X[i] = [
-                    np.random.uniform(0.5, 0.9),   # hesitation_score (high)
-                    np.random.uniform(0, 10),      # price_dwell_time_s
-                    np.random.uniform(0.1, 0.5),   # rage_click_score
-                    np.random.uniform(2, 8),       # scroll_retreat_count
-                    np.random.uniform(2, 6),       # exit_intent_count (high)
-                    np.random.uniform(15, 60),     # checkout_hesitation_s (high)
-                    np.random.uniform(5000, 50000), # velocity_variance
-                    np.random.uniform(60, 300),    # session_duration_s
-                ]
-            elif emotion == 'focus':
-                # Smooth movement, low hesitation
+            else:  # disengaged
+                # Very short sessions, low activity, low velocity
                 X[i] = [
                     np.random.uniform(0, 0.2),     # hesitation_score (low)
-                    np.random.uniform(5, 25),      # price_dwell_time_s (reading)
-                    np.random.uniform(0, 0.1),     # rage_click_score (very low)
+                    np.random.uniform(0, 3),       # price_dwell_time_s
+                    np.random.uniform(0, 0.2),     # rage_click_score (low)
                     np.random.uniform(0, 2),       # scroll_retreat_count (low)
                     np.random.uniform(0, 1),       # exit_intent_count (low)
-                    np.random.uniform(0, 3),       # checkout_hesitation_s
-                    np.random.uniform(3000, 25000), # velocity_variance (smooth)
-                    np.random.uniform(120, 600),   # session_duration_s
-                ]
-            elif emotion == 'hesitation':
-                # High hesitation, moderate velocity
-                X[i] = [
-                    np.random.uniform(0.6, 0.95),  # hesitation_score (very high)
-                    np.random.uniform(3, 15),      # price_dwell_time_s
-                    np.random.uniform(0, 0.3),     # rage_click_score
-                    np.random.uniform(1, 5),       # scroll_retreat_count
-                    np.random.uniform(1, 3),       # exit_intent_count
-                    np.random.uniform(10, 45),     # checkout_hesitation_s
-                    np.random.uniform(2000, 40000), # velocity_variance
-                    np.random.uniform(60, 240),    # session_duration_s
-                ]
-            else:  # satisfaction
-                # Balanced everything
-                X[i] = [
-                    np.random.uniform(0, 0.3),     # hesitation_score (low)
-                    np.random.uniform(3, 15),      # price_dwell_time_s
-                    np.random.uniform(0, 0.15),    # rage_click_score (low)
-                    np.random.uniform(0, 3),       # scroll_retreat_count
-                    np.random.uniform(0, 2),       # exit_intent_count (low)
-                    np.random.uniform(0, 8),       # checkout_hesitation_s
-                    np.random.uniform(5000, 35000), # velocity_variance
-                    np.random.uniform(90, 600),    # session_duration_s
+                    np.random.uniform(0, 2),       # checkout_hesitation_s (low)
+                    np.random.uniform(500, 5000),  # velocity_variance (very low)
+                    np.random.uniform(5, 60),      # session_duration_s (very short)
                 ]
 
             y[i] = emotion
@@ -213,7 +153,7 @@ def bootstrap_emotion_model() -> bool:
                 max_depth=6,
                 learning_rate=0.1,
                 objective='multi:softprob',
-                num_class=8,
+                num_class=4,
                 random_state=42,
                 eval_metric='mlogloss',
             )

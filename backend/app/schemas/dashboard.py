@@ -126,7 +126,7 @@ class FunnelResponse(BaseModel):
 class DashboardStatsResponse(BaseModel):
     """Summary stats for the dashboard overview page."""
     avg_emotion_confidence: float | None = None  # Average emotion confidence across all sessions
-    frustration_count: int = 0  # Count of sessions with primary_emotion = 'frustration'
+    frustration_count: int = 0  # Count of sessions with primary_emotion = 'frustrated'
 
 
 # ── Analytics: Heatmap (Raw x,y coordinates) ────────────────────────

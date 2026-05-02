@@ -449,9 +449,9 @@ async def process_session(session_id: str) -> dict:
                 valence = emotion_result.get('valence', 0.5)
                 arousal = emotion_result.get('arousal', 0.5)
 
-                # Simple valence adjustment based on emotion
-                negative_emotions = {'frustration', 'confusion', 'anxiety', 'boredom'}
-                positive_emotions = {'delight', 'satisfaction', 'focus'}
+                # Simple valence adjustment based on emotion (4-emotion system)
+                negative_emotions = {'frustrated', 'confused', 'disengaged'}
+                positive_emotions = {'engaged'}
 
                 negative_weight = sum(emotion_scores.get(e, 0) for e in negative_emotions)
                 positive_weight = sum(emotion_scores.get(e, 0) for e in positive_emotions)

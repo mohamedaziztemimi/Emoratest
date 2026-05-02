@@ -222,7 +222,7 @@ class EmotionService:
             )
 
         # Check for alerts
-        if result.primary_emotion == "frustration" and result.confidence > self.alert_threshold:
+        if result.primary_emotion == "frustrated" and result.confidence > self.alert_threshold:
             await self._trigger_frustration_alert(session_id, result)
 
         return result
@@ -693,7 +693,7 @@ class EmotionService:
                 and_(
                     EmotionEvent.experiment_id == experiment_id,
                     EmotionEvent.timestamp >= cutoff,
-                    EmotionEvent.primary_emotion == "frustration",
+                    EmotionEvent.primary_emotion == "frustrated",
                 )
             )
         )
