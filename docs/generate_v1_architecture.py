@@ -920,7 +920,7 @@ def _ch7_javascript_sdk(pdf: CoursePDF) -> None:
     pdf.code_block(
         "// SDK initialization\n"
         "EmoraTest.init({\n"
-        "  sdkKey: 'sk_live_a1b2c3d4e5f6...',\n"
+        "  sdkKey: 'sk_live_YOUR_SDK_KEY_HERE',\n"
         "  endpoint: 'https://api.emoratest.com',\n"
         "  batchSize: 20,\n"
         "  flushInterval: 5000,  // 5 seconds\n"

@@ -476,7 +476,7 @@ def _ch3_auth_endpoints(pdf: CoursePDF) -> None:
     pdf.subsection("Response Schema (200 OK)")
     pdf.code_block(
         '{\n'
-        '  "access_token": "eyJhbGciOiJIUzI1NiIs...",\n'
+        '  "access_token": "YOUR_JWT_TOKEN_HERE",\n'
         '  "token_type": "bearer"\n'
         '}'
     )

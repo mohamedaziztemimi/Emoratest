@@ -619,7 +619,7 @@ def build():
 
     pdf.section_title("6.1", "WebSocket Protocol")
     pdf.code_block(
-        "1. Connect:  ws://host/api/v1/ws/scores?sdk_key=<hash>\n"
+        "1. Connect:  wss://host/api/v1/ws/scores?sdk_key=<hash>\n"
         '2. Receive:  {"action": "connected", "merchant_id": "..."}\n'
         '3. Send:     {"action": "subscribe", "session_ids": ["uuid1", "uuid2"]}\n'
         '4. Receive:  {"action": "subscribed", "session_ids": [...], "count": 2}\n'
