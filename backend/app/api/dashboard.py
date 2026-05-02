@@ -2543,7 +2543,7 @@ async def get_feedback_analytics(
         .where(
             Session.merchant_id == merchant.id,
             Session.primary_emotion.isnot(None),
-            Session.created_at >= cutoff_date,
+            Session.started_at >= cutoff_date,
         )
         .group_by(Session.primary_emotion, SessionFeedback.rating)
     )

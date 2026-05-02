@@ -322,7 +322,7 @@ async def get_page_insights(
             emotions.get("frustrated", 0) +
             emotions.get("anxiety", 0)
         )
-        frustration_rate = round(fruustrated_count / session_count * 100, 1) if session_count else 0
+        frustration_rate = round(frustrated_count / session_count * 100, 1) if session_count else 0
 
         # Get dominant emotion
         total_emotions = sum(emotions.values()) or 1

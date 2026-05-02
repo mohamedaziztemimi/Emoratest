@@ -119,6 +119,82 @@ def _history_to_dict(h: AlertHistory, rule_name: str | None = None) -> dict[str,
 
 
 # ── Endpoints ───────────────────────────────────────────────────────
+# IMPORTANT: Route order matters! Specific routes must be defined BEFORE
+# parameterized routes like /{rule_id}. Otherwise /unresolved-count would
+# match /{rule_id} with rule_id="unresolved-count".
+# Order: /history/list → /unresolved-count → /check → /{rule_id} → CRUD
+
+
+@router.get("/history/list", response_model=list[AlertHistoryResponse], summary="Get alert history")
+@limiter.limit("60/minute")
+async def get_alert_history(
+    request: Request,
+    limit: int = Query(20, ge=1, le=100),
+    db: DBSession = Depends(get_db),
+    merchant_id: str = Depends(get_merchant_flexible),
+):
+    """Get alert trigger history for the merchant."""
+    # Join with AlertRule to get rule names
+    result = db.execute(
+        select(AlertHistory, AlertRule.name)
+        .join(AlertRule, AlertHistory.alert_rule_id == AlertRule.id)
+        .where(AlertRule.merchant_id == uuid.UUID(merchant_id))
+        .order_by(AlertHistory.triggered_at.desc())
+        .limit(limit)
+    )
+    rows = result.all()
+    return [_history_to_dict(h, rule_name) for h, rule_name in rows]
+
+
+@router.get("/unresolved-count", summary="Get unresolved alert count")
+@limiter.limit("60/minute")
+async def get_unresolved_count(
+    request: Request,
+    db: DBSession = Depends(get_db),
+    merchant_id: str = Depends(get_merchant_flexible),
+):
+    """Count of unresolved alerts from last 24 hours (for sidebar badge)."""
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+
+    rule_ids_result = db.execute(
+        select(AlertRule.id).where(AlertRule.merchant_id == uuid.UUID(merchant_id))
+    )
+    rule_ids = [r[0] for r in rule_ids_result.all()]
+
+    if not rule_ids:
+        return {"count": 0}
+
+    result = db.execute(
+        select(func.count(AlertHistory.id))
+        .where(
+            and_(
+                AlertHistory.alert_rule_id.in_(rule_ids),
+                AlertHistory.status == "fired",
+                AlertHistory.triggered_at >= cutoff,
+            )
+        )
+    )
+    count = result.scalar() or 0
+    return {"count": count}
+
+
+@router.post("/check", summary="Manually trigger alert check")
+@limiter.limit("10/minute")
+async def check_alerts(
+    request: Request,
+    db: DBSession = Depends(get_db),
+    merchant_id: str = Depends(get_merchant_flexible),
+):
+    """Check alert rules and fire if thresholds met (for testing)."""
+    from app.services.alert_checker import check_alerts
+
+    fired = check_alerts(db)
+
+    return {
+        "status": "checked",
+        "fired": fired,
+        "message": f"Checked {merchant_id}'s alert rules - {fired} fired",
+    }
 
 
 @router.post("", response_model=AlertRuleResponse, summary="Create alert rule")
@@ -275,75 +351,3 @@ async def delete_alert_rule(
     db.delete(rule)
     db.commit()
     return {"status": "deleted"}
-
-
-@router.get("/history/list", response_model=list[AlertHistoryResponse], summary="Get alert history")
-@limiter.limit("60/minute")
-async def get_alert_history(
-    request: Request,
-    limit: int = Query(20, ge=1, le=100),
-    db: DBSession = Depends(get_db),
-    merchant_id: str = Depends(get_merchant_flexible),
-):
-    """Get alert trigger history for the merchant."""
-    # Join with AlertRule to get rule names
-    result = db.execute(
-        select(AlertHistory, AlertRule.name)
-        .join(AlertRule, AlertHistory.alert_rule_id == AlertRule.id)
-        .where(AlertRule.merchant_id == uuid.UUID(merchant_id))
-        .order_by(AlertHistory.triggered_at.desc())
-        .limit(limit)
-    )
-    rows = result.all()
-    return [_history_to_dict(h, rule_name) for h, rule_name in rows]
-
-
-@router.get("/unresolved-count", summary="Get unresolved alert count")
-@limiter.limit("60/minute")
-async def get_unresolved_count(
-    request: Request,
-    db: DBSession = Depends(get_db),
-    merchant_id: str = Depends(get_merchant_flexible),
-):
-    """Count of unresolved alerts from last 24 hours (for sidebar badge)."""
-    cutoff = datetime.utcnow() - timedelta(hours=24)
-
-    rule_ids_result = db.execute(
-        select(AlertRule.id).where(AlertRule.merchant_id == uuid.UUID(merchant_id))
-    )
-    rule_ids = [r[0] for r in rule_ids_result.all()]
-
-    if not rule_ids:
-        return {"count": 0}
-
-    result = db.execute(
-        select(func.count(AlertHistory.id))
-        .where(
-            and_(
-                AlertHistory.alert_rule_id.in_(rule_ids),
-                AlertHistory.status == "fired",
-                AlertHistory.triggered_at >= cutoff,
-            )
-        )
-    )
-    count = result.scalar() or 0
-    return {"count": count}
-
-
-@router.post("/check", summary="Manually trigger alert check")
-@limiter.limit("10/minute")
-async def check_alerts(
-    request: Request,
-    db: DBSession = Depends(get_db),
-    merchant_id: str = Depends(get_merchant_flexible),
-):
-    """Check alert rules and fire if thresholds met (for testing)."""
-    from app.services.alert_checker import check_alerts
-
-    fired = check_alerts(db)
-
-    return {
-        "status": "checked",
-        "fired": fired,
-        "message": f"Checked {merchant_id}'s alert rules - {fired} fired",
-    }
