@@ -44,16 +44,6 @@ from app.core.security import SecurityHeadersMiddleware
 # Import emotion model bootstrap for ML pipeline initialization
 from app.services.emotion_model_bootstrap import bootstrap_emotion_model
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
-    docs_url=f"{settings.API_V1_PREFIX}/docs",
-    redoc_url=f"{settings.API_V1_PREFIX}/redoc",
-    lifespan=lifespan,
-)
-
-
 # ── Background task for alert checking ─────────────────────────────────
 
 logger = logging.getLogger(__name__)
@@ -126,6 +116,15 @@ async def lifespan(app: FastAPI):
 
 
 # ── Create FastAPI app with lifespan ───────────────────────────────────
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+    docs_url=f"{settings.API_V1_PREFIX}/docs",
+    redoc_url=f"{settings.API_V1_PREFIX}/redoc",
+    lifespan=lifespan,
+)
 
 # ── Static files (SDK and test page) ─────────────────────────────
 static_dir = Path(__file__).parent.parent / "static"
