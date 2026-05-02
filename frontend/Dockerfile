@@ -13,8 +13,8 @@ RUN addgroup -g 1001 -S appuser && \
 # Copy dependency files
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci && \
+# Install dependencies (exclude optional to avoid LGPL-licensed native binaries)
+RUN npm ci --omit=optional && \
     mkdir -p .next && \
     chown -R appuser:appuser /app
 
@@ -44,7 +44,7 @@ RUN addgroup -g 1001 -S appuser && \
 
 # Copy package files and install production dependencies only
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && \
+RUN npm ci --omit=dev --omit=optional && \
     chown -R appuser:appuser /app
 
 # Copy built application from builder stage
