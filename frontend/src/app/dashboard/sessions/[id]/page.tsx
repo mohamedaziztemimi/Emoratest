@@ -23,12 +23,41 @@ const EMOTION_COLORS: Record<string, string> = {
   insufficient_data: "#D1D5DB",
 };
 
-const OUTCOME_LABELS = {
+// Map old 8 emotions to new 4 emotions for backward compatibility
+const EMOTION_CONSOLIDATION_MAP: Record<string, string> = {
+  // Old names -> New names
+  frustration: "frustrated",
+  anxiety: "frustrated",
+  confusion: "confused",
+  focus: "engaged",
+  satisfaction: "engaged",
+  delight: "engaged",
+  boredom: "disengaged",
+  hesitation: "disengaged",
+};
+
+// Helper to get the consolidated emotion name
+function getConsolidatedEmotion(emotion: string): string {
+  return EMOTION_CONSOLIDATION_MAP[emotion] || emotion;
+}
+
+// Helper to get display name for emotion
+function getEmotionDisplayName(emotion: string): string {
+  const consolidated = getConsolidatedEmotion(emotion);
+  return consolidated.charAt(0).toUpperCase() + consolidated.slice(1);
+}
+
+const OUTCOME_LABELS: Record<string, string> = {
   purchase: "Converted",
   abandon: "Abandoned",
-  browse: "Active",
-  unknown: "Unknown",
-} as const;
+  unknown: "Bounced",
+  browse: "Left",
+  signup: "Signed Up",
+  trial_started: "Trial Started",
+  lead_generated: "Lead",
+  demo_booked: "Demo Booked",
+  checkout_completed: "Checkout Done",
+};
 
 const INTENT_LABELS = {
   browsing: "Low Intent",
@@ -51,7 +80,7 @@ const FEATURE_LABELS: Record<string, { label: string; tip: string }> = {
   rage_click_score: { label: "Friction Level", tip: "Repeated clicks suggesting confusion or frustration" },
   scroll_retreat_count: { label: "Scroll Retreats", tip: "Scrolled down then back up, indicating uncertainty" },
   exit_intent_count: { label: "Exit Intents", tip: "Moved cursor toward closing the page" },
-  checkout_hesitation_s: { label: "Hesitation Score", tip: "Time spent pausing during checkout" },
+  checkout_hesitation_s: { label: "Checkout Hesitation", tip: "Time spent pausing during checkout" },
   velocity_variance: { label: "Velocity Variance", tip: "How erratic their navigation pattern was" },
   session_duration_s: { label: "Session Duration", tip: "Total time spent on site" },
 };
@@ -320,7 +349,13 @@ export default function SessionDetailPage() {
           </h1>
           <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{s.page_url}</p>
         </div>
-        <Badge variant={outcomeVariant(s.outcome)}>{OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome}</Badge>
+        <Badge variant={outcomeVariant(s.outcome)}>{(() => {
+          // If session ended but outcome is still unknown, show "Left" (matches sessions list behavior)
+          if (s.outcome === "unknown" && s.ended_at) {
+            return "Left";
+          }
+          return OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome;
+        })()}</Badge>
       </div>
 
       {/* Top Stat Cards .  Prompt 21 */}
@@ -329,11 +364,21 @@ export default function SessionDetailPage() {
         <MetricBox label="Duration" value={formatDuration(s.ended_at ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null)} />
         <MetricBox
           label="Primary Emotion"
-          value={s.primary_emotion === "insufficient_data" ? "Not enough data" : (s.primary_emotion ? capitalize(s.primary_emotion) : "--")}
-          variant={s.primary_emotion ? getEmotionVariant(s.primary_emotion) : undefined}
+          value={s.primary_emotion === "insufficient_data" ? "Not enough data" : (s.primary_emotion ? getEmotionDisplayName(s.primary_emotion) : "--")}
+          variant={s.primary_emotion ? getEmotionVariant(getConsolidatedEmotion(s.primary_emotion)) : undefined}
           title={s.primary_emotion === "insufficient_data" ? "Session was too short for reliable classification (< 10s or < 5 events)" : undefined}
         />
-        <MetricBox label="Outcome" value={OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome} variant={outcomeVariant(s.outcome)} />
+        <MetricBox
+          label="Outcome"
+          value={(() => {
+            // If session ended but outcome is still unknown, show "Left" (matches sessions list behavior)
+            if (s.outcome === "unknown" && s.ended_at) {
+              return "Left";
+            }
+            return OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome;
+          })()}
+          variant={outcomeVariant(s.outcome)}
+        />
       </div>
 
       {s.primary_emotion && (
@@ -353,10 +398,10 @@ export default function SessionDetailPage() {
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Primary Emotion</span>
                 <span
                   className="mt-2 text-[28px] font-bold capitalize"
-                  style={{ color: EMOTION_COLORS[s.primary_emotion] || 'hsl(var(--foreground))' }}
+                  style={{ color: EMOTION_COLORS[getConsolidatedEmotion(s.primary_emotion || '')] || 'hsl(var(--foreground))' }}
                   title={s.primary_emotion === "insufficient_data" ? "Session was too short for reliable classification (< 10s or < 5 events)" : undefined}
                 >
-                  {s.primary_emotion === "insufficient_data" ? "Not enough data" : s.primary_emotion}
+                  {s.primary_emotion === "insufficient_data" ? "Not enough data" : getEmotionDisplayName(s.primary_emotion || '')}
                 </span>
                 <span className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">
                   {s.primary_emotion === "insufficient_data" ? (
@@ -380,25 +425,32 @@ export default function SessionDetailPage() {
               {/* Emotion scores bar chart */}
               <div className="lg:col-span-2">
                 <div className="space-y-3">
-                  {s.emotion_scores && Object.entries(s.emotion_scores)
-                    .sort(([,a], [,b]) => (b as number) - (a as number))
-                    .map(([emotion, score]) => (
-                      <div key={emotion} className="flex items-center gap-3">
-                        <span className="w-24 text-[12px] font-medium capitalize text-[hsl(var(--foreground))]">{emotion}</span>
-                        <div className="flex-1 h-6 rounded-full bg-[hsl(var(--secondary))] overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${((score as number) * 100).toFixed(1)}%`,
-                              backgroundColor: EMOTION_COLORS[emotion] || '#6B7280',
-                            }}
-                          />
-                        </div>
-                        <span className="w-14 text-right text-[12px] font-semibold text-[hsl(var(--muted-foreground))]">
-                          {((score as number) * 100).toFixed(1)}%
-                        </span>
+                  {s.emotion_scores && (() => {
+                    // Consolidate old 8 emotions to new 4 emotions
+                    const consolidated: Record<string, number> = {};
+                    for (const [emotion, score] of Object.entries(s.emotion_scores)) {
+                      const mapped = getConsolidatedEmotion(emotion);
+                      consolidated[mapped] = (consolidated[mapped] || 0) + (score as number);
+                    }
+                    // Sort by score descending
+                    return Object.entries(consolidated).sort(([,a], [,b]) => b - a);
+                  })().map(([emotion, score]) => (
+                    <div key={emotion} className="flex items-center gap-3">
+                      <span className="w-24 text-[12px] font-medium capitalize text-[hsl(var(--foreground))]">{emotion}</span>
+                      <div className="flex-1 h-6 rounded-full bg-[hsl(var(--secondary))] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${(score * 100).toFixed(1)}%`,
+                            backgroundColor: EMOTION_COLORS[emotion] || '#6B7280',
+                          }}
+                        />
                       </div>
-                    ))}
+                      <span className="w-14 text-right text-[12px] font-semibold text-[hsl(var(--muted-foreground))]">
+                        {(score * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -527,10 +579,10 @@ export default function SessionDetailPage() {
       {/* Similar sessions .  Prompt 21 */}
       <div className="text-center py-4">
         <Link
-          href={`/dashboard/sessions?page=${encodeURIComponent(s.page_url)}&emotion=${s.primary_emotion || ''}`}
+          href={`/dashboard/sessions?page=${encodeURIComponent(s.page_url)}&emotion=${s.primary_emotion ? getConsolidatedEmotion(s.primary_emotion) : ''}`}
           className="inline-flex items-center gap-2 text-[13px] font-medium text-[hsl(var(--primary))] hover:underline"
         >
-          View {s.primary_emotion ? `other ${s.primary_emotion} sessions` : 'other sessions'} on this page
+          View {s.primary_emotion ? `other ${getConsolidatedEmotion(s.primary_emotion)} sessions` : 'other sessions'} on this page
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>

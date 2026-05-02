@@ -116,7 +116,7 @@ async def get_emotion_pulse(
         select(func.count(func.distinct(Session.page_url))).where(
             Session.merchant_id == merchant.id,
             Session.started_at >= today_start,
-            Session.primary_emotion == "frustration",
+            Session.primary_emotion == "frustrated",
         )
     )
     frustration_alerts = pages_result.scalar() or 0
@@ -445,7 +445,7 @@ async def get_dashboard_stats(
     frustration_result = await db.execute(
         select(func.count()).where(
             Session.merchant_id == merchant.id,
-            Session.primary_emotion == "frustration",
+            Session.primary_emotion == "frustrated",
         )
     )
     frustration_count = frustration_result.scalar() or 0
