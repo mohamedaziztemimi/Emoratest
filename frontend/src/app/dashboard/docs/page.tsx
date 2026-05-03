@@ -673,7 +673,7 @@ if (result.variant === 'control') {
                   />
                   <TroubleshootItem
                     problem="Very few events being captured?"
-                    solution="Default mouse throttle is 100ms. If you need higher resolution, pass <code className="bg-[hsl(var(--secondary))] px-1 rounded">mouseMoveThrottleMs: 50</code> to init()."
+                    solution="Default mouse throttle is 100ms. If you need higher resolution, pass mouseMoveThrottleMs: 50 to init()."
                   />
                   <TroubleshootItem
                     problem="enableTracking() not working?"
