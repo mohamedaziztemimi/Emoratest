@@ -507,11 +507,19 @@ async def get_page_detail_query(
     )
     emotion_rows = emotion_result.all()
     total_emotions = sum(r.cnt for r in emotion_rows) or 1
-    emotion_breakdown = {
-        r.primary_emotion: round(r.cnt / total_emotions * 100, 1)
-        for r in emotion_rows
-    }
-    emotion_counts = {r.primary_emotion: r.cnt for r in emotion_rows}
+
+    # Consolidate old emotion names to new 4-emotion system
+    emotion_breakdown: dict[str, float] = {}
+    emotion_counts: dict[str, int] = {}
+
+    for r in emotion_rows:
+        consolidated = _consolidate_emotion(r.primary_emotion)
+        emotion_breakdown[consolidated] = emotion_breakdown.get(consolidated, 0) + round(r.cnt / total_emotions * 100, 1)
+        emotion_counts[consolidated] = emotion_counts.get(consolidated, 0) + r.cnt
+
+    # Round percentages properly after consolidation
+    for key in emotion_breakdown:
+        emotion_breakdown[key] = round(emotion_breakdown[key], 1)
 
     # Calculate frustration rate (consolidated)
     frustrated_count = (
@@ -604,13 +612,24 @@ async def get_page_detail_query(
         .group_by(cast(Session.started_at, Date), Session.primary_emotion)
         .order_by(cast(Session.started_at, Date))
     )
+
+    # Consolidate emotions for daily trend chart
+    daily_emotions_consolidated: dict[str, dict[str, int]] = {}
+    for row in daily_emotions_result.all():
+        date_str = str(row.date)
+        consolidated = _consolidate_emotion(row.primary_emotion)
+        if date_str not in daily_emotions_consolidated:
+            daily_emotions_consolidated[date_str] = {}
+        daily_emotions_consolidated[date_str][consolidated] = daily_emotions_consolidated[date_str].get(consolidated, 0) + row.cnt
+
     daily_emotions = [
         DailyEmotionCount(
-            date=str(row.date),
-            emotion=row.primary_emotion,
-            count=row.cnt
+            date=date,
+            emotion=emotion,
+            count=count
         )
-        for row in daily_emotions_result.all()
+        for date, emotions in daily_emotions_consolidated.items()
+        for emotion, count in emotions.items()
     ]
 
     # Get issues from diagnosis engine
@@ -786,11 +805,19 @@ async def get_page_detail(
     )
     emotion_rows = emotion_result.all()
     total_emotions = sum(r.cnt for r in emotion_rows) or 1
-    emotion_breakdown = {
-        r.primary_emotion: round(r.cnt / total_emotions * 100, 1)
-        for r in emotion_rows
-    }
-    emotion_counts = {r.primary_emotion: r.cnt for r in emotion_rows}
+
+    # Consolidate old emotion names to new 4-emotion system
+    emotion_breakdown: dict[str, float] = {}
+    emotion_counts: dict[str, int] = {}
+
+    for r in emotion_rows:
+        consolidated = _consolidate_emotion(r.primary_emotion)
+        emotion_breakdown[consolidated] = emotion_breakdown.get(consolidated, 0) + round(r.cnt / total_emotions * 100, 1)
+        emotion_counts[consolidated] = emotion_counts.get(consolidated, 0) + r.cnt
+
+    # Round percentages properly after consolidation
+    for key in emotion_breakdown:
+        emotion_breakdown[key] = round(emotion_breakdown[key], 1)
 
     # Calculate frustration rate (consolidated)
     frustrated_count = (

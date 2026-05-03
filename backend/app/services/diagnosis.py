@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 from sqlalchemy import func, and_, cast, Integer
 from sqlalchemy.orm import Session
 
+from app.models.event import Event
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 
@@ -219,32 +220,41 @@ class DiagnosisEngine:
         page_url: str,
         total_sessions: int,
         abandon_sessions: int,
+        form_interaction_sessions: int,
     ) -> Issue | None:
         """Detect form abandonment.
 
-        Rule: If >= 25% of sessions have form_abandon_count > 0
-        Note: We use exit_intent_count as a proxy for form abandonment
+        CRITICAL: Only trigger if users actually interacted with form elements.
+        We check for events with element_type in ('form', 'input', 'textarea', 'select').
+        Users leaving a page without form interaction is normal browsing, NOT form abandonment.
+
+        Rule: If >= 25% of sessions with form interactions have exit_intent_count > 0
         """
         if total_sessions < DiagnosisEngine.MIN_SESSIONS_PER_PAGE:
             return None
 
-        abandon_percentage = (abandon_sessions / total_sessions * 100) if total_sessions else 0
-
-        if abandon_percentage < 15:  # Below warning threshold
+        # If no one interacted with forms, this is NOT form abandonment
+        if form_interaction_sessions == 0:
             return None
 
-        severity = "critical" if abandon_percentage >= 30 else "warning"
+        # Calculate abandonment rate ONLY among sessions that had form interactions
+        form_abandon_percentage = (abandon_sessions / form_interaction_sessions * 100) if form_interaction_sessions else 0
+
+        if form_abandon_percentage < 20:  # Below warning threshold
+            return None
+
+        severity = "critical" if form_abandon_percentage >= 35 else "warning"
 
         return Issue(
             type="form_abandonment",
             severity=severity,
             title=f"Form abandonment detected on {DiagnosisEngine._extract_page_name(page_url)}",
             description=(
-                f"{abandon_percentage:.1f}% of users start interacting but exit unexpectedly. "
-                f"({abandon_sessions} of {total_sessions} sessions)"
+                f"{form_abandon_percentage:.1f}% of users who interacted with forms exited unexpectedly. "
+                f"({abandon_sessions} of {form_interaction_sessions} form sessions)"
             ),
             affected_sessions=abandon_sessions,
-            affected_percentage=round(abandon_percentage, 1),
+            affected_percentage=round(form_abandon_percentage, 1),
             recommendation=(
                 "Simplify the form, reduce required fields, add progress indicators, "
                 "or break into multiple steps. Consider saving progress so users can return later."
@@ -383,10 +393,54 @@ class DiagnosisEngine:
             .scalar() or 0
         )
 
-        # Count sessions with exit intent (form abandonment proxy)
+        # Count sessions with form interactions (form, input, textarea, select)
+        # Subquery to find sessions that have at least one form-related event
+        form_interaction_subquery = (
+            db.query(Event.session_id)
+            .filter(
+                and_(
+                    Event.element_type.in_(["form", "input", "textarea", "select"]),
+                )
+            )
+            .distinct()
+            .subquery()
+        )
+
+        form_interaction_sessions = (
+            db.query(func.count(Session.id))
+            .join(
+                form_interaction_subquery,
+                Session.id == form_interaction_subquery.c.session_id
+            )
+            .filter(
+                and_(
+                    Session.merchant_id == merchant_id,
+                    Session.page_url == page_url,
+                    Session.started_at >= since,
+                )
+            )
+            .scalar() or 0
+        )
+
+        # Count sessions with BOTH form interactions AND exit intent (actual form abandonment)
+        exit_intent_with_form_subquery = (
+            db.query(Event.session_id)
+            .filter(
+                and_(
+                    Event.element_type.in_(["form", "input", "textarea", "select"]),
+                )
+            )
+            .distinct()
+            .subquery()
+        )
+
         exit_sessions = (
             db.query(func.count(Session.id))
             .join(SessionFeatures, SessionFeatures.session_id == Session.id)
+            .join(
+                exit_intent_with_form_subquery,
+                Session.id == exit_intent_with_form_subquery.c.session_id
+            )
             .filter(
                 and_(
                     Session.merchant_id == merchant_id,
@@ -433,7 +487,7 @@ class DiagnosisEngine:
             issues.append(scroll_issue)
 
         form_issue = cls._detect_form_abandonment(
-            page_url, total_sessions, exit_sessions
+            page_url, total_sessions, exit_sessions, form_interaction_sessions
         )
         if form_issue:
             issues.append(form_issue)

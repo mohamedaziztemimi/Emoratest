@@ -49,19 +49,21 @@ interface PageDetailInsight {
   }>;
 }
 
+// New 4-emotion system — consolidated from old 8 emotions
 const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
-  frustration: { color: "#EF4444", label: "Frustration" },
   frustrated: { color: "#EF4444", label: "Frustrated" },
-  anxiety: { color: "#F97316", label: "Anxiety" },
-  confusion: { color: "#F59E0B", label: "Confusion" },
   confused: { color: "#F59E0B", label: "Confused" },
-  focus: { color: "#3B82F6", label: "Focus" },
-  satisfaction: { color: "#059669", label: "Satisfaction" },
-  delight: { color: "#10B981", label: "Delight" },
   engaged: { color: "#10B981", label: "Engaged" },
-  boredom: { color: "#6B7280", label: "Boredom" },
   disengaged: { color: "#6B7280", label: "Disengaged" },
-  hesitation: { color: "#8B5CF6", label: "Hesitation" },
+  // Fallback for old data (will be consolidated on backend)
+  frustration: { color: "#EF4444", label: "Frustrated" },
+  anxiety: { color: "#EF4444", label: "Frustrated" },
+  confusion: { color: "#F59E0B", label: "Confused" },
+  focus: { color: "#10B981", label: "Engaged" },
+  satisfaction: { color: "#10B981", label: "Engaged" },
+  delight: { color: "#10B981", label: "Engaged" },
+  boredom: { color: "#6B7280", label: "Disengaged" },
+  hesitation: { color: "#6B7280", label: "Disengaged" },
   insufficient_data: { color: "#D1D5DB", label: "N/A" },
   unknown: { color: "#9CA3AF", label: "Unknown" },
   none: { color: "#D1D5DB", label: "None" },

@@ -5,29 +5,24 @@ import { useQuery } from "@/lib/hooks";
 import { fetchPagesDiagnosis, PagesDiagnosisResponse, DiagnosisPageItem, DiagnosisIssueItem } from "@/lib/api";
 
 // ── Severity Config ────────────────────────────────────────────
+// Uses white cards with colored left-border accents and dots
 
 const SEVERITY_CONFIG = {
   critical: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    badge: "bg-red-100 text-red-700",
-    badgeOutline: "border-red-200 text-red-700",
+    border: "border-l-4 border-l-red-500 border border-gray-200",
+    badge: "bg-red-50 text-red-700 border border-red-200",
     icon: "🔴",
     dot: "bg-red-500",
   },
   warning: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    badge: "bg-amber-100 text-amber-700",
-    badgeOutline: "border-amber-200 text-amber-700",
+    border: "border-l-4 border-l-amber-500 border border-gray-200",
+    badge: "bg-amber-50 text-amber-700 border border-amber-200",
     icon: "🟠",
     dot: "bg-amber-500",
   },
   info: {
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    badge: "bg-blue-100 text-blue-700",
-    badgeOutline: "border-blue-200 text-blue-700",
+    border: "border-l-4 border-l-blue-500 border border-gray-200",
+    badge: "bg-blue-50 text-blue-700 border border-blue-200",
     icon: "🔵",
     dot: "bg-blue-500",
   },
@@ -135,8 +130,7 @@ function IssueBadge({ severity }: { severity: "critical" | "warning" | "info" })
   const config = SEVERITY_CONFIG[severity];
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${config.badge}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${config.badge}`}>
       {severity.toUpperCase()}
     </span>
   );
@@ -146,11 +140,13 @@ function IssueCard({ issue }: { issue: DiagnosisIssueItem }) {
   const config = SEVERITY_CONFIG[issue.severity];
 
   return (
-    <div className={`rounded-lg border ${config.border} ${config.bg} p-4`}>
+    <div className={`rounded-r-lg ${config.border} bg-white p-4`}>
       <div className="flex items-start gap-3 mb-3">
-        <span className="text-xl">{config.icon}</span>
+        <div className="flex-shrink-0 mt-0.5">
+          <span className={`w-2 h-2 rounded-full ${config.dot} inline-block`} />
+        </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h4 className="font-semibold text-gray-900">{issue.title}</h4>
             <IssueBadge severity={issue.severity} />
           </div>
@@ -158,20 +154,20 @@ function IssueCard({ issue }: { issue: DiagnosisIssueItem }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-3 text-sm">
+      <div className="flex items-center gap-4 mb-3 text-sm pl-5">
         <div>
           <span className="text-gray-500">Affected sessions: </span>
-          <span className="font-semibold text-gray-900">{issue.affected_sessions}</span>
+          <span className="font-medium text-gray-900">{issue.affected_sessions}</span>
         </div>
         <div>
           <span className="text-gray-500">Impact: </span>
-          <span className="font-semibold text-gray-900">{issue.affected_percentage}%</span>
+          <span className="font-medium text-gray-900">{issue.affected_percentage}%</span>
         </div>
       </div>
 
-      <div className="bg-white/50 rounded-md p-3 border border-white/50">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Recommendation</p>
-        <p className="text-sm text-gray-700">{issue.recommendation}</p>
+      <div className="bg-gray-50 rounded-md p-3 ml-5">
+        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Recommendation</p>
+        <p className="text-sm text-gray-800">{issue.recommendation}</p>
       </div>
     </div>
   );
