@@ -171,7 +171,25 @@ export default function DocsPage() {
                   Add the EmoraTest SDK to your website to start tracking user emotions and behavior.
                 </p>
 
-                <h3 className="text-lg font-semibold mb-3 mt-6">HTML (Any website)</h3>
+                <div className="bg-[hsl(var(--card))] rounded-xl p-5 border border-[hsl(var(--border))] mb-8">
+                  <h3 className="font-semibold text-[hsl(var(--foreground))] mb-3">Choose your integration mode:</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+                      <div className="text-green-600 font-semibold mb-2">🚀 Quick Start (Recommended)</div>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        Tracking starts immediately. Best for non-EU websites or internal tools.
+                      </p>
+                    </div>
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
+                      <div className="text-blue-600 font-semibold mb-2">🇪🇺 GDPR Compliance Mode</div>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        Waits for user consent. Required for EU websites. See below.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mb-3 mt-6">Quick Start — HTML (Any website)</h3>
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
                   Add this snippet to your website's <code className="bg-[hsl(var(--secondary))] px-1 rounded">&lt;head&gt;</code> or before <code className="bg-[hsl(var(--secondary))] px-1 rounded">&lt;/body&gt;</code>:
                 </p>
@@ -189,8 +207,8 @@ export default function DocsPage() {
 
                 <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mt-4">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                    <strong className="text-green-700 dark:text-green-400">That's it!</strong> The SDK will start tracking immediately.
-                    Sessions will appear in your dashboard within seconds.
+                    <strong className="text-green-700 dark:text-green-400">✓ Done!</strong> The SDK will start tracking immediately.
+                    Sessions appear in your dashboard within seconds. Events are sent every 2 seconds.
                   </p>
                 </div>
 
@@ -283,31 +301,30 @@ export default function EmoraTracker() {
 
               {/* GDPR Consent */}
               <section id="gdpr-consent" className="mb-16 scroll-mt-8">
-                <h2 className="text-2xl font-bold mb-4">GDPR Compliance (EU Users Only)</h2>
+                <h2 className="text-2xl font-bold mb-4">GDPR Compliance Mode (EU Websites)</h2>
                 <p className="text-[hsl(var(--muted-foreground))] mb-6">
-                  If your website serves users in the European Union, you need to obtain user consent before tracking.
-                  EmoraTest provides a <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent</code> option for GDPR compliance.
+                  If your website serves users in the European Union, you must obtain user consent before tracking.
+                  Use the <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent: true</code> option.
                 </p>
 
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                    <strong className="text-[hsl(var(--primary))]">Not in the EU?</strong> You can ignore this section.
-                    The SDK works out of the box without any consent configuration.
+                    <strong className="text-[hsl(var(--primary))]">🇪🇺 EU Website?</strong> Follow the steps below. <strong className="text-[hsl(var(--primary))]">Not in EU?</strong> Use the Quick Start above — no consent needed.
                   </p>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Step 1: Initialize with requireConsent option</h3>
+                    <h3 className="text-lg font-semibold mb-3">Step 1: Initialize with requireConsent</h3>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-                      Pass <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent: true</code> when initializing:
+                      Pass <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent: true</code>. The SDK will load but wait for consent:
                     </p>
                     <CodeBlock
                       code={`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
 <script>
   EmoraTest.init({
     sdkKey: "YOUR_SDK_KEY",
-    requireConsent: true  // Wait for user consent before tracking
+    requireConsent: true  // SDK waits for user consent
   });
 </script>`}
                       onCopy={() => copyToClipboard(`<script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
@@ -319,40 +336,75 @@ export default function EmoraTracker() {
 </script>`, "gdpr-step1")}
                       copied={copiedCode === "gdpr-step1"}
                     />
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mt-3">
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        <strong>⚠️ Important:</strong> With <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent: true</code>, tracking will NOT start until the user accepts and you call <code className="bg-[hsl(var(--secondary))] px-1 rounded">enableTracking()</code>.
+                      </p>
+                    </div>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Step 2: Handle user consent in your banner</h3>
+                    <h3 className="text-lg font-semibold mb-3">Step 2: Create a consent banner</h3>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-                      When the user accepts tracking in your consent banner:
+                      Add a consent banner to your website. When user accepts:
                     </p>
                     <CodeBlock
-                      code={`// When user accepts tracking
-function onAcceptTracking() {
-  // 1. Set the consent cookie
+                      code={`<!-- Simple HTML consent banner example -->
+<div id="consent-banner" style="position:fixed;bottom:0;left:0;right:0;padding:20px;background:white;border-top:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;z-index:9999;">
+  <p>We use behavioral tracking to improve your experience. <a href="/privacy">Privacy Policy</a></p>
+  <div>
+    <button onclick="rejectConsent()">Reject</button>
+    <button onclick="acceptConsent()" style="background:#007BFF;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">Accept</button>
+  </div>
+</div>
+
+<script>
+function acceptConsent() {
+  // 1. Hide banner
+  document.getElementById('consent-banner').style.display = 'none';
+
+  // 2. Set consent cookie (required by SDK)
   document.cookie = 'emoratest_consent=accepted; max-age=31536000; path=/';
 
-  // 2. Enable tracking
+  // 3. Start tracking
   if (window.EmoraTest) {
     window.EmoraTest.enableTracking();
   }
 }
 
-// When user rejects tracking
-function onRejectTracking() {
+function rejectConsent() {
+  document.getElementById('consent-banner').style.display = 'none';
   document.cookie = 'emoratest_consent=rejected; max-age=31536000; path=/';
-  // SDK remains inactive - nothing more to do
-}`}
-                      onCopy={() => copyToClipboard(`function onAcceptTracking() {
+}
+
+// Check if user already decided
+if (document.cookie.includes('emoratest_consent=')) {
+  document.getElementById('consent-banner').style.display = 'none';
+}
+</script>`}
+                      onCopy={() => copyToClipboard(`<div id="consent-banner" style="position:fixed;bottom:0;left:0;right:0;padding:20px;background:white;border-top:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;z-index:9999;">
+  <p>We use behavioral tracking to improve your experience.</p>
+  <div>
+    <button onclick="rejectConsent()">Reject</button>
+    <button onclick="acceptConsent()" style="background:#007BFF;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">Accept</button>
+  </div>
+</div>
+<script>
+function acceptConsent() {
+  document.getElementById('consent-banner').style.display = 'none';
   document.cookie = 'emoratest_consent=accepted; max-age=31536000; path=/';
   if (window.EmoraTest) {
     window.EmoraTest.enableTracking();
   }
 }
-
-function onRejectTracking() {
+function rejectConsent() {
+  document.getElementById('consent-banner').style.display = 'none';
   document.cookie = 'emoratest_consent=rejected; max-age=31536000; path=/';
-}`, "gdpr-step2")}
+}
+if (document.cookie.includes('emoratest_consent=')) {
+  document.getElementById('consent-banner').style.display = 'none';
+}
+</script>`, "gdpr-step2")}
                       copied={copiedCode === "gdpr-step2"}
                     />
                   </div>
@@ -577,30 +629,59 @@ if (result.variant === 'control') {
               <section id="troubleshooting" className="mb-16 scroll-mt-8">
                 <h2 className="text-2xl font-bold mb-4">Troubleshooting</h2>
 
+                <div className="bg-[hsl(var(--card))] rounded-xl p-5 border border-[hsl(var(--border))] mb-8">
+                  <h3 className="font-semibold text-[hsl(var(--foreground))] mb-3">🔍 Quick Debug Checklist</h3>
+                  <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                    Open your browser's Developer Console (F12) and run these commands:
+                  </p>
+                  <ol className="text-sm text-[hsl(var(--muted-foreground))] space-y-2 list-decimal list-inside">
+                    <li><code className="bg-[hsl(var(--secondary))] px-1 rounded">typeof window.EmoraTest</code> → Should be <code className="bg-green-500/20 text-green-700 px-1 rounded">'object'</code></li>
+                    <li><code className="bg-[hsl(var(--secondary))] px-1 rounded">window.EmoraTest.isInitialized()</code> → Should be <code className="bg-green-500/20 text-green-700 px-1 rounded">true</code></li>
+                    <li><code className="bg-[hsl(var(--secondary))] px-1 rounded">window.EmoraTest.getSessionId()</code> → Should return a session ID string</li>
+                    <li><code className="bg-[hsl(var(--secondary))] px-1 rounded">document.cookie</code> → Check for <code className="bg-[hsl(var(--secondary))] px-1 rounded">emoratest_consent=accepted</code></li>
+                  </ol>
+                  <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      <strong>Tip:</strong> Open the Network tab in DevTools, filter by "events" or "sessions" to see API calls being made. Events are sent every 2 seconds.
+                    </p>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mb-4">Common Issues</h3>
                 <div className="space-y-4">
                   <TroubleshootItem
-                    problem="SDK not loading?"
-                    solution="Check script URL is correct, check browser console for errors. Verify the SDK key is valid."
+                    problem="Sessions not appearing in dashboard?"
+                    solution={
+                      <span>
+                        1) Check <code className="bg-[hsl(var(--secondary))] px-1 rounded">window.EmoraTest.isInitialized()</code> returns true.<br/>
+                        2) Open Network tab → look for requests to <code className="bg-[hsl(var(--secondary))] px-1 rounded">/api/v1/sdk/sessions</code> and <code className="bg-[hsl(var(--secondary))] px-1 rounded">/api/v1/sdk/events</code>.<br/>
+                        3) If using <code className="bg-[hsl(var(--secondary))] px-1 rounded">requireConsent: true</code>, make sure user accepted consent and cookie is set.
+                      </span>
+                    }
+                  />
+                  <TroubleshootItem
+                    problem="'EmoraTest is not defined' error?"
+                    solution="SDK script hasn't loaded yet. Make sure the script src URL is correct and you're calling init() after the page loads."
                   />
                   <TroubleshootItem
                     problem="401 Unauthorized errors?"
-                    solution="Invalid SDK key. Copy it again from Settings → SDK. Make sure there are no extra spaces."
+                    solution="Invalid SDK key. Copy it again from Settings → SDK. Make sure there are no extra spaces at the start/end."
                   />
                   <TroubleshootItem
-                    problem="Sessions not appearing?"
-                    solution="Open browser console and type: window.EmoraTest.isInitialized(). Should return true. If false, check for JS errors."
+                    problem="Events only appear after I close the tab?"
+                    solution="Normal behavior! Events batch every 2 seconds. Session data (including emotion prediction) is finalized when the session ends (tab close or navigation away)."
                   />
                   <TroubleshootItem
-                    problem="Emotion not showing yet?"
-                    solution="Emotions are predicted after the session ends (user closes tab or navigates away). Sessions under 5 seconds may not generate enough data."
+                    problem="Very few events being captured?"
+                    solution="Default mouse throttle is 100ms. If you need higher resolution, pass <code className="bg-[hsl(var(--secondary))] px-1 rounded">mouseMoveThrottleMs: 50</code> to init()."
                   />
                   <TroubleshootItem
                     problem="enableTracking() not working?"
-                    solution="Make sure you called init() with requireConsent: true first, and that the emoratest_consent cookie is set to 'accepted'."
+                    solution="Make sure: 1) init() was called with requireConsent: true, 2) emoratest_consent cookie is set to 'accepted', 3) init() completed before calling enableTracking()."
                   />
                   <TroubleshootItem
                     problem="A/B test always shows same variant?"
-                    solution="Correct behavior! Each visitor always sees the same variant (deterministic). Use incognito mode to test other variants."
+                    solution="Correct behavior! Each visitor always sees the same variant (deterministic hashing). Use incognito mode to test other variants."
                   />
                 </div>
               </section>
@@ -682,12 +763,12 @@ function TroubleshootItem({
   solution,
 }: {
   problem: string;
-  solution: string;
+  solution: string | React.ReactNode;
 }) {
   return (
     <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))]">
       <h4 className="font-semibold text-[hsl(var(--primary))] mb-2">Q: {problem}</h4>
-      <p className="text-[hsl(var(--muted-foreground))] text-sm">→ {solution}</p>
+      <div className="text-[hsl(var(--muted-foreground))] text-sm">→ {solution}</div>
     </div>
   );
 }

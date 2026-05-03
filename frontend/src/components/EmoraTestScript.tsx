@@ -12,6 +12,7 @@ export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
         (window as any).EmoraTest.init({
           sdkKey,
           apiUrl: "https://emoratest.com",
+          requireConsent: true, // Wait for user to accept consent banner
         });
       }
       return;
@@ -26,6 +27,7 @@ export default function EmoraTestScript({ sdkKey }: { sdkKey: string }) {
         (window as any).EmoraTest.init({
           sdkKey,
           apiUrl: "https://emoratest.com",
+          requireConsent: true, // Wait for user to accept consent banner
         });
       }
     };
