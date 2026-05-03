@@ -272,28 +272,61 @@ async def get_page_insights(
         - Bounce rate: % of sessions with duration < 10 seconds
         - Trend: comparison of frustration rate vs previous period
     """
+    from urllib.parse import urlparse
+
     cutoff = datetime.now(UTC) - timedelta(days=days)
     prev_cutoff = cutoff - timedelta(days=days)
 
-    # Get all pages in the time window
+    # Helper function to normalize URL to pathname for grouping
+    def normalize_page_url(url: str | None) -> str:
+        """Extract pathname from URL for consistent page grouping."""
+        if not url:
+            return "/"
+        try:
+            parsed = urlparse(url)
+            path = parsed.path or "/"
+            # For root path, return a consistent key
+            if path == "/":
+                return "/"
+            return path
+        except Exception:
+            # If URL parsing fails, return as-is
+            return url or "/"
+
+    # Get all unique normalized pages in the time window
     pages_result = await db.execute(
         select(Session.page_url)
         .where(
             Session.merchant_id == merchant.id,
             Session.started_at >= cutoff,
         )
-        .distinct()
     )
-    all_pages = [r[0] for r in pages_result.all()]
+    all_raw_pages = [r[0] for r in pages_result.all()]
+
+    # Group by normalized URL to avoid duplicates
+    page_groups: dict[str, list[str]] = {}
+    for raw_url in all_raw_pages:
+        normalized = normalize_page_url(raw_url)
+        if normalized not in page_groups:
+            page_groups[normalized] = []
+        page_groups[normalized].append(raw_url)
+
+    # Use normalized URLs as the keys, but store all variants for querying
+    all_pages = list(page_groups.keys())
 
     insights = []
-    for page_url in all_pages:
-        # Get session count for this page
+    for normalized_url, url_variants in page_groups.items():
+        # Build OR condition for all URL variants of this page
+        url_conditions = [Session.page_url == variant for variant in url_variants]
+        from sqlalchemy import or_
+        url_condition = or_(*url_conditions)
+
+        # Get session count for this page (all variants)
         session_result = await db.execute(
             select(func.count(Session.id))
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= cutoff,
             )
         )
@@ -302,12 +335,12 @@ async def get_page_insights(
         if session_count == 0:
             continue
 
-        # Get emotion breakdown for frustration rate
+        # Get emotion breakdown for frustration rate (all variants)
         emotion_result = await db.execute(
             select(Session.primary_emotion, func.count().label("cnt"))
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= cutoff,
                 Session.primary_emotion.isnot(None),
                 Session.primary_emotion != "insufficient_data",
@@ -329,7 +362,7 @@ async def get_page_insights(
         emotion_pct = {k: round(v / total_emotions, 4) for k, v in emotions.items()}
         dominant_emotion, dominant_pct = _get_dominant_emotion(emotion_pct)
 
-        # Calculate average duration
+        # Calculate average duration (all variants)
         duration_result = await db.execute(
             select(
                 func.avg(
@@ -338,7 +371,7 @@ async def get_page_insights(
             )
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= cutoff,
                 Session.ended_at.isnot(None),
             )
@@ -351,7 +384,7 @@ async def get_page_insights(
             .join(SessionFeatures, SessionFeatures.session_id == Session.id)
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= cutoff,
                 SessionFeatures.rage_click_score > 0.3,
             )
@@ -363,7 +396,7 @@ async def get_page_insights(
             select(func.count(Session.id))
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= cutoff,
                 Session.ended_at.isnot(None),
                 func.extract("epoch", Session.ended_at - Session.started_at) < 10,
@@ -377,7 +410,7 @@ async def get_page_insights(
             select(Session.primary_emotion, func.count().label("cnt"))
             .where(
                 Session.merchant_id == merchant.id,
-                Session.page_url == page_url,
+                url_condition,
                 Session.started_at >= prev_cutoff,
                 Session.started_at < cutoff,
                 Session.primary_emotion.isnot(None),
@@ -405,7 +438,7 @@ async def get_page_insights(
 
         insights.append(
             PageInsightItem(
-                page_url=page_url,
+                page_url=normalized_url,  # Use normalized URL for display
                 session_count=session_count,
                 dominant_emotion=dominant_emotion,
                 dominant_emotion_pct=dominant_pct,
