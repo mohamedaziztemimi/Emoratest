@@ -12,7 +12,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.alerts import router as alerts_router
@@ -146,79 +145,93 @@ app.add_middleware(AuditLogMiddleware)
 # Security headers + request ID (CONV-45)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS - allow credentials for localhost, local network, and production
-# Use environment variable or allow all origins in development
+# ── CORS Middleware ─────────────────────────────────────────────────────
+# SDK endpoints need to accept requests from ANY origin (customer websites).
+# Dashboard endpoints are restricted to emoratest.com domains only.
+# SDK uses X-SDK-Key auth, dashboard uses cookies.
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 import os
 
 cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
 
-if os.getenv("ENVIRONMENT") == "production":
-    # In production, use configured origins
-    # Include all subdomains for cross-domain support
-    default_origins = [
+
+class SmartCORSMiddleware(BaseHTTPMiddleware):
+    """Custom CORS middleware that allows any origin for SDK endpoints.
+
+    SDK endpoints (/api/v1/sessions, /api/v1/events/*, /api/v1/sdk/*)
+    accept requests from any origin since they use X-SDK-Key authentication.
+    Dashboard endpoints remain restricted to emoratest.com domains.
+    """
+
+    # Allowed origins for dashboard (cookie-based auth)
+    DASHBOARD_ORIGINS = [
         "https://emoratest.com",
         "https://www.emoratest.com",
         "https://api.emoratest.com",
         "https://dashboard.emoratest.com",
-    ]
-elif not cors_origins:
-    # In development, allow localhost and local network IPs
-    default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        # Allow common local network IP ranges (will be validated dynamically)
-        "http://10.*",
-        "http://192.168.*",
-        "http://172.16.*",
-        "http://172.17.*",
-        "http://172.18.*",
-        "http://172.19.*",
-        "http://172.20.*",
-        "http://172.21.*",
-        "http://172.22.*",
-        "http://172.23.*",
-        "http://172.24.*",
-        "http://172.25.*",
-        "http://172.26.*",
-        "http://172.27.*",
-        "http://172.28.*",
-        "http://172.29.*",
-        "http://172.30.*",
-        "http://172.31.*",
     ]
-else:
-    default_origins = []
 
-# Use standard CORSMiddleware - wildcard for development, specific domains for production
-# The allow_origin_regex parameter handles dynamic subdomain matching
-if os.getenv("ENVIRONMENT") == "production":
-    # Production: allow all emoratest.com subdomains via regex
-    allow_origin_regex = r"https://([a-z0-9-]+\.)*emoratest\.com"
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=default_origins + cors_origins,
-        allow_origin_regex=allow_origin_regex,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-else:
-    # Development: allow localhost and local network via regex
-    allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)"
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=default_origins + cors_origins,
-        allow_origin_regex=allow_origin_regex,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
+    # SDK endpoints that allow any origin
+    SDK_PATHS = ["/api/v1/sessions", "/api/v1/events", "/api/v1/sdk"]
+
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+
+        # Check if this is an SDK endpoint
+        is_sdk_endpoint = any(request.url.path.startswith(path) for path in self.SDK_PATHS)
+
+        if request.method == "OPTIONS":
+            # Handle preflight
+            response = Response(status_code=200)
+            if is_sdk_endpoint:
+                # SDK: allow any origin
+                response.headers["Access-Control-Allow-Origin"] = origin or "*"
+            elif origin:
+                # Dashboard: check allowed origins
+                if self._is_allowed_dashboard_origin(origin):
+                    response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Access-Control-Max-Age"] = "86400"
+            return response
+
+        # Pass through to actual handler
+        response = await call_next(request)
+
+        # Add CORS headers to actual response
+        if is_sdk_endpoint:
+            # SDK: allow any origin, no credentials needed (X-SDK-Key auth)
+            response.headers["Access-Control-Allow-Origin"] = origin or "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        elif origin and self._is_allowed_dashboard_origin(origin):
+            # Dashboard: allow only trusted origins with credentials
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+
+        return response
+
+    def _is_allowed_dashboard_origin(self, origin: str) -> bool:
+        """Check if origin is allowed for dashboard access."""
+        # Check exact matches
+        if origin in self.DASHBOARD_ORIGINS:
+            return True
+        # Check emoratest.com subdomains
+        if origin.endswith(".emoratest.com") or origin.endswith("://emoratest.com"):
+            return True
+        # Check CORS_ORIGINS env var
+        if cors_origins and origin in cors_origins:
+            return True
+        return False
+
+
+# Use custom CORS middleware instead of CORSMiddleware
+app.add_middleware(SmartCORSMiddleware)
 
 # ── Payload size limit middleware ────────────────────────────────────
 
