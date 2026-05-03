@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlparse
 
-from sqlalchemy import func, and_, cast, Integer
+from sqlalchemy import func, and_, or_, cast, Integer
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
@@ -393,64 +393,78 @@ class DiagnosisEngine:
             .scalar() or 0
         )
 
-        # Count sessions with form interactions (form, input, textarea, select)
-        # Subquery to find sessions that have at least one form-related event
-        form_interaction_subquery = (
+        # Count sessions with form interactions (form, input, textarea, select, checkbox)
+        # CRITICAL: Must filter by page_url and merchant_id to avoid counting form interactions
+        # from OTHER pages. A session on Homepage should NOT count as having form interactions
+        # just because the user visited a signup page earlier.
+        form_interaction_session_ids = (
             db.query(Event.session_id)
-            .filter(
-                and_(
-                    Event.element_type.in_(["form", "input", "textarea", "select"]),
-                )
-            )
-            .distinct()
-            .subquery()
-        )
-
-        form_interaction_sessions = (
-            db.query(func.count(Session.id))
-            .join(
-                form_interaction_subquery,
-                Session.id == form_interaction_subquery.c.session_id
-            )
+            .join(Session, Session.id == Event.session_id)
             .filter(
                 and_(
                     Session.merchant_id == merchant_id,
                     Session.page_url == page_url,
                     Session.started_at >= since,
-                )
-            )
-            .scalar() or 0
-        )
-
-        # Count sessions with BOTH form interactions AND exit intent (actual form abandonment)
-        exit_intent_with_form_subquery = (
-            db.query(Event.session_id)
-            .filter(
-                and_(
-                    Event.element_type.in_(["form", "input", "textarea", "select"]),
+                    Event.element_type.in_(["form", "input", "textarea", "select", "checkbox"]),
                 )
             )
             .distinct()
-            .subquery()
+            .all()
         )
+        form_interaction_session_ids = [s[0] for s in form_interaction_session_ids]
 
-        exit_sessions = (
-            db.query(func.count(Session.id))
-            .join(SessionFeatures, SessionFeatures.session_id == Session.id)
-            .join(
-                exit_intent_with_form_subquery,
-                Session.id == exit_intent_with_form_subquery.c.session_id
-            )
+        # Also check for form-related keywords in label and selector
+        # This catches forms that might not have element_type set correctly
+        form_keyword_session_ids = (
+            db.query(Event.session_id)
+            .join(Session, Session.id == Event.session_id)
             .filter(
                 and_(
                     Session.merchant_id == merchant_id,
                     Session.page_url == page_url,
                     Session.started_at >= since,
-                    SessionFeatures.exit_intent_count > 0,
+                    or_(
+                        Event.label.ilike("%form%"),
+                        Event.label.ilike("%input%"),
+                        Event.label.ilike("%email%"),
+                        Event.label.ilike("%password%"),
+                        Event.label.ilike("%submit%"),
+                        Event.selector.ilike("%form%"),
+                        Event.selector.ilike("%input%"),
+                        Event.selector.ilike("%email%"),
+                        Event.selector.ilike("%submit%"),
+                    ),
                 )
             )
-            .scalar() or 0
+            .distinct()
+            .all()
         )
+        form_keyword_session_ids = [s[0] for s in form_keyword_session_ids]
+
+        # Combine both lists and get unique session IDs with form interactions
+        all_form_session_ids = set(form_interaction_session_ids) | set(form_keyword_session_ids)
+        form_interaction_sessions = len(all_form_session_ids)
+
+        # If no form interactions on this page, skip form abandonment detection entirely
+        if form_interaction_sessions == 0:
+            # Early exit - no form abandonment issue possible
+            exit_sessions = 0
+        else:
+            # Count sessions with BOTH form interactions AND exit intent (actual form abandonment)
+            exit_sessions = (
+                db.query(func.count(Session.id))
+                .join(SessionFeatures, SessionFeatures.session_id == Session.id)
+                .filter(
+                    and_(
+                        Session.merchant_id == merchant_id,
+                        Session.page_url == page_url,
+                        Session.started_at >= since,
+                        Session.id.in_(all_form_session_ids),
+                        SessionFeatures.exit_intent_count > 0,
+                    )
+                )
+                .scalar() or 0
+            )
 
         # Count sessions with hesitation (> 0.3 threshold)
         hesitation_sessions = (
