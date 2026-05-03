@@ -414,11 +414,11 @@ async def process_session(session_id: str) -> dict:
         }
 
         # Data quality check: skip emotion prediction if insufficient data
-        # Requirements: session >= 10 seconds AND >= 5 events
+        # Requirements: session >= 3 seconds AND >= 3 events
         session_duration = features.get('session_duration_s', 0)
         event_count = len(events)
 
-        if session_duration < 10 or event_count < 5:
+        if session_duration < 3 or event_count < 3:
             # Mark as insufficient data for reliable emotion classification
             emotion_result = {
                 'primary_emotion': 'insufficient_data',

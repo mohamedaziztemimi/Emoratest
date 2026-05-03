@@ -168,6 +168,8 @@ export interface SessionFilters {
   date_to?: string;
   device_type?: string;
   emotion?: string;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
 }
 
 export function fetchSessions(filters: SessionFilters = {}): Promise<SessionListResponse> {

@@ -298,6 +298,18 @@ export default function SessionsPage() {
       <Card>
         <CardBody className="flex flex-wrap items-end gap-4">
           <FilterSelect
+            label="Sort By"
+            value={filters.sort_by || "started_at"}
+            onChange={(v) => setFilter("sort_by", v || "started_at")}
+            options={SORT_OPTIONS}
+          />
+          <FilterSelect
+            label="Order"
+            value={filters.sort_order || "desc"}
+            onChange={(v) => setFilter("sort_order", (v as "asc" | "desc") || "desc")}
+            options={[{ value: "desc", label: "Descending" }, { value: "asc", label: "Ascending" }]}
+          />
+          <FilterSelect
             label="Outcome"
             value={filters.outcome || ""}
             onChange={(v) => setFilter("outcome", v || undefined)}
@@ -559,6 +571,14 @@ const DEVICE_OPTIONS = [
   { value: "desktop", label: "Desktop" },
   { value: "mobile", label: "Mobile" },
   { value: "tablet", label: "Tablet" },
+];
+
+const SORT_OPTIONS = [
+  { value: "started_at", label: "Recent First" },
+  { value: "outcome", label: "Outcome" },
+  { value: "primary_emotion", label: "Emotion" },
+  { value: "abandonment_risk", label: "Risk Score" },
+  { value: "friction_score", label: "Friction" },
 ];
 
 /* ── Memoized filter controls ──────────────────────────── */

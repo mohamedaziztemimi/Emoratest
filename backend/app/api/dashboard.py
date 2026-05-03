@@ -472,6 +472,8 @@ async def list_sessions(
     date_to: datetime | None = Query(None),
     device_type: str | None = Query(None, pattern=r"^(desktop|mobile|tablet)$"),
     emotion: str | None = Query(None, description="Filter by primary emotion"),
+    sort_by: str | None = Query(None, description="Sort by field: started_at, outcome, primary_emotion, abandonment_risk, friction_score"),
+    sort_order: str = Query("desc", pattern=r"^(asc|desc)$", description="Sort order: asc or desc"),
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
@@ -502,9 +504,21 @@ async def list_sessions(
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
+    # Apply sorting
+    valid_sort_fields = {
+        "started_at": Session.started_at,
+        "outcome": Session.outcome,
+        "primary_emotion": Session.primary_emotion,
+        "abandonment_risk": Session.abandonment_risk,
+        "friction_score": Session.friction_score,
+        "emotion_confidence": Session.emotion_confidence,
+    }
+    sort_field = valid_sort_fields.get(sort_by, Session.started_at)
+    order_func = asc if sort_order == "asc" else desc
+
     # Paginate
     offset = (page - 1) * page_size
-    query = query.order_by(Session.started_at.desc()).offset(offset).limit(page_size)
+    query = query.order_by(order_func(sort_field)).offset(offset).limit(page_size)
     result = await db.execute(query)
     sessions = result.scalars().all()
 
