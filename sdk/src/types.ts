@@ -211,6 +211,9 @@ export interface EmoraTestConfig {
 
   /** Micro-survey configuration (optional) */
   survey?: SurveyConfig;
+
+  /** Require user consent before tracking (GDPR mode). Default: false */
+  requireConsent?: boolean;
 }
 
 // ── Feature Flags ─────────────────────────────────────────────────

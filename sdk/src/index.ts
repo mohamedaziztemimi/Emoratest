@@ -1,10 +1,19 @@
 /**
  * EmoraTest SDK — main entry point.
  *
- * Usage (script tag):
- *   <script src="https://cdn.emoratest.com/sdk/emoratest.min.js"></script>
+ * Quick Start (script tag):
+ *   <script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
  *   <script>
  *     EmoraTest.init({ sdkKey: 'your-key-here' });
+ *   </script>
+ *
+ * GDPR/Consent Mode (EU users):
+ *   <script src="https://emoratest.com/static/sdk/emoratest.umd.js"></script>
+ *   <script>
+ *     EmoraTest.init({ sdkKey: 'your-key-here', requireConsent: true });
+ *     // Later, when user accepts:
+ *     // document.cookie = 'emoratest_consent=accepted; max-age=31536000; path=/';
+ *     // EmoraTest.enableTracking();
  *   </script>
  *
  * Usage (npm):
@@ -117,13 +126,16 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     throw new Error("[EmoraTest] sdkKey is required");
   }
 
-  // Check consent cookie (GDPR requirement)
+  // Consent mode: if requireConsent is true, wait for consent before tracking
+  // Otherwise, start tracking immediately (default behavior)
+  const requireConsent = userConfig.requireConsent === true;
   const consentCookie = getConsentCookie();
-  if (consentCookie !== "accepted") {
+
+  if (requireConsent && consentCookie !== "accepted") {
     // Consent not given - store config and wait for enableTracking()
     pendingInit = userConfig;
     if (userConfig.debug) {
-      console.debug("[EmoraTest] Waiting for user consent. Call enableTracking() after consent.");
+      console.debug("[EmoraTest] requireConsent enabled. Waiting for user consent. Call enableTracking() after consent.");
     }
     return;
   }
@@ -444,6 +456,7 @@ function getConsentCookie(): "accepted" | "rejected" | null {
 /**
  * Enable tracking after user consent is given.
  * Call this after setting the emoratest_consent cookie to 'accepted'.
+ * Only works when requireConsent: true was passed to init().
  */
 export async function enableTracking(): Promise<void> {
   if (initialized) {
@@ -452,7 +465,7 @@ export async function enableTracking(): Promise<void> {
   }
 
   if (!pendingInit) {
-    console.warn("[EmoraTest] No pending initialization. Call init() first.");
+    console.warn("[EmoraTest] No pending initialization. Call init() first with requireConsent: true.");
     return;
   }
 
@@ -462,7 +475,7 @@ export async function enableTracking(): Promise<void> {
   // Verify consent was given
   const consentCookie = getConsentCookie();
   if (consentCookie !== "accepted") {
-    console.warn("[EmoraTest] Consent not accepted. Cannot enable tracking.");
+    console.warn("[EmoraTest] Consent not accepted. Cannot enable tracking. Set emoratest_consent=accepted cookie first.");
     return;
   }
 
