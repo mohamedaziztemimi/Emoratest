@@ -37,74 +37,60 @@ const SEVERITY_CONFIG = {
   },
 };
 
-// ── DEMO DATA (for instant value when no real data exists) ──────
+// ── Demo data for previewing the UI ──────
 
 const DEMO_DIAGNOSIS: DiagnosisResponse = {
   summary: {
-    title: "Users are clicking furiously on broken elements",
-    page_url: "https://example.com/checkout",
+    title: "Users are showing frustration on checkout",
+    page_url: "https://yourstore.com/checkout",
     page_name: "Checkout",
-    affected_users_pct: 23,
-    severity: "high",
-    estimated_lost_revenue: "~$1,200/week",
+    affected_users_pct: 32,
+    severity: "medium",
+    estimated_lost_revenue: null,
   },
   evidence: [
     {
-      type: "rage_clicks",
-      value: "23%",
-      label: "23% of clicks show rage patterns",
-      element: "#checkout-button",
-      session_ids: [],
-    },
-    {
-      type: "hesitation",
-      value: "45%",
-      label: "45% hesitation score before checkout",
+      type: "session_pattern",
+      value: "127",
+      label: "Total sessions analyzed",
       element: null,
       session_ids: [],
     },
     {
-      type: "drop_off",
-      value: "38%",
-      label: "38% abandon at checkout step",
+      type: "hesitation",
+      value: "32%",
+      label: "Showing frustration signals",
       element: null,
       session_ids: [],
     },
   ],
   root_cause: {
-    primary_cause: "Checkout button appears unresponsive",
-    explanation: "Users are rapidly clicking the checkout button because they expect an action that isn't happening. The button may have no click handler, be blocked by an overlay, or respond too slowly.",
+    primary_cause: "Users experiencing friction during checkout",
+    explanation: "32% of users on this page are showing negative emotion patterns. This may indicate form validation issues, confusing navigation, or slow load times.",
     contributing_factors: [
-      "Possible invisible overlay blocking clicks",
-      "Button may have no click handler attached",
-      "Response time > 2 seconds causing double-clicks",
-      "No visual feedback on click",
+      "Possible form validation errors",
+      "Confusing checkout flow",
+      "Slow page response",
     ],
   },
   actions: [
     {
-      title: "Test the checkout button",
-      description: "Click on the checkout button to verify it responds correctly",
-      type: "edit_element",
-      link: "/dashboard/editor",
-    },
-    {
-      title: "Create A/B test to fix",
-      description: "Test a version with faster response or clearer visual feedback",
+      title: "Review the checkout page",
+      description: "Check the page for usability issues affecting checkout completion",
       type: "ab_test",
-      link: "/dashboard/experiments?template=fix-checkout",
+      link: "/dashboard/pages",
     },
     {
-      title: "Add loading indicator",
-      description: "Show visual feedback when checkout is processing",
+      title: "View session details",
+      description: "See individual sessions showing frustration patterns",
       type: "edit_element",
-      link: "/dashboard/editor",
+      link: "/dashboard/sessions",
     },
   ],
   supporting_charts: {
     page_stats: {
       total_sessions: 127,
-      avg_friction: 42,
+      avg_friction: 32,
       top_emotion: "frustration",
     },
   },
@@ -427,6 +413,11 @@ function SupportingCharts({ data, isDemo }: { data: DiagnosisResponse; isDemo?: 
   const avgFriction = pageStats?.avg_friction;
   const topEmotion = pageStats?.top_emotion;
 
+  // Show meaningful values instead of dots or N/A
+  const displaySessions = typeof totalSessions === "number" ? totalSessions : 0;
+  const displayFriction = typeof avgFriction === "number" ? avgFriction : null;
+  const displayEmotion = typeof topEmotion === "string" ? topEmotion : null;
+
   return (
     <section className="border-t border-gray-200 pt-6 mt-6">
       <div className="flex items-center justify-between mb-4">
@@ -441,22 +432,22 @@ function SupportingCharts({ data, isDemo }: { data: DiagnosisResponse; isDemo?: 
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">Total Sessions</p>
           <p className="text-lg font-semibold text-gray-900">
-            {typeof totalSessions === "number" ? totalSessions : ". "}
+            {displaySessions}
           </p>
         </div>
-        {typeof avgFriction === "number" && (
+        {displayFriction !== null && displayFriction > 0 && (
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500 mb-1">Avg Friction</p>
             <p className="text-lg font-semibold text-gray-900">
-              {avgFriction}%
+              {displayFriction}%
             </p>
           </div>
         )}
-        {typeof topEmotion === "string" && (
+        {displayEmotion && (
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500 mb-1">Top Emotion</p>
             <p className="text-lg font-semibold text-gray-900 capitalize">
-              {topEmotion}
+              {displayEmotion}
             </p>
           </div>
         )}
@@ -632,33 +623,55 @@ export default function DiagnosisPage() {
     </div>
   );
 
-  // Determine what to show
-  const showDemo = isDemoMode || error || !diagnosis;
-  const displayDiagnosis = showDemo ? DEMO_DIAGNOSIS : diagnosis;
-  const displayIssues = showDemo ? {
-    issues: [
-      {
-        id: "1",
-        title: "Users hesitating on pricing page",
-        page_url: "https://example.com/pricing",
-        affected_users: 45,
-        severity: "medium",
-      },
-      {
-        id: "2",
-        title: "High drop-off at sign up form",
-        page_url: "https://example.com/signup",
-        affected_users: 32,
-        severity: "medium",
-      },
-    ],
-    total_issues: 2,
-    high_severity_count: 0,
-  } : issues;
+  // Error state - show empty state, not demo data
+  if (error && !isDemoMode) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <PageHeader
+          onTimeRangeChange={setTimeRange}
+          timeRange={timeRange}
+          showDemoToggle
+          isDemoMode={false}
+          onToggleDemo={() => setIsDemoMode(true)}
+        />
+        <section className="bg-amber-50 rounded-2xl border border-amber-200 p-8 text-center">
+          <span className="text-4xl mb-4 block">⚠️</span>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to load data</h2>
+          <p className="text-gray-600 mb-6">There was a problem fetching your analytics. Please try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors"
+          >
+            Retry
+          </button>
+        </section>
+      </div>
+    );
+  }
 
-  // No real data and not in demo mode - show "collect more data" state
-  if (!isDemoMode && diagnosis && diagnosis.summary.affected_users_pct === 0) {
-    const pageStats = diagnosis.supporting_charts?.page_stats as Record<string, unknown> | undefined;
+  // Demo mode - show sample data
+  if (isDemoMode) {
+    return (
+      <div className="max-w-5xl mx-auto pb-24">
+        <PageHeader
+          onTimeRangeChange={setTimeRange}
+          timeRange={timeRange}
+          showDemoToggle={false}
+          isDemoMode={true}
+          onToggleDemo={() => setIsDemoMode(false)}
+        />
+        <ProblemSummarySection summary={DEMO_DIAGNOSIS.summary} isDemo={true} />
+        <EvidenceSection evidence={DEMO_DIAGNOSIS.evidence} severity={DEMO_DIAGNOSIS.summary.severity} isDemo={true} />
+        <WhySection rootCause={DEMO_DIAGNOSIS.root_cause} isDemo={true} />
+        <ActionsSection actions={DEMO_DIAGNOSIS.actions} isDemo={true} />
+        <SupportingCharts data={DEMO_DIAGNOSIS} isDemo={true} />
+      </div>
+    );
+  }
+
+  // No data yet - show "collect more data" state
+  if (!diagnosis || diagnosis.summary.affected_users_pct === 0) {
+    const pageStats = diagnosis?.supporting_charts?.page_stats as Record<string, unknown> | undefined;
     const sessionCount = typeof pageStats?.total_sessions === "number" ? pageStats.total_sessions : 0;
     return (
       <div className="max-w-5xl mx-auto">
@@ -674,46 +687,46 @@ export default function DiagnosisPage() {
     );
   }
 
-  // Main diagnosis view (real or demo)
+  // Main diagnosis view with real data
   return (
     <div className="max-w-5xl mx-auto pb-24">
       <PageHeader
         onTimeRangeChange={setTimeRange}
         timeRange={timeRange}
-        showDemoToggle={!isDemoMode}
-        isDemoMode={isDemoMode}
-        onToggleDemo={() => setIsDemoMode(!isDemoMode)}
+        showDemoToggle={false}
+        isDemoMode={false}
+        onToggleDemo={() => setIsDemoMode(true)}
       />
 
-      {/* 1. PROBLEM SUMMARY .  TOP PRIORITY */}
-      <ProblemSummarySection summary={displayDiagnosis.summary} isDemo={isDemoMode} />
+      {/* 1. PROBLEM SUMMARY - TOP PRIORITY */}
+      <ProblemSummarySection summary={diagnosis.summary} isDemo={false} />
 
-      {/* 2. EVIDENCE .  SUPPORTING DATA */}
+      {/* 2. EVIDENCE - SUPPORTING DATA */}
       <EvidenceSection
-        evidence={displayDiagnosis.evidence}
-        severity={displayDiagnosis.summary.severity}
-        isDemo={isDemoMode}
+        evidence={diagnosis.evidence}
+        severity={diagnosis.summary.severity}
+        isDemo={false}
       />
 
-      {/* 3. WHY .  ROOT CAUSE */}
-      <WhySection rootCause={displayDiagnosis.root_cause} isDemo={isDemoMode} />
+      {/* 3. WHY - ROOT CAUSE */}
+      <WhySection rootCause={diagnosis.root_cause} isDemo={false} />
 
-      {/* 4. WHAT TO FIX .  ACTION ITEMS */}
-      <ActionsSection actions={displayDiagnosis.actions} isDemo={isDemoMode} />
+      {/* 4. WHAT TO FIX - ACTION ITEMS */}
+      <ActionsSection actions={diagnosis.actions} isDemo={false} />
 
-      {/* 5. CTA .  STICKY BOTTOM (only in real mode) */}
+      {/* 5. CTA - STICKY BOTTOM */}
       <CTASection
-        actions={displayDiagnosis.actions}
-        summary={displayDiagnosis.summary}
-        isDemo={isDemoMode}
+        actions={diagnosis.actions}
+        summary={diagnosis.summary}
+        isDemo={false}
       />
 
       {/* 6. DE-EMPHASIZED CHARTS */}
-      <SupportingCharts data={displayDiagnosis} isDemo={isDemoMode} />
+      <SupportingCharts data={diagnosis} isDemo={false} />
 
       {/* 7. OTHER ISSUES LIST */}
-      {displayIssues && displayIssues.issues.length > 0 && (
-        <IssuesList issues={displayIssues.issues} isDemo={isDemoMode} />
+      {issues && issues.issues.length > 0 && (
+        <IssuesList issues={issues.issues} isDemo={false} />
       )}
     </div>
   );
