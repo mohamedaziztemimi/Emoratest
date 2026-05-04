@@ -472,6 +472,7 @@ async def list_sessions(
     date_to: datetime | None = Query(None),
     device_type: str | None = Query(None, pattern=r"^(desktop|mobile|tablet)$"),
     emotion: str | None = Query(None, description="Filter by primary emotion"),
+    environment: str | None = Query(None, pattern=r"^(test|production)$", description="Filter by environment"),
     sort_by: str | None = Query(None, description="Sort by field: started_at, outcome, primary_emotion, abandonment_risk, friction_score"),
     sort_order: str = Query("desc", pattern=r"^(asc|desc)$", description="Sort order: asc or desc"),
     db: AsyncSession = Depends(get_db),
@@ -498,6 +499,8 @@ async def list_sessions(
         query = query.where(Session.device_type == device_type)
     if emotion:
         query = query.where(Session.primary_emotion == emotion)
+    if environment:
+        query = query.where(Session.environment == environment)
 
     # Count total
     count_query = select(func.count()).select_from(query.subquery())

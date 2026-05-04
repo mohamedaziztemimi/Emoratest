@@ -81,26 +81,86 @@ export function detectOutcomeFromUrl(): void {
 
   const url = window.location.href.toLowerCase();
   const pathname = window.location.pathname.toLowerCase();
+  const searchParams = new URLSearchParams(window.location.search.toLowerCase());
 
-  // Define pattern → outcome mappings
-  const patterns: Array<{ pattern: RegExp; outcome: OutcomeType }> = [
-    { pattern: /\/success|\/thank-?you|\/confirmation|\/complete/i, outcome: "purchase" },
-    { pattern: /\/signup\/success|\/registered|\/sign-?up\/success/i, outcome: "signup" },
-    { pattern: /\/checkout\/success|\/order\/confirm|\/payment\/success/i, outcome: "checkout_completed" },
-    { pattern: /\/demo\/booked|\/demo\/confirm|\/meeting\/scheduled/i, outcome: "demo_booked" },
-    { pattern: /\/lead\/success|\/submitted|\/form\/success/i, outcome: "lead_generated" },
-    { pattern: /\/trial\/started|\/subscribed|\/welcome/i, outcome: "trial_started" },
+  // Define pattern → outcome mappings (expanded for e-commerce)
+  const patterns: Array<{ pattern: RegExp; outcome: OutcomeType; description: string }> = [
+    // Purchase/Order completion (expanded patterns)
+    {
+      pattern: /\/success|\/thank-?you|\/confirmation|\/complete|\/order-confirmation/i,
+      outcome: "purchase",
+      description: "purchase confirmation page"
+    },
+    {
+      pattern: /\/order\/success|\/order\/confirm|\/order\/confirmed|\/order\/complete/i,
+      outcome: "purchase",
+      description: "order success page"
+    },
+    {
+      pattern: /\/checkout\/success|\/checkout\/complete|\/checkout\/thank/i,
+      outcome: "purchase",
+      description: "checkout success page"
+    },
+    {
+      pattern: /\/cart\/success|\/cart\/complete|\/cart\/thank/i,
+      outcome: "purchase",
+      description: "cart success page"
+    },
+    {
+      pattern: /\/payment\/success|\/payment\/complete|\/payment\/confirmed/i,
+      outcome: "purchase",
+      description: "payment success page"
+    },
+    // International patterns
+    { pattern: /\/merci|\/danke|\/gracias|\/grazie|\/obrigado/i, outcome: "purchase", description: "international thank you" },
+
+    // Signup
+    { pattern: /\/signup\/success|\/registered|\/sign-?up\/success|\/signup\/complete/i, outcome: "signup", description: "signup success" },
+
+    // Checkout completed (for multi-step checkouts)
+    {
+      pattern: /\/checkout\/success|\/checkout\/complete|\/order\/confirm/i,
+      outcome: "checkout_completed",
+      description: "checkout completed"
+    },
+
+    // Demo booked
+    { pattern: /\/demo\/booked|\/demo\/confirm|\/meeting\/scheduled/i, outcome: "demo_booked", description: "demo booked" },
+
+    // Lead generated
+    { pattern: /\/lead\/success|\/submitted|\/form\/success/i, outcome: "lead_generated", description: "lead form submitted" },
+
+    // Trial started
+    { pattern: /\/trial\/started|\/subscribed|\/welcome/i, outcome: "trial_started", description: "trial started" },
   ];
 
   // Check each pattern
-  for (const { pattern, outcome } of patterns) {
+  for (const { pattern, outcome, description } of patterns) {
     if (pattern.test(url) || pattern.test(pathname)) {
       reportOutcome(outcome);
       if (config?.debug) {
-        console.debug(`[EmoraTest] Auto-detected outcome: ${outcome}`);
+        console.debug(`[EmoraTest] Auto-detected outcome: ${outcome} (${description})`);
+        console.debug(`[EmoraTest] URL checked: ${pathname}`);
       }
       return;
     }
+  }
+
+  // Check query parameters for success indicators
+  const successParams = ["order=confirmed", "status=success", "payment=complete", "checkout=complete", "order=success"];
+  for (const param of successParams) {
+    if (url.includes(`?${param}`) || url.includes(`&${param}`)) {
+      reportOutcome("purchase");
+      if (config?.debug) {
+        console.debug(`[EmoraTest] Auto-detected outcome: purchase (query param: ${param})`);
+        console.debug(`[EmoraTest] URL checked: ${url}`);
+      }
+      return;
+    }
+  }
+
+  if (config?.debug) {
+    console.debug(`[EmoraTest] No outcome pattern matched for URL: ${pathname}`);
   }
 }
 
@@ -151,6 +211,8 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     mouseMoveThrottleMs: userConfig.mouseMoveThrottleMs ?? 100,
     debug: userConfig.debug ?? false,
     disabled: false,
+    samplingRate: userConfig.samplingRate ?? 1.0,  // Default to 100% tracking
+    environment: userConfig.environment ?? "production",  // Default to production
   } as EmoraTestConfig & {
     apiUrl: string;
     flushIntervalMs: number;
@@ -158,6 +220,8 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     mouseMoveThrottleMs: number;
     debug: boolean;
     disabled: false;
+    samplingRate: number;
+    environment: "test" | "production";
   };
 
   // Set up components - send RAW SDK key, backend will hash it server-side
@@ -171,7 +235,8 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   sessionManager = new SessionManager(transport, config.debug!);
 
   // Create session — backend uses X-SDK-Key header to find merchant
-  const session = await sessionManager.start();
+  // Pass sampling rate and environment from config
+  const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
   queue.start();
 
@@ -490,6 +555,8 @@ export async function enableTracking(): Promise<void> {
     mouseMoveThrottleMs: userConfig.mouseMoveThrottleMs ?? 100,
     debug: userConfig.debug ?? false,
     disabled: false,
+    samplingRate: userConfig.samplingRate ?? 1.0,  // Default to 100% tracking
+    environment: userConfig.environment ?? "production",  // Default to production
   } as EmoraTestConfig & {
     apiUrl: string;
     flushIntervalMs: number;
@@ -497,6 +564,8 @@ export async function enableTracking(): Promise<void> {
     mouseMoveThrottleMs: number;
     debug: boolean;
     disabled: false;
+    samplingRate: number;
+    environment: "test" | "production";
   };
 
   // Set up components - send RAW SDK key, backend will hash it server-side
@@ -510,7 +579,8 @@ export async function enableTracking(): Promise<void> {
   sessionManager = new SessionManager(transport, config.debug!);
 
   // Create session — backend uses X-SDK-Key header to find merchant
-  const session = await sessionManager.start();
+  // Pass sampling rate and environment from config
+  const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
   queue.start();
 

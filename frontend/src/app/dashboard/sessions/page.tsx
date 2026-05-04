@@ -321,6 +321,12 @@ export default function SessionsPage() {
             onChange={(v) => setFilter("device_type", v || undefined)}
             options={DEVICE_OPTIONS}
           />
+          <FilterSelect
+            label="Environment"
+            value={filters.environment || ""}
+            onChange={(v) => setFilter("environment", v || undefined)}
+            options={ENVIRONMENT_OPTIONS}
+          />
           <FilterInput
             label="From"
             type="date"
@@ -571,6 +577,12 @@ const DEVICE_OPTIONS = [
   { value: "desktop", label: "Desktop" },
   { value: "mobile", label: "Mobile" },
   { value: "tablet", label: "Tablet" },
+];
+
+const ENVIRONMENT_OPTIONS = [
+  { value: "", label: "All Environments" },
+  { value: "production", label: "Production" },
+  { value: "test", label: "Test" },
 ];
 
 const SORT_OPTIONS = [

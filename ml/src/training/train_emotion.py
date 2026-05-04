@@ -47,9 +47,11 @@ def train():
     sys.path.insert(0, str(ml_dir))
     from data.synthetic_emotions import generate_all
 
-    df = generate_all(n_per_class=1000, seed=42)
+    df = generate_all(n_total=10000, seed=42)
     print(f"Total samples: {len(df)}")
     print(df['emotion'].value_counts())
+    print("\nPercentage distribution:")
+    print(df['emotion'].value_counts(normalize=True) * 100)
 
     X = df[FEATURE_NAMES].values
     y = df['emotion'].values
@@ -154,7 +156,7 @@ def train():
             'velocity_variance': 380,
             'session_duration_s': 130,
         }, 'confused'),
-        ("Engaged user", {
+        ("Engaged user (ideal)", {
             'hesitation_score': 0.06,
             'price_dwell_time_s': 9,
             'rage_click_score': 0.00,
@@ -163,6 +165,18 @@ def train():
             'checkout_hesitation_s': 2,
             'velocity_variance': 170,
             'session_duration_s': 260,
+        }, 'engaged'),
+        # CRITICAL TEST: Normal browsing behavior MUST predict 'engaged', not 'disengaged'
+        # This is the exact scenario a real tester reported: "why is every session disengaged?"
+        ("Normal browsing (CRITICAL)", {
+            'hesitation_score': 0.15,  # Low hesitation
+            'price_dwell_time_s': 12,  # Looking at content
+            'rage_click_score': 0.03,  # Minimal rage clicking
+            'scroll_retreat_count': 2,  # Some scrolling
+            'exit_intent_count': 0,    # Didn't try to leave
+            'checkout_hesitation_s': 3,  # Quick decisions
+            'velocity_variance': 250,  # Moderate activity
+            'session_duration_s': 45,  # 45 seconds - THIS SHOULD BE ENGAGED
         }, 'engaged'),
         ("Disengaged user", {
             'hesitation_score': 0.3,
@@ -174,6 +188,17 @@ def train():
             'velocity_variance': 100,
             'session_duration_s': 5,
         }, 'disengaged'),
+        # Another engaged case - moderate duration, moderate activity
+        ("Engaged user (moderate)", {
+            'hesitation_score': 0.12,
+            'price_dwell_time_s': 8,
+            'rage_click_score': 0.02,
+            'scroll_retreat_count': 1,
+            'exit_intent_count': 0,
+            'checkout_hesitation_s': 2,
+            'velocity_variance': 180,
+            'session_duration_s': 35,  # 35 seconds - should be engaged
+        }, 'engaged'),
     ]
 
     all_passed = True
@@ -218,7 +243,12 @@ def train():
         'cv_mean': float(cv_scores.mean()),
         'cv_std': float(cv_scores.std()),
         'n_samples': len(df),
-        'n_per_class': 1000,
+        'distribution': {
+            'engaged': 0.40,
+            'confused': 0.25,
+            'frustrated': 0.20,
+            'disengaged': 0.15,
+        },
         'model_type': 'XGBoost' if HAS_XGB else 'GradientBoosting',
     }
 

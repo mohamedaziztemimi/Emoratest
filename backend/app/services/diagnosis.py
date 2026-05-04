@@ -95,6 +95,22 @@ class DiagnosisEngine:
     # Minimum sessions for reliable diagnosis
     MIN_SESSIONS_PER_PAGE = 5
 
+    # E-commerce URL patterns (pages where browsing-and-leaving is normal)
+    ECOMMERCE_PATTERNS = [
+        '/shop', '/store', '/product', '/products', '/collection',
+        '/collections', '/category', '/categories', '/item', '/items',
+        '/catalog', '/goods', '/merch', '/buy',
+    ]
+
+    @staticmethod
+    def _is_ecommerce_page(url: str) -> bool:
+        """Check if URL is an e-commerce product/category page."""
+        try:
+            path = urlparse(url).path.lower()
+            return any(pattern in path for pattern in DiagnosisEngine.ECOMMERCE_PATTERNS)
+        except Exception:
+            return False
+
     @staticmethod
     def _extract_page_name(url: str) -> str:
         """Extract human-readable page name from URL."""
@@ -228,9 +244,17 @@ class DiagnosisEngine:
         We check for events with element_type in ('form', 'input', 'textarea', 'select').
         Users leaving a page without form interaction is normal browsing, NOT form abandonment.
 
+        E-COMMERCE AWARENESS: For shopping pages, browsing-and-leaving is normal.
+        Only flag cart abandonment if user added items to cart.
+
         Rule: If >= 25% of sessions with form interactions have exit_intent_count > 0
         """
         if total_sessions < DiagnosisEngine.MIN_SESSIONS_PER_PAGE:
+            return None
+
+        # E-COMMERCE: Skip form abandonment on product/category pages
+        # Browsing products and leaving is normal shopping behavior
+        if DiagnosisEngine._is_ecommerce_page(page_url):
             return None
 
         # If no one interacted with forms, this is NOT form abandonment

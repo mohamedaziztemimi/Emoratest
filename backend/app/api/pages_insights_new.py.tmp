@@ -1,0 +1,158 @@
+@router.get("/insights", response_model=PageInsightsResponse, summary="Get page insights")
+@limiter.limit("60/minute")
+async def get_page_insights(
+    request: Request,
+    days: int = Query(7, ge=1, le=30, description="Lookback period in days"),
+    limit: int = Query(50, ge=1, le=100, description="Max pages to return"),
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get page-level emotion analysis, sorted by frustration rate (worst pages first).
+
+    Returns:
+        - List of pages with dominant emotions
+        - Session counts
+        - Frustration rate (%)
+        - Rage click count
+        - Bounce rate (%)
+        - Average duration
+        - Trend (vs previous period)
+    """
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    prev_cutoff = cutoff - timedelta(days=days)
+
+    insights = []
+
+    # Get all pages with sessions in the time window
+    page_result = await db.execute(
+        select(Session.page_url)
+        .where(
+            Session.merchant_id == merchant.id,
+            Session.started_at >= cutoff,
+        )
+        .group_by(Session.page_url)
+    )
+    pages = [row[0] for row in page_result.all()]
+
+    for page_url in pages:
+        # Get all sessions for this page
+        sessions_result = await db.execute(
+            select(
+                Session.id,
+                Session.primary_emotion,
+                Session.started_at,
+                Session.ended_at,
+            )
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= cutoff,
+            )
+        )
+        sessions = sessions_result.all()
+
+        if not sessions:
+            continue
+
+        session_count = len(sessions)
+
+        # Calculate emotion breakdown with consolidation
+        emotion_counts = {}
+        for s in sessions:
+            if s.primary_emotion and s.primary_emotion != "insufficient_data":
+                mapped = _consolidate_emotion(s.primary_emotion)
+                emotion_counts[mapped] = emotion_counts.get(mapped, 0) + 1
+
+        total_emotions = sum(emotion_counts.values()) or 1
+        emotion_pct = {k: round(v / total_emotions, 4) for k, v in emotion_counts.items()}
+
+        dominant_emotion, dominant_pct = _get_dominant_emotion(emotion_counts)
+
+        # Calculate frustration rate
+        frustrated_count = emotion_counts.get("frustrated", 0)
+        frustration_rate = round(frustrated_count / session_count * 100, 1) if session_count > 0 else 0
+
+        # Calculate bounce rate (sessions < 10 seconds)
+        bounce_count = 0
+        total_duration = 0
+        for s in sessions:
+            if s.ended_at:
+                duration = (s.ended_at - s.started_at).total_seconds()
+                total_duration += duration
+                if duration < 10:
+                    bounce_count += 1
+
+        bounce_rate = round(bounce_count / session_count * 100, 1) if session_count > 0 else 0
+        avg_duration = round(total_duration / session_count, 1) if session_count > 0 else 0
+
+        # Get rage click count from session_features
+        rage_result = await db.execute(
+            select(func.count(SessionFeatures.session_id))
+            .join(Session, SessionFeatures.session_id == Session.id)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= cutoff,
+                SessionFeatures.rage_click_score > 0.3,
+            )
+        )
+        rage_click_count = rage_result.scalar() or 0
+
+        # Calculate trend (compare current vs previous period)
+        # Get previous period frustration rate
+        prev_sessions_result = await db.execute(
+            select(Session.primary_emotion)
+            .where(
+                Session.merchant_id == merchant.id,
+                Session.page_url == page_url,
+                Session.started_at >= prev_cutoff,
+                Session.started_at < cutoff,
+                Session.primary_emotion.isnot(None),
+                Session.primary_emotion != "insufficient_data",
+            )
+        )
+        prev_sessions = prev_sessions_result.all()
+
+        prev_emotion_counts = {}
+        for s in prev_sessions:
+            mapped = _consolidate_emotion(s.primary_emotion)
+            prev_emotion_counts[mapped] = prev_emotion_counts.get(mapped, 0) + 1
+
+        prev_total = sum(prev_emotion_counts.values()) or 1
+        prev_frustration_pct = prev_emotion_counts.get("frustrated", 0) / prev_total * 100
+        curr_frustration_pct = frustration_rate
+
+        # Determine trend
+        trend = None
+        if prev_total >= 3:  # Only show trend if we have enough data
+            diff = curr_frustration_pct - prev_frustration_pct
+            if diff > 5:
+                trend = "up"  # Getting worse
+            elif diff < -5:
+                trend = "down"  # Improving
+            else:
+                trend = "stable"
+
+        insights.append(
+            PageInsightItem(
+                page_url=page_url,
+                session_count=session_count,
+                dominant_emotion=dominant_emotion,
+                dominant_emotion_pct=dominant_pct,
+                avg_duration_seconds=avg_duration,
+                frustration_rate=frustration_rate,
+                rage_click_count=rage_click_count,
+                bounce_rate=bounce_rate,
+                trend=trend,
+            )
+        )
+
+    # Sort by frustration rate (desc), then rage clicks (desc), then bounce rate (desc)
+    insights.sort(
+        key=lambda p: (-p.frustration_rate, -p.rage_click_count, -p.bounce_rate)
+    )
+
+    return PageInsightsResponse(
+        pages=insights[:limit],
+        total_pages=len(insights),
+    )

@@ -79,7 +79,7 @@ export class SessionManager {
   }
 
   /** Get or create a session with sampling decision. */
-  async start(samplingRate: number = 0.2): Promise<SessionInfo> {
+  async start(samplingRate: number = 1.0, environment: string = "production"): Promise<SessionInfo> {
     // Check sessionStorage for existing session
     const stored = this.loadFromStorage();
     if (stored) {
@@ -105,6 +105,7 @@ export class SessionManager {
           started_at: startedAt,
           country_code: detectCountryCode(),
           device_type: detectDeviceType(),
+          environment: environment,
         });
         sessionId = response.session_id;
         fullResponse = response; // Store full response for survey config

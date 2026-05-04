@@ -22,6 +22,7 @@ class SessionCreateRequest(BaseModel):
     started_at: datetime
     country_code: str | None = None
     device_type: str | None = Field(None, pattern=r"^(desktop|mobile|tablet)$")
+    environment: str | None = Field("production", pattern=r"^(test|production)$")
 
 
 class SessionCreateResponse(BaseModel):

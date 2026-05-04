@@ -289,6 +289,7 @@ async def create_session(
         outcome="unknown",
         country_code=body.country_code,
         device_type=body.device_type,
+        environment=body.environment or "production",
         expires_at=now + timedelta(days=90),
         ip_address=client_ip,
         user_agent=user_agent,

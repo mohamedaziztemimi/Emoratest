@@ -168,6 +168,7 @@ export interface SessionFilters {
   date_to?: string;
   device_type?: string;
   emotion?: string;
+  environment?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
 }

@@ -23,6 +23,10 @@ class Session(Base):
             "friction_score BETWEEN 0 AND 1",
             name="ck_sessions_friction_score",
         ),
+        CheckConstraint(
+            "environment IN ('test','production')",
+            name="ck_sessions_environment",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -44,6 +48,9 @@ class Session(Base):
     intent_label: Mapped[str | None] = mapped_column(String(32))
     country_code: Mapped[str | None] = mapped_column(CHAR(2))
     device_type: Mapped[str | None] = mapped_column(String(16))
+    environment: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="production"
+    )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )

@@ -85,30 +85,50 @@ export interface OutcomePattern {
 }
 
 export const DEFAULT_OUTCOME_PATTERNS: readonly OutcomePattern[] = [
+  // Purchase/Order completion (expanded for e-commerce)
   { path: "/success", outcome: "purchase" as const },
   { path: "/thank-you", outcome: "purchase" as const },
   { path: "/thankyou", outcome: "purchase" as const },
   { path: "/confirmation", outcome: "purchase" as const },
   { path: "/complete", outcome: "purchase" as const },
-  { path: "/checkout/success", outcome: "checkout_completed" as const },
-  { path: "/checkout/complete", outcome: "checkout_completed" as const },
-  { path: "/order/confirm", outcome: "checkout_completed" as const },
-  { path: "/order/confirmed", outcome: "checkout_completed" as const },
-  { path: "/payment/success", outcome: "checkout_completed" as const },
+  { path: "/order-confirmation", outcome: "purchase" as const },
+  { path: "/order/success", outcome: "purchase" as const },
+  { path: "/order/confirm", outcome: "purchase" as const },
+  { path: "/order/confirmed", outcome: "purchase" as const },
+  { path: "/order/complete", outcome: "purchase" as const },
+  { path: "/checkout/success", outcome: "purchase" as const },
+  { path: "/checkout/complete", outcome: "purchase" as const },
+  { path: "/checkout/thank", outcome: "purchase" as const },
+  { path: "/cart/success", outcome: "purchase" as const },
+  { path: "/cart/complete", outcome: "purchase" as const },
+  { path: "/cart/thank", outcome: "purchase" as const },
+  { path: "/payment/success", outcome: "purchase" as const },
+  { path: "/payment/complete", outcome: "purchase" as const },
+  { path: "/payment/confirmed", outcome: "purchase" as const },
+  // International patterns
+  { path: "/merci", outcome: "purchase" as const },
+  { path: "/danke", outcome: "purchase" as const },
+  { path: "/gracias", outcome: "purchase" as const },
+  { path: "/grazie", outcome: "purchase" as const },
+  { path: "/obrigado", outcome: "purchase" as const },
+  // Signup
   { path: "/signup/success", outcome: "signup" as const },
   { path: "/signup/complete", outcome: "signup" as const },
   { path: "/registered", outcome: "signup" as const },
+  // Demo
   { path: "/demo/booked", outcome: "demo_booked" as const },
   { path: "/demo/confirmed", outcome: "demo_booked" as const },
   { path: "/meeting/scheduled", outcome: "demo_booked" as const },
+  // Lead
   { path: "/lead/success", outcome: "lead_generated" as const },
+  // Trial
   { path: "/trial/started", outcome: "trial_started" as const },
   { path: "/subscribed", outcome: "trial_started" as const },
 ] as const;
 
 // ── Scalability constants ────────────────────────────────────────────
 
-export const DEFAULT_SAMPLING_RATE = 0.2; // Track 20% of sessions
+export const DEFAULT_SAMPLING_RATE = 1.0; // Track 100% of sessions (changed from 20% for better evaluation experience)
 export const MAX_EVENTS_PER_SESSION = 1000;
 export const MAX_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 export const DEFAULT_FLUSH_INTERVAL_MS = 5000; // 5 seconds
@@ -161,6 +181,7 @@ export interface SessionCreatePayload {
   started_at: string;
   country_code?: string | null;
   device_type?: string | null;
+  environment?: string | null;  // "test" or "production"
 }
 
 export interface SessionCreateResponse {
@@ -197,7 +218,7 @@ export interface EmoraTestConfig {
   /** Disable all tracking (opt-out). Default: false */
   disabled?: boolean;
 
-  /** Sampling rate (0-1). Default: 0.2 (20% of sessions tracked) */
+  /** Sampling rate (0-1). Default: 1.0 (100% of sessions tracked) */
   samplingRate?: number;
 
   /** Max events per session before dropping low-priority events. Default: 1000 */
@@ -214,6 +235,9 @@ export interface EmoraTestConfig {
 
   /** Require user consent before tracking (GDPR mode). Default: false */
   requireConsent?: boolean;
+
+  /** Environment tag for this session (test/production). Default: "production" */
+  environment?: "test" | "production";
 }
 
 // ── Feature Flags ─────────────────────────────────────────────────
