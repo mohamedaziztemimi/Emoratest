@@ -465,7 +465,7 @@ async def list_sessions(
     request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    outcome: str | None = Query(None, pattern=r"^(purchase|abandon|browse|unknown)$"),
+    outcome: str | None = Query(None, description="Filter by outcome"),
     risk_min: float | None = Query(None, ge=0.0, le=1.0),
     risk_max: float | None = Query(None, ge=0.0, le=1.0),
     date_from: datetime | None = Query(None),
@@ -480,13 +480,42 @@ async def list_sessions(
 ):
     """List sessions for the authenticated merchant with filtering.
     Accepts both full ISO datetime and date-only strings (YYYY-MM-DD).
+
+    Outcome filter accepts both display names (Converted, Abandoned, etc.) and
+    database values (purchase, abandon, etc.) for flexibility.
     """
+
+    # Map frontend outcome names to database values
+    OUTCOME_MAPPING = {
+        # Frontend display names → Database values
+        "converted": "purchase",
+        "abandoned": "abandon",
+        "left": "abandon",  # Map "left" to abandon
+        "bounced": "unknown",  # Map "bounced" to unknown
+        "signed up": "signup",
+        "trial started": "trial_started",
+        "lead": "lead_generated",
+        "demo booked": "demo_booked",
+        "checkout done": "checkout_completed",
+        # Database values (already correct)
+        "purchase": "purchase",
+        "abandon": "abandon",
+        "unknown": "unknown",
+        "signup": "signup",
+        "trial_started": "trial_started",
+        "lead_generated": "lead_generated",
+        "demo_booked": "demo_booked",
+        "checkout_completed": "checkout_completed",
+    }
 
     query = select(Session).where(Session.merchant_id == merchant.id)
 
-    # Apply filters
+    # Apply outcome filter with mapping
     if outcome:
-        query = query.where(Session.outcome == outcome)
+        outcome_key = outcome.lower().strip()
+        mapped_outcome = OUTCOME_MAPPING.get(outcome_key, outcome)
+        query = query.where(Session.outcome == mapped_outcome)
+
     if risk_min is not None:
         query = query.where(Session.abandonment_risk >= risk_min)
     if risk_max is not None:

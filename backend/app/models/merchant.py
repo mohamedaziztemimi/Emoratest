@@ -24,6 +24,7 @@ class Merchant(Base):
     password_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     shop_domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     sdk_key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    test_sdk_key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, server_default=text("'test_' || gen_random_uuid()::text"))
     plan: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default=text("'free'")
     )

@@ -96,10 +96,13 @@ class DiagnosisEngine:
     MIN_SESSIONS_PER_PAGE = 5
 
     # E-commerce URL patterns (pages where browsing-and-leaving is normal)
+    # Expanded to catch more shop/product patterns
     ECOMMERCE_PATTERNS = [
         '/shop', '/store', '/product', '/products', '/collection',
         '/collections', '/category', '/categories', '/item', '/items',
-        '/catalog', '/goods', '/merch', '/buy',
+        '/catalog', '/goods', '/merch', '/buy', '/cart', '/basket',
+        '/market', '/marketplace', '/order', '/booking', '/tour',
+        '/course', '/courses', '/lesson', '/lessons',
     ]
 
     @staticmethod
@@ -110,6 +113,45 @@ class DiagnosisEngine:
             return any(pattern in path for pattern in DiagnosisEngine.ECOMMERCE_PATTERNS)
         except Exception:
             return False
+
+    @staticmethod
+    def _get_page_context(url: str) -> str:
+        """Get page context for contextual recommendations."""
+        try:
+            path = urlparse(url).path.lower()
+            full_url = url.lower()
+
+            # E-commerce browse pages
+            if any(x in path for x in ['/shop', '/store', '/product', '/collection',
+                                        '/category', '/catalog', '/goods', '/merch',
+                                        '/market', '/marketplace', '/item', '/items',
+                                        '/course', '/courses', '/lesson', '/lessons',
+                                        '/tour', '/booking']):
+                return 'ecommerce_browse'
+
+            # E-commerce checkout pages
+            if any(x in path for x in ['/cart', '/checkout', '/payment']):
+                return 'ecommerce_checkout'
+
+            # Auth pages
+            if any(x in path for x in ['/login', '/signin', '/register', '/signup',
+                                       '/sign-up', '/sign_in', '/sign_up', '/auth']):
+                return 'auth'
+
+            # Documentation/help pages
+            if any(x in path for x in ['/docs', '/help', '/faq', '/support',
+                                       '/documentation', '/guide', '/tutorial']):
+                return 'documentation'
+
+            # Homepage or root path
+            if path == '/' or path == '' or path.rstrip('/') == '' or \
+               any(full_url.endswith(ext) for ext in ['.com/', '.net/', '.org/', '.io/',
+                                                    '.com', '.net', '.org', '.io']):
+                return 'homepage'
+
+            return 'general'
+        except Exception:
+            return 'general'
 
     @staticmethod
     def _extract_page_name(url: str) -> str:
@@ -145,6 +187,10 @@ class DiagnosisEngine:
 
         severity = "critical" if rage_percentage >= 30 else "warning"
 
+        # Get context-aware recommendation
+        page_context = DiagnosisEngine._get_page_context(page_url)
+        recommendation = DiagnosisEngine._get_rage_click_recommendation(page_context, rage_percentage)
+
         return Issue(
             type="rage_click_cluster",
             severity=severity,
@@ -155,11 +201,31 @@ class DiagnosisEngine:
             ),
             affected_sessions=rage_sessions,
             affected_percentage=round(rage_percentage, 1),
-            recommendation=(
-                "Check for broken buttons, slow-loading elements, or misleading "
-                "clickable-looking elements on this page. Test all interactive elements."
-            ),
+            recommendation=recommendation,
         )
+
+    @staticmethod
+    def _get_rage_click_recommendation(page_context: str, rage_rate: float) -> str:
+        """Get context-aware recommendation for rage clicks."""
+        recommendations = {
+            'ecommerce_browse': (
+                f"Users may be clicking on product images expecting zoom or quick-view. "
+                f"Check that all clickable elements respond properly and add loading indicators "
+                f"for images that take time to load."
+            ),
+            'ecommerce_checkout': (
+                f"Users are clicking frantically during checkout. This often indicates: "
+                f"buttons that appear broken, slow page transitions, or confusing form validation."
+            ),
+            'homepage': (
+                f"Users are rage-clicking on homepage elements. Check for: "
+                f"broken navigation links, slow-loading CTAs, or elements that look clickable but aren't."
+            ),
+        }
+        return recommendations.get(page_context, (
+            f"Check for broken buttons, slow-loading elements, or misleading "
+            f"clickable-looking elements on this page. Test all interactive elements."
+        ))
 
     @staticmethod
     def _detect_high_bounce(
@@ -182,6 +248,10 @@ class DiagnosisEngine:
 
         severity = "critical" if bounce_percentage >= 50 else "warning"
 
+        # Get context-aware recommendation
+        page_context = DiagnosisEngine._get_page_context(page_url)
+        recommendation = DiagnosisEngine._get_bounce_recommendation(page_context, bounce_percentage)
+
         return Issue(
             type="high_bounce",
             severity=severity,
@@ -192,12 +262,41 @@ class DiagnosisEngine:
             ),
             affected_sessions=short_sessions,
             affected_percentage=round(bounce_percentage, 1),
-            recommendation=(
-                "Review page load speed, above-the-fold content, and whether the page "
-                "matches user expectations from the referring link. Consider adding "
-                "engaging content or a clear value proposition."
-            ),
+            recommendation=recommendation,
         )
+
+    @staticmethod
+    def _get_bounce_recommendation(page_context: str, bounce_rate: float) -> str:
+        """Get context-aware recommendation for high bounce."""
+        recommendations = {
+            'ecommerce_browse': (
+                f"Product images or descriptions may not match user expectations. "
+                f"Check if prices are visible above the fold, if product images load quickly on mobile, "
+                f"and if the page clearly shows what products are available."
+            ),
+            'ecommerce_checkout': (
+                f"Users are abandoning checkout immediately. Check for: "
+                f"unexpected shipping costs shown, required account creation, "
+                f"or confusing checkout flow. Consider guest checkout."
+            ),
+            'homepage': (
+                f"Your homepage may not clearly communicate your value proposition. "
+                f"Check if the key message is visible without scrolling and if users "
+                f"immediately understand what you offer."
+            ),
+            'documentation': (
+                f"Users aren't finding what they need. Consider: better search functionality, "
+                f"clearer navigation, or more prominent links to common topics."
+            ),
+            'auth': (
+                f"Users are leaving the auth page immediately. This could indicate: "
+                f"confusing login/signup buttons, missing social login options, or concerns about privacy."
+            ),
+        }
+        return recommendations.get(page_context, (
+            f"Review page load speed, above-the-fold content, and whether the page "
+            f"matches user expectations from the referring link."
+        ))
 
     @staticmethod
     def _detect_scroll_confusion(
@@ -215,6 +314,9 @@ class DiagnosisEngine:
         if avg_scroll_retreats is None or avg_scroll_retreats <= 3:
             return None
 
+        # Get context-aware recommendation
+        page_context = DiagnosisEngine._get_page_context(page_url)
+
         return Issue(
             type="scroll_confusion",
             severity="warning",
@@ -225,11 +327,27 @@ class DiagnosisEngine:
             ),
             affected_sessions=total_sessions,  # Affects all sessions on this page
             affected_percentage=100.0,
-            recommendation=(
-                "Review content structure and navigation. Consider adding anchor links, "
-                "a table of contents, or reorganizing content to follow a logical flow."
-            ),
+            recommendation=DiagnosisEngine._get_scroll_confusion_recommendation(page_context),
         )
+
+    @staticmethod
+    def _get_scroll_confusion_recommendation(page_context: str) -> str:
+        """Get context-aware recommendation for scroll confusion."""
+        recommendations = {
+            'documentation': (
+                f"Users can't find what they're looking for in documentation. "
+                f"Add: a table of contents, search functionality, or better section headers."
+            ),
+            'ecommerce_browse': (
+                f"Users are scrolling back and forth on product pages. "
+                f"This may indicate: product categories aren't clear, filters aren't working well, "
+                f"or product information is hard to compare."
+            ),
+        }
+        return recommendations.get(page_context, (
+            f"Review content structure and navigation. Consider adding anchor links, "
+            f"a table of contents, or reorganizing content to follow a logical flow."
+        ))
 
     @staticmethod
     def _detect_form_abandonment(
@@ -269,6 +387,10 @@ class DiagnosisEngine:
 
         severity = "critical" if form_abandon_percentage >= 35 else "warning"
 
+        # Get context-aware recommendation
+        page_context = DiagnosisEngine._get_page_context(page_url)
+        recommendation = DiagnosisEngine._get_form_abandonment_recommendation(page_context, form_abandon_percentage)
+
         return Issue(
             type="form_abandonment",
             severity=severity,
@@ -279,11 +401,37 @@ class DiagnosisEngine:
             ),
             affected_sessions=abandon_sessions,
             affected_percentage=round(form_abandon_percentage, 1),
-            recommendation=(
-                "Simplify the form, reduce required fields, add progress indicators, "
-                "or break into multiple steps. Consider saving progress so users can return later."
-            ),
+            recommendation=recommendation,
         )
+
+    @staticmethod
+    def _get_form_abandonment_recommendation(page_context: str, abandon_rate: float) -> str:
+        """Get context-aware recommendation for form abandonment."""
+        recommendations = {
+            'auth': (
+                f"Users are abandoning before completing sign in/sign up. "
+                f"Consider: showing password requirements upfront, adding social login options, "
+                f"reducing required fields, or offering a 'guest checkout' option if applicable."
+            ),
+            'ecommerce_checkout': (
+                f"Users are leaving during checkout. Common fixes: "
+                f"show total cost upfront (no hidden fees), offer guest checkout, "
+                f"reduce form fields, show trust badges, or provide multiple payment options."
+            ),
+            'homepage': (
+                f"Users aren't completing forms on your homepage. "
+                f"If this is a newsletter signup, consider moving it below the fold "
+                f"or offering immediate value in exchange for the email address."
+            ),
+            'documentation': (
+                f"Users aren't completing forms (search, feedback, etc.). "
+                f"Consider making the form optional or positioning it after users find value."
+            ),
+        }
+        return recommendations.get(page_context, (
+            f"Simplify the form, reduce required fields, add progress indicators, "
+            f"or break into multiple steps. Consider saving progress so users can return later."
+        ))
 
     @staticmethod
     def _detect_hesitation(
@@ -439,6 +587,7 @@ class DiagnosisEngine:
 
         # Also check for form-related keywords in label and selector
         # This catches forms that might not have element_type set correctly
+        # CRITICAL: Use word boundaries to avoid false positives like "information" containing "form"
         form_keyword_session_ids = (
             db.query(Event.session_id)
             .join(Session, Session.id == Event.session_id)
@@ -448,15 +597,24 @@ class DiagnosisEngine:
                     Session.page_url == page_url,
                     Session.started_at >= since,
                     or_(
-                        Event.label.ilike("%form%"),
-                        Event.label.ilike("%input%"),
-                        Event.label.ilike("%email%"),
+                        # More specific patterns for form-related keywords
+                        # Use word boundaries where possible
+                        Event.label.ilike("% email %"),  # standalone "email"
                         Event.label.ilike("%password%"),
                         Event.label.ilike("%submit%"),
-                        Event.selector.ilike("%form%"),
-                        Event.selector.ilike("%input%"),
-                        Event.selector.ilike("%email%"),
-                        Event.selector.ilike("%submit%"),
+                        Event.label.ilike("%sign up%"),
+                        Event.label.ilike("%sign-in%"),
+                        Event.label.ilike("%register%"),
+                        Event.label.ilike("%name%"),
+                        # Selector patterns - more specific
+                        Event.selector.ilike("#form%"),
+                        Event.selector.ilike(".form%"),
+                        Event.selector.ilike("[type=%email%]"),
+                        Event.selector.ilike("[type=%password%]"),
+                        Event.selector.ilike("[type=%text%]"),
+                        Event.selector.ilike("[type=%submit%]"),
+                        Event.selector.ilike("textarea"),
+                        Event.selector.ilike("select"),
                     ),
                 )
             )
