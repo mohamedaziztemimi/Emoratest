@@ -1,7 +1,7 @@
 """add environment to sessions
 
 Revision ID: 022_add_environment_to_sessions
-Revises: 021_create_session_feedback_and_survey_config
+Revises: 021_create_session_feedback
 Create Date: 2026-05-04
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '022_add_environment_to_sessions'
-down_revision: Union[str, None] = '021_create_session_feedback_and_survey_config'
+down_revision: Union[str, None] = '021_create_session_feedback'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
