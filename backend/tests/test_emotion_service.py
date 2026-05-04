@@ -123,9 +123,9 @@ class TestEmotionIngestion:
             raw_events=events,
         ))
 
+        # Model now returns consolidated 4 emotions
         assert result.primary_emotion in [
-            "confusion", "frustration", "delight", "boredom",
-            "anxiety", "focus", "hesitation", "satisfaction"
+            "frustrated", "confused", "engaged", "disengaged"
         ]
 
     def test_ingest_events_sets_confidence(self):
