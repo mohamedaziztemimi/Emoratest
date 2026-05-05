@@ -256,8 +256,8 @@ async def create_session(
         merchant.session_month = current_month
         merchant.session_year = current_year
 
-    # Check session limit
-    if merchant.sessions_this_month >= merchant.monthly_session_limit:
+    # Check session limit (skip if unlimited: -1)
+    if merchant.monthly_session_limit != -1 and merchant.sessions_this_month >= merchant.monthly_session_limit:
         raise HTTPException(
             status_code=429,
             detail={

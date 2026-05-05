@@ -20,7 +20,7 @@ interface MerchantProfile {
 interface UsageData {
   plan: string;
   sessions_used: number;
-  sessions_limit: number;
+  sessions_limit: number | null;  // null = unlimited
   reset_date: string;
 }
 
@@ -315,101 +315,138 @@ export default function SettingsPage() {
 
                 {/* Session Usage Bar */}
                 <div style={{ marginBottom: "16px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#111318",
-                      }}
-                    >
-                      {usage.sessions_used} / {usage.sessions_limit} sessions this month
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "12px",
-                        color: "#6B7280",
-                      }}
-                    >
-                      {Math.round((usage.sessions_used / usage.sessions_limit) * 100)}%
-                    </span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "8px",
-                      background: "#E5E7EB",
-                      borderRadius: "4px",
-                      overflow: "hidden",
-                    }}
-                  >
+                  {usage.sessions_limit === null ? (
+                    // Unlimited plan - show simple usage count
                     <div
                       style={{
-                        height: "100%",
-                        width: `${Math.min((usage.sessions_used / usage.sessions_limit) * 100, 100)}%`,
-                        background:
-                          usage.sessions_used >= usage.sessions_limit
-                            ? "#EF4444"
-                            : usage.sessions_used >= usage.sessions_limit * 0.8
-                            ? "#F59E0B"
-                            : "#007BFF",
-                        borderRadius: "4px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-
-                  {/* Limit Reached Message */}
-                  {usage.sessions_used >= usage.sessions_limit && (
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        color: "#EF4444",
-                        marginTop: "8px",
-                        fontWeight: "500",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                       }}
                     >
-                      Limit reached. New sessions are not being tracked.
-                    </p>
+                      <span
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          color: "#111318",
+                        }}
+                      >
+                        {usage.sessions_used} sessions this month
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "#10B981",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Unlimited
+                      </span>
+                    </div>
+                  ) : (
+                    // Limited plan - show progress bar
+                    <>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: "#111318",
+                          }}
+                        >
+                          {usage.sessions_used} / {usage.sessions_limit} sessions this month
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "#6B7280",
+                          }}
+                        >
+                          {Math.round((usage.sessions_used / usage.sessions_limit) * 100)}%
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "8px",
+                          background: "#E5E7EB",
+                          borderRadius: "4px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${Math.min((usage.sessions_used / usage.sessions_limit) * 100, 100)}%`,
+                            background:
+                              usage.sessions_used >= usage.sessions_limit
+                                ? "#EF4444"
+                                : usage.sessions_used >= usage.sessions_limit * 0.8
+                                ? "#F59E0B"
+                                : "#007BFF",
+                            borderRadius: "4px",
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
+
+                      {/* Limit Reached Message */}
+                      {usage.sessions_used >= usage.sessions_limit && (
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#EF4444",
+                            marginTop: "8px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          Limit reached. New sessions are not being tracked.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
-                {/* Reset Date */}
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "#6B7280",
-                    marginBottom: "16px",
-                  }}
-                >
-                  Resets on {new Date(usage.reset_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                </p>
+                {/* Reset Date - only show for limited plans */}
+                {usage.sessions_limit !== null && (
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "#6B7280",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    Resets on {new Date(usage.reset_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  </p>
+                )}
 
-                {/* Need More Sessions Link */}
-                <button
-                  onClick={() => setShowWaitlist(true)}
-                  style={{
-                    fontSize: "13px",
-                    color: "#007BFF",
-                    textDecoration: "none",
-                    fontWeight: "500",
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                  }}
-                >
-                  Need more sessions? →
-                </button>
+                {/* Need More Sessions Link - only show for limited plans */}
+                {usage.sessions_limit !== null && (
+                  <button
+                    onClick={() => setShowWaitlist(true)}
+                    style={{
+                      fontSize: "13px",
+                      color: "#007BFF",
+                      textDecoration: "none",
+                      fontWeight: "500",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Need more sessions? →
+                  </button>
+                )}
               </div>
             ) : null}
           </CardBody>

@@ -47,7 +47,7 @@ interface ProblemSession {
 interface UsageData {
   plan: string;
   sessions_used: number;
-  sessions_limit: number;
+  sessions_limit: number | null;  // null = unlimited
   reset_date: string;
 }
 
@@ -248,8 +248,8 @@ export default function OverviewPage() {
         <OnboardingCard sdkKey={sdkKey} onVerify={handleVerifyInstallation} verifying={verifying} verified={verified} />
       )}
 
-      {/* Session Limit Warning Banner */}
-      {!loading && usage && !dismissedUsageBanner && totalSessions > 0 && (
+      {/* Session Limit Warning Banner - only show for limited plans */}
+      {!loading && usage && !dismissedUsageBanner && totalSessions > 0 && usage.sessions_limit !== null && (
         <div
           className="mb-6 rounded-xl p-4 flex items-center justify-between"
           style={{

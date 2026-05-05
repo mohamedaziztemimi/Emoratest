@@ -136,7 +136,7 @@ class GdprExportResponse(BaseModel):
 class UsageResponse(BaseModel):
     plan: str
     sessions_used: int
-    sessions_limit: int
+    sessions_limit: int | None  # None = unlimited
     reset_date: str
 
 
@@ -684,10 +684,13 @@ async def get_usage(
     )
     actual_sessions_used = count_result.scalar() or 0
 
+    # -1 indicates unlimited sessions for paid plans
+    limit = None if merchant.monthly_session_limit == -1 else merchant.monthly_session_limit
+
     return UsageResponse(
         plan=merchant.plan,
         sessions_used=actual_sessions_used,
-        sessions_limit=merchant.monthly_session_limit,
+        sessions_limit=limit,
         reset_date=reset_date,
     )
 
