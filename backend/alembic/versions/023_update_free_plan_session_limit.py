@@ -21,9 +21,9 @@ depends_on: Union[str, None] = None
 
 
 def upgrade() -> None:
-    # Update existing free plan merchants from 500 to 2000
+    # Update existing free and trial plan merchants from 500 to 2000
     op.execute(
-        sa.text("UPDATE merchants SET monthly_session_limit = 2000 WHERE plan = 'free' AND monthly_session_limit = 500")
+        sa.text("UPDATE merchants SET monthly_session_limit = 2000 WHERE plan IN ('free', 'trial') AND monthly_session_limit = 500")
     )
     # Change the default for new merchants
     op.alter_column(
