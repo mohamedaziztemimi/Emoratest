@@ -41,7 +41,7 @@ class Merchant(Base):
     )
     # Session limit fields
     monthly_session_limit: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default=text("500")
+        Integer, nullable=False, server_default=text("2000")
     )
     sessions_this_month: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")

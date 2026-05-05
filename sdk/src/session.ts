@@ -47,6 +47,9 @@ export class SessionManager {
   private readonly maxEvents: number;
   private readonly maxDuration: number;
   private limitReached: boolean = false;
+  // Store device/country context for fallback
+  private deviceType: string | null = null;
+  private countryCode: string | null = null;
 
   constructor(
     transport: Transport,
@@ -93,33 +96,55 @@ export class SessionManager {
     // Make sampling decision (persisted so same decision across page navs)
     const sampledIn = this.makeSamplingDecision(samplingRate);
 
+    // Capture device and country info once (used for session creation and event metadata)
+    const detectedDevice = detectDeviceType();
+    const detectedCountry = detectCountryCode();
+    this.deviceType = detectedDevice;
+    this.countryCode = detectedCountry;
+
     // Only create session on backend if sampled in
-    let sessionId: string;
+    let sessionId!: string;  // Definitely assigned in if/else below
     let fullResponse: SessionCreateResponse | undefined;
     const startedAt = isoNow();
 
     if (sampledIn) {
-      try {
-        const response = await this.transport.createSession({
-          page_url: window.location.href,
-          started_at: startedAt,
-          country_code: detectCountryCode(),
-          device_type: detectDeviceType(),
-          environment: environment,
-        });
-        sessionId = response.session_id;
-        fullResponse = response; // Store full response for survey config
-      } catch (err) {
-        // Check if this is a limit reached error
-        if (this.transport.limitReached || (err as Error).message.includes("429")) {
-          this.limitReached = true;
-          console.warn("[EmoraTest] Session limit reached. Tracking paused for this month.");
+      // Retry session creation up to 2 times (mobile networks can be flaky)
+      let lastError: Error | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await this.transport.createSession({
+            page_url: window.location.href,
+            started_at: startedAt,
+            country_code: detectedCountry,
+            device_type: detectedDevice,
+            environment: environment,
+          });
+          sessionId = response.session_id;
+          fullResponse = response; // Store full response for survey config
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err as Error;
+          // Check if this is a limit reached error - don't retry
+          if (this.transport.limitReached || (err as Error).message.includes("429")) {
+            this.limitReached = true;
+            console.warn("[EmoraTest] Session limit reached. Tracking paused for this month.");
+            break;
+          }
+          // Wait before retry (exponential backoff: 100ms, 300ms)
+          if (attempt < 2) {
+            await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+          }
         }
-        if (this.debug) {
-          console.error("[EmoraTest] Session creation failed:", err);
-        }
-        this.clearStorage();
+      }
+
+      // If all retries failed, generate local ID and continue tracking
+      // Backend will auto-create session when first event arrives
+      if (lastError) {
         sessionId = uuid4();
+        if (this.debug) {
+          console.warn("[EmoraTest] Session creation failed after retries, will retry via events:", lastError.message);
+        }
       }
     } else {
       // Not sampled - generate a client ID but don't create backend session
@@ -292,6 +317,16 @@ export class SessionManager {
 
     this.clearStorage();
     this.session = null;
+  }
+
+  /** Get the detected device type for this session. */
+  getDeviceType(): string | null {
+    return this.deviceType;
+  }
+
+  /** Get the detected country code for this session. */
+  getCountryCode(): string | null {
+    return this.countryCode;
   }
 
   // ── Storage helpers ─────────────────────────────────────────────

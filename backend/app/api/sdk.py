@@ -532,6 +532,7 @@ async def ingest_events(
         page_url = "unknown"
 
     # Auto-create session if not found (defensive programming)
+    # Use device_type and country_code from request body if provided
     if session is None:
         new_session = Session(
             id=sid,
@@ -539,8 +540,8 @@ async def ingest_events(
             page_url=page_url,
             started_at=now,
             outcome="unknown",
-            country_code=country_code,
-            device_type=None,
+            country_code=body.country_code or country_code,  # Prefer body value, fallback to CF header
+            device_type=body.device_type,  # Use device_type from request
             expires_at=now + timedelta(days=90),
             ip_address=client_ip,
         )

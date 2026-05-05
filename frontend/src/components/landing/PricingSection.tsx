@@ -19,7 +19,7 @@ const PRICING_TIERS = [
     subtitle: "Get started with emotion tracking",
     price: "$0 / month",
     features: [
-      "Up to 500 sessions per month",
+      "Up to 2,000 sessions per month",
       "1 active experiment",
       "Basic emotion detection (4 behaviors)",
       "Session explorer with filters",
@@ -35,7 +35,7 @@ const PRICING_TIERS = [
     subtitle: "For teams serious about conversion",
     price: "$29 / month",
     features: [
-      "Up to 10,000 sessions per month",
+      "Unlimited sessions",
       "Unlimited experiments",
       "Full emotion detection",
       "Automatic diagnosis",
@@ -53,7 +53,7 @@ const PRICING_TIERS = [
     subtitle: "For growing companies",
     price: "$79 / month",
     features: [
-      "Up to 50,000 sessions per month",
+      "Unlimited sessions",
       "Everything in Growth",
       "Slack integration",
       "Data export (CSV)",

@@ -163,6 +163,8 @@ export interface BatchPayload {
   session_id: string;
   events: RawEvent[];
   page_url?: string;  // Current page URL (for session tracking)
+  device_type?: string | null;  // Device type for session auto-creation
+  country_code?: string | null;  // Country code for session auto-creation
 }
 
 // ── Session ───────────────────────────────────────────────────────

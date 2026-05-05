@@ -72,3 +72,5 @@ class EventBatchRequest(BaseModel):
     session_id: str
     events: list[EventItem] = Field(..., min_length=1, max_length=200)
     page_url: str | None = None  # For auto-creating sessions if needed
+    device_type: str | None = Field(None, pattern=r"^(desktop|mobile|tablet)$")  # Device type for session auto-creation
+    country_code: str | None = Field(None, min_length=2, max_length=2)  # ISO country code for session auto-creation

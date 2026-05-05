@@ -40,6 +40,9 @@ export class EventQueue {
   private readonly maxEvents: number;
   private eventCount = 0;
   private isStopped = false;
+  // Store session context for auto-creation fallback
+  private deviceType: string | null = null;
+  private countryCode: string | null = null;
 
   // Import types dynamically for priority checking
   // Fallback sets in case dynamic import fails (mouse_summary is high priority)
@@ -69,6 +72,16 @@ export class EventQueue {
   /** Set the active session ID (events require this). */
   setSessionId(sessionId: string): void {
     this.sessionId = sessionId;
+  }
+
+  /** Set device type for session auto-creation fallback. */
+  setDeviceType(deviceType: string | null): void {
+    this.deviceType = deviceType;
+  }
+
+  /** Set country code for session auto-creation fallback. */
+  setCountryCode(countryCode: string | null): void {
+    this.countryCode = countryCode;
   }
 
   /** Get the current event count. */
@@ -174,6 +187,8 @@ export class EventQueue {
         session_id: this.sessionId,
         events,
         page_url: pageUrl,
+        device_type: this.deviceType,
+        country_code: this.countryCode,
       });
     } catch (err) {
       // Re-queue on failure (at the front)
@@ -201,6 +216,8 @@ export class EventQueue {
       session_id: this.sessionId,
       events,
       page_url: pageUrl,
+      device_type: this.deviceType,
+      country_code: this.countryCode,
     });
   }
 

@@ -238,6 +238,9 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   // Pass sampling rate and environment from config
   const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
+  // Store device/country context for session auto-creation fallback
+  queue.setDeviceType(sessionManager.getDeviceType());
+  queue.setCountryCode(sessionManager.getCountryCode());
   queue.start();
 
   // Initialize micro-survey if backend config says it's enabled
@@ -582,6 +585,9 @@ export async function enableTracking(): Promise<void> {
   // Pass sampling rate and environment from config
   const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
+  // Store device/country context for session auto-creation fallback
+  queue.setDeviceType(sessionManager.getDeviceType());
+  queue.setCountryCode(sessionManager.getCountryCode());
   queue.start();
 
   // Initialize micro-survey if backend config says it's enabled

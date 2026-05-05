@@ -56,7 +56,28 @@ export class Transport {
     if (!res.ok) {
       this.handleAuthError(res);
       this.handleLimitReached(res);
-      throw new Error(`Session create failed: ${res.status} ${res.statusText}`);
+
+      // Try to get error details from response
+      let errorDetail = res.statusText;
+      try {
+        const errBody = await res.json();
+        errorDetail = errBody.detail || errBody.message || JSON.stringify(errBody);
+      } catch {
+        // Response isn't JSON, use status text
+      }
+
+      const errorMsg = `Session create failed: ${res.status} ${errorDetail}`;
+      console.error("[EmoraTest] Session creation error:", {
+        status: res.status,
+        detail: errorDetail,
+        payload: {
+          page_url: payload.page_url?.substring(0, 100),
+          device_type: payload.device_type,
+          environment: payload.environment
+        }
+      });
+
+      throw new Error(errorMsg);
     }
 
     return (await res.json()) as SessionCreateResponse;
