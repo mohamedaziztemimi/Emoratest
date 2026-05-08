@@ -1,0 +1,30 @@
+{
+  "version": "v1",
+  "feature_names": [
+    "hesitation_score",
+    "price_dwell_time_s",
+    "rage_click_score",
+    "scroll_retreat_count",
+    "exit_intent_count",
+    "checkout_hesitation_s",
+    "velocity_variance",
+    "session_duration_s"
+  ],
+  "emotion_labels": [
+    "frustrated",
+    "confused",
+    "engaged",
+    "disengaged"
+  ],
+  "accuracy": 0.9265,
+  "cv_mean": 0.9236000000000001,
+  "cv_std": 0.003813135192987522,
+  "n_samples": 10000,
+  "distribution": {
+    "engaged": 0.4,
+    "confused": 0.25,
+    "frustrated": 0.2,
+    "disengaged": 0.15
+  },
+  "model_type": "XGBoost"
+}

@@ -3,13 +3,13 @@
 ## What is this project
 EmoraTest is an Emotion ML + A/B Testing SaaS platform.
 Tagline: "Unlock Emotions, Win Tests"
-It detects 8 emotions (confusion, frustration, delight, anxiety, hesitation, focus, boredom, satisfaction) from behavioral signals using XGBoost with 80%+ accuracy.
+It detects 4 behavioral states (frustrated, confused, engaged, disengaged) from mouse/scroll behavior using XGBoost with 92.7% accuracy.
 DO NOT call it Conversiono anywhere — that is the old name.
 
 ## Stack
 - Frontend: Next.js 14, TypeScript, Tailwind CSS — port 3000
 - Backend: FastAPI (Python 3.11), PostgreSQL, Redis — port 8000
-- ML: XGBoost emotion classifier (80.1% accuracy, 8 emotions)
+- ML: XGBoost emotion classifier (92.7% accuracy, 4 behavioral states: frustrated, confused, engaged, disengaged)
 - Infra: Docker Compose (4 services: postgres, redis, backend, frontend)
 - Auth: JWT httpOnly cookies, cookie name: auth_token
 
@@ -96,16 +96,13 @@ Primary blue:    #007BFF
 Primary purple:  #7C3AED
 ```
 
-## Emotion colors (use these consistently everywhere)
+## Behavioral State colors (use these consistently everywhere)
 ```
-confusion:    #F59E0B (amber)
-frustration:  #EF4444 (red)
-delight:      #10B981 (green)
-focus:        #3B82F6 (blue)
-anxiety:      #F97316 (orange)
-boredom:      #6B7280 (gray)
-hesitation:   #8B5CF6 (purple)
-satisfaction: #059669 (dark green)
+frustrated:  #EF4444 (red)    — high rage clicks, erratic movement
+confused:    #F59E0B (amber)  — back-and-forth scrolling, aimless hovering
+hesitating:  #EAB308 (yellow) — hovering near CTAs without clicking (frontend display state)
+engaged:     #22C55E (green)  — steady movement, completing actions
+disengaged:  #6B7280 (gray)   — inactivity, fast scroll past content
 ```
 
 ## Design system
@@ -278,9 +275,9 @@ docker-compose exec postgres psql -U postgres -d emoratest -c "SELECT COUNT(*) F
 ```sql
 id, merchant_id, visitor_id, page_url, device_type,
 outcome,              -- 'unknown' → 'purchase'/'abandoned'/'signup'/etc
-primary_emotion,      -- 'frustration', 'satisfaction', etc
+primary_emotion,      -- 'frustrated', 'confused', 'engaged', 'disengaged'
 emotion_confidence,   -- 0.0 to 1.0
-emotion_scores,       -- JSON: {"frustration": 0.35, "satisfaction": 0.45, ...}
+emotion_scores,       -- JSON: {"frustrated": 0.35, "engaged": 0.45, ...}
 valence,              -- positive-negative axis
 arousal,              -- high-low energy axis
 duration_seconds,
