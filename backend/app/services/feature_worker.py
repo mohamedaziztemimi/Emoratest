@@ -180,7 +180,11 @@ def _extract_features_bundled(
         ]
         if len(velocities) < 2:
             return 0.0
-        return round(float(np.var(velocities)), 2)
+        # Raw velocity variance is in pixels²/second², which can be 500,000+
+        # Scale down to match training data range (0-2000) by dividing by 1000
+        # This prevents false "frustrated" predictions from normal mouse movement
+        raw_variance = float(np.var(velocities))
+        return round(min(raw_variance / 1000.0, 2000.0), 2)
 
     return {
         "hesitation_score": hesitation_score(events),
@@ -262,8 +266,8 @@ def _score_session_sync(
 
     Args:
         features: Behavioral features extracted from session events
-        emotion_scores: Optional dict of emotion probabilities from ML model
-                        e.g., {"frustration": 0.86, "delight": 0.10, ...}
+        emotion_scores: Optional dict of behavioral state probabilities from ML model
+                        e.g., {"frustrated": 0.86, "engaged": 0.10, ...}
     """
     try:
         # Simple heuristic scoring based on behavioral features
