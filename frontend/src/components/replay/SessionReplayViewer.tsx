@@ -299,12 +299,45 @@ export function SessionReplayViewer({
   const [highlightsMode, setHighlightsMode] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [currentHighlightIndex, setCurrentHighlightIndex] = useState(0);
+  const [iframeLoadFailed, setIframeLoadFailed] = useState(false);
 
   // Calculate time range from mouse_path
   const timestamps = mousePath.map(p => p.timestamp);
   const minTime = Math.min(...timestamps, 0);
   const maxTime = Math.max(...timestamps, 0);
   const totalDuration = maxTime - minTime || 1;
+
+  // Get viewport dimensions from first mouse path point (for iframe scaling)
+  const recordedViewport = mousePath.length > 0 ? {
+    width: mousePath[0].viewport_width || 1920,
+    height: mousePath[0].viewport_height || 1080,
+  } : { width: 1920, height: 1080 };
+
+  // Calculate scale to fit recorded viewport into container
+  const [iframeScale, setIframeScale] = useState(0.5);
+  const [iframeDimensions, setIframeDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateIframeScale = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const scaleX = containerRect.width / recordedViewport.width;
+      const scaleY = containerRect.height / recordedViewport.height;
+      const scale = Math.min(scaleX, scaleY) * 0.9; // 90% fit with padding
+
+      setIframeScale(scale);
+      setIframeDimensions({
+        width: recordedViewport.width,
+        height: recordedViewport.height,
+      });
+    };
+
+    updateIframeScale();
+    window.addEventListener('resize', updateIframeScale);
+    return () => window.removeEventListener('resize', updateIframeScale);
+  }, [recordedViewport.width, recordedViewport.height]);
 
   // Get current state based on time
   const getStateAtTime = useCallback((time: number): BehavioralState => {
@@ -688,8 +721,54 @@ export function SessionReplayViewer({
         {/* Main content */}
         <div className="flex">
           {/* Replay canvas */}
-          <div ref={containerRef} className="flex-1 bg-gray-100 relative" style={{ minHeight: 400 }}>
-            <canvas ref={canvasRef} className="w-full h-full" />
+          <div ref={containerRef} className="flex-1 bg-gray-100 relative overflow-hidden" style={{ minHeight: 400 }}>
+            {/* Page context iframe - shows the actual page in background */}
+            {pageUrl && !iframeLoadFailed && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 overflow-hidden">
+                <iframe
+                  src={pageUrl}
+                  className="absolute"
+                  style={{
+                    width: `${iframeDimensions.width}px`,
+                    height: `${iframeDimensions.height}px`,
+                    pointerEvents: 'none',
+                    transform: `scale(${iframeScale})`,
+                    transformOrigin: 'center center',
+                    border: 'none',
+                    opacity: 0.85,
+                  }}
+                  sandbox="allow-same-origin allow-scripts"
+                  onError={() => setIframeLoadFailed(true)}
+                  onLoad={(e) => {
+                    const iframe = e.target as HTMLIFrameElement;
+                    try {
+                      // Check if iframe loaded successfully
+                      if (iframe.contentWindow?.location?.href) {
+                        setIframeLoadFailed(false);
+                      }
+                    } catch {
+                      // Cross-origin error - iframe failed to load
+                      setIframeLoadFailed(true);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Fallback: show page URL when iframe fails */}
+            {iframeLoadFailed && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                <div className="text-center p-6">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25" />
+                  </svg>
+                  <p className="text-sm text-gray-600 mb-1">Page preview unavailable</p>
+                  <p className="text-xs text-gray-500 font-mono break-all max-w-md">{pageUrl}</p>
+                </div>
+              </div>
+            )}
+
+            <canvas ref={canvasRef} className="relative z-10 w-full h-full" />
 
             {/* State label overlay */}
             {currentState !== "neutral" && (
