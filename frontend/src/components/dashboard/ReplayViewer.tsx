@@ -30,6 +30,7 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
   const [data, setData] = useState<SessionReplayResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [screenshotLoaded, setScreenshotLoaded] = useState(false);
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -195,32 +196,34 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
 
-    // Clear canvas
-    ctx.fillStyle = REPLAY_COLORS.background;
+    // Clear canvas (transparent to show screenshot behind)
+    ctx.fillStyle = screenshotLoaded ? "transparent" : REPLAY_COLORS.background;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Draw grid
-    ctx.strokeStyle = REPLAY_COLORS.grid;
-    ctx.lineWidth = 1;
-    const gridSize = 50 * scale;
+    // Draw grid only if no screenshot loaded
+    if (!screenshotLoaded) {
+      ctx.strokeStyle = REPLAY_COLORS.grid;
+      ctx.lineWidth = 1;
+      const gridSize = 50 * scale;
 
-    for (let x = 0; x < canvasWidth; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasHeight);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvasHeight; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasWidth, y);
-      ctx.stroke();
-    }
+      for (let x = 0; x < canvasWidth; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvasHeight);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvasHeight; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvasWidth, y);
+        ctx.stroke();
+      }
 
-    // Draw page URL at top
-    ctx.fillStyle = "#6B7280";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(data?.page_url || "Unknown page", 10, 20);
+      // Draw page URL at top (only when no screenshot)
+      ctx.fillStyle = "#6B7280";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(data?.page_url || "Unknown page", 10, 20);
+    }
 
     // Draw trail with emotion colors (last 50 points before current)
     const trailStart = Math.max(0, currentIndex - 50);
@@ -293,7 +296,7 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
         ctx.fillText(label, cursorX + 15 + padding, cursorY + 4);
       }
     }
-  }, [mousePathWithEmotions, currentIndex, scale, offset, currentEmotion, data]);
+  }, [mousePathWithEmotions, currentIndex, scale, offset, currentEmotion, data, screenshotLoaded]);
 
   // Handlers
   const handleTogglePlay = () => {
@@ -400,6 +403,12 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
     ? (currentIndex / (mousePathWithEmotions.length - 1)) * 100
     : 0;
 
+  // Build thum.io screenshot URL
+  const pageUrl = data?.page_url || "";
+  const screenshotUrl = pageUrl
+    ? `https://image.thum.io/get/width/1440/crop/900/${encodeURIComponent(pageUrl)}`
+    : null;
+
   return (
     <Card>
       <CardHeader>
@@ -411,8 +420,31 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
         </div>
       </CardHeader>
       <CardBody>
-        <div className="border rounded-lg overflow-hidden bg-white">
-          <canvas ref={canvasRef} className="w-full" />
+        <div className="border rounded-lg overflow-hidden bg-white relative">
+          {/* Screenshot background behind canvas */}
+          {screenshotUrl && (
+            <img
+              src={screenshotUrl}
+              alt="Page screenshot"
+              className="absolute top-0 left-0 w-full h-full object-cover"
+              style={{
+                opacity: 0.85,
+                zIndex: 0,
+                pointerEvents: "none"
+              }}
+              onLoad={() => setScreenshotLoaded(true)}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                setScreenshotLoaded(false);
+              }}
+            />
+          )}
+          {/* Canvas with cursor trail on top */}
+          <canvas
+            ref={canvasRef}
+            className="w-full relative"
+            style={{ zIndex: 1 }}
+          />
         </div>
 
         {/* Controls */}
