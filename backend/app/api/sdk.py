@@ -8,6 +8,7 @@ Endpoints:
 """
 
 import hashlib
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -15,11 +16,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import case, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
+
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.merchant import Merchant
 from app.models.session import Session
+from app.models.session_replay_data import SessionReplayData
 from app.schemas.sdk import (
     EventBatchRequest,
     SessionCreateRequest,
@@ -296,6 +300,19 @@ async def create_session(
     )
 
     db.add(session)
+
+    # Store replay data if provided (emotion replay feature)
+    if body.mouse_path:
+        replay_data = SessionReplayData(
+            session_id=session_id,
+            mouse_path=body.mouse_path,
+            page_url=body.page_url,
+            page_title=body.page_title,
+            page_width=body.page_width,
+            page_height=body.page_height,
+            device_pixel_ratio=body.device_pixel_ratio,
+        )
+        db.add(replay_data)
 
     # Increment session count
     from sqlalchemy import update as sql_update
@@ -589,6 +606,54 @@ async def ingest_events(
 
     db.add_all(events)
     await db.commit()
+
+    # Store replay data if provided (emotion replay feature)
+    # Use upsert to handle cases where data already exists
+    try:
+        if body.mouse_path and len(body.mouse_path) > 0:
+            logger.info(f"[session_replay] Received mouse_path with {len(body.mouse_path)} points for session {sid}")
+            from sqlalchemy import insert
+
+            # Check if replay data already exists for this session
+            existing_result = await db.execute(
+                select(SessionReplayData.session_id).where(SessionReplayData.session_id == sid)
+            )
+            existing = existing_result.scalar_one_or_none()
+
+            if existing:
+                # Update existing record - merge mouse_path entries
+                logger.info(f"[session_replay] Updating existing replay data for session {sid}")
+                await db.execute(
+                    update(SessionReplayData)
+                    .where(SessionReplayData.session_id == sid)
+                    .values(
+                        mouse_path=body.mouse_path,  # Replace with latest data
+                        page_url=body.page_url or page_url,
+                        page_title=body.page_title if body.page_title else SessionReplayData.page_title,
+                        page_width=body.page_width if body.page_width else SessionReplayData.page_width,
+                        page_height=body.page_height if body.page_height else SessionReplayData.page_height,
+                    )
+                )
+            else:
+                # Create new replay data record
+                logger.info(f"[session_replay] Creating new replay data for session {sid}")
+                replay_data = SessionReplayData(
+                    session_id=sid,
+                    mouse_path=body.mouse_path,
+                    page_url=body.page_url or page_url,
+                    page_title=body.page_title,
+                    page_width=body.page_width,
+                    page_height=body.page_height,
+                    device_pixel_ratio=body.device_pixel_ratio,
+                )
+                db.add(replay_data)
+            await db.commit()
+            logger.info(f"[session_replay] Successfully saved replay data for session {sid}")
+        elif body.mouse_path is not None and len(body.mouse_path) == 0:
+            logger.warning(f"[session_replay] Received empty mouse_path array for session {sid}")
+    except Exception as e:
+        logger.error(f"[session_replay] Failed to save replay data for session {sid}: {e}", exc_info=True)
+        # Don't fail the entire request - log and continue
 
     # Enqueue background feature processing (CONV-34)
     from app.services.feature_worker import enqueue_session_processing
