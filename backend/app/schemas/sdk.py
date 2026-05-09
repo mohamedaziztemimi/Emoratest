@@ -86,3 +86,9 @@ class EventBatchRequest(BaseModel):
     page_width: int | None = Field(None, description="Full page width in pixels")
     page_height: int | None = Field(None, description="Full page height in pixels")
     device_pixel_ratio: float | None = Field(1.0, description="Device pixel ratio")
+
+
+# ── Screenshot ─────────────────────────────────────────────────────
+
+class ScreenshotRequest(BaseModel):
+    screenshot: str = Field(..., description="Base64-encoded JPEG data URL (data:image/jpeg;base64,...)")

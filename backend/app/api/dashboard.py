@@ -14,14 +14,11 @@ Endpoints:
     GET  /api/v1/dashboard/analytics/funnel       — conversion funnel
 """
 
-import hashlib
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse
 from sqlalchemy import asc, case, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -817,9 +814,11 @@ async def get_session_replay_screenshot(
 ):
     """Get a screenshot of the page for session replay background.
 
-    Uses Playwright to capture the page, caches screenshots by URL hash.
-    Returns 404 if screenshot cannot be generated (page not accessible, auth required, etc).
+    Returns the base64-encoded JPEG screenshot captured by the SDK via html2canvas.
+    Returns 404 if no screenshot exists (frontend falls back to wireframe).
     """
+
+    import base64
 
     try:
         sid = uuid.UUID(session_id)
@@ -837,72 +836,29 @@ async def get_session_replay_screenshot(
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Load replay data to get page URL
+    # Load replay data to get screenshot
     replay_result = await db.execute(
         select(SessionReplayData).where(SessionReplayData.session_id == sid)
     )
     replay_data = replay_result.scalar_one_or_none()
 
-    if replay_data is None or not replay_data.page_url:
-        raise HTTPException(status_code=404, detail="No replay data found")
+    if replay_data is None or not replay_data.page_screenshot:
+        raise HTTPException(status_code=404, detail="Screenshot not available")
 
-    page_url = replay_data.page_url
-    viewport_width = replay_data.viewport_width or 1920
-    viewport_height = replay_data.viewport_height or 1080
-    page_width = replay_data.page_width or viewport_width
-    page_height = replay_data.page_height or viewport_height * 3
-
-    # Create screenshots directory if it doesn't exist
-    screenshots_dir = Path("/app/screenshots")
-    screenshots_dir.mkdir(exist_ok=True)
-
-    # Generate cache filename from URL hash
-    url_hash = hashlib.sha256(page_url.encode()).hexdigest()[:16]
-    screenshot_path = screenshots_dir / f"{url_hash}.jpg"
-
-    # Return cached screenshot if it exists
-    if screenshot_path.exists():
-        return FileResponse(
-            screenshot_path,
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
-
-    # Generate new screenshot using Playwright
+    # Decode base64 and return as image
     try:
-        from playwright.async_api import async_playwright
+        image_data = base64.b64decode(replay_data.page_screenshot)
+        from fastapi.responses import Response
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page(
-                viewport={"width": viewport_width, "height": viewport_height}
-            )
-
-            # Set timeout and navigate
-            await page.goto(page_url, timeout=10000, wait_until="networkidle")
-
-            # Take full page screenshot
-            await page.screenshot(
-                path=str(screenshot_path),
-                full_page=True,
-                type="jpeg",
-                quality=70,
-            )
-
-            await browser.close()
-
-        # Return the new screenshot
-        return FileResponse(
-            screenshot_path,
+        return Response(
+            content=image_data,
             media_type="image/jpeg",
             headers={"Cache-Control": "public, max-age=86400"},
         )
-
     except Exception as e:
-        # Screenshot failed - return 404 so frontend falls back to wireframe
         raise HTTPException(
             status_code=404,
-            detail=f"Screenshot not available: {str(e)}",
+            detail=f"Failed to decode screenshot: {str(e)}",
         ) from e
 
 

@@ -35,6 +35,9 @@ class SessionReplayData(Base):
     page_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     device_pixel_ratio: Mapped[float | None] = mapped_column(Integer, nullable=True)
 
+    # Base64-encoded JPEG screenshot of the page (captured by SDK via html2canvas)
+    page_screenshot: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Timestamp when this record was created
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default="now()"

@@ -26,6 +26,7 @@ from app.models.session import Session
 from app.models.session_replay_data import SessionReplayData
 from app.schemas.sdk import (
     EventBatchRequest,
+    ScreenshotRequest,
     SessionCreateRequest,
     SessionCreateResponse,
     SessionOutcomeRequest,
@@ -414,6 +415,91 @@ async def update_outcome(
     enqueue_session_processing(session_id)
 
     return {"status": "updated", "outcome": body.outcome}
+
+
+# ── POST /sessions/{id}/screenshot — page screenshot for replay ────────────
+
+
+@router.post("/sessions/{session_id}/screenshot")
+@limiter.limit("60/minute")
+async def upload_screenshot(
+    request: Request,
+    session_id: str,
+    body: ScreenshotRequest,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_from_sdk_key),
+):
+    """Receive and store page screenshot captured by SDK via html2canvas.
+
+    Accepts base64-encoded JPEG data URL. Strips the data:image/jpeg;base64, prefix
+    and stores the raw base64 string in session_replay_data.page_screenshot.
+
+    Silently returns 200 on errors to avoid breaking SDK operation.
+    """
+
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError:
+        return {"status": "error", "message": "Invalid session ID"}
+
+    # Validate screenshot size (max 2MB after base64 decoding ~1.5MB of image data)
+    max_size = 2_000_000  # 2MB base64 string limit
+    if len(body.screenshot) > max_size:
+        logger.warning(f"[screenshot] Screenshot too large for session {sid}: {len(body.screenshot)} bytes")
+        return {"status": "error", "message": "Screenshot too large"}
+
+    # Strip data URL prefix if present
+    base64_data = body.screenshot
+    if base64_data.startswith("data:image/"):
+        # Remove "data:image/jpeg;base64," or similar prefix
+        comma_idx = base64_data.find(",")
+        if comma_idx >= 0:
+            base64_data = base64_data[comma_idx + 1:]
+
+    try:
+        # Verify it's valid base64 by attempting to decode
+        import base64
+
+        decoded = base64.b64decode(base64_data, validate=True)
+
+        # Check decoded size (should be reasonable for a JPEG)
+        if len(decoded) > 1_500_000:  # 1.5MB decoded limit
+            logger.warning(f"[screenshot] Decoded screenshot too large for session {sid}: {len(decoded)} bytes")
+            return {"status": "error", "message": "Screenshot too large"}
+    except Exception as e:
+        logger.warning(f"[screenshot] Invalid base64 data for session {sid}: {e}")
+        return {"status": "error", "message": "Invalid screenshot data"}
+
+    # Update or create session_replay_data record
+    try:
+        result = await db.execute(
+            select(SessionReplayData).where(SessionReplayData.session_id == sid)
+        )
+        replay_data = result.scalar_one_or_none()
+
+        if replay_data:
+            # Update existing record
+            await db.execute(
+                update(SessionReplayData)
+                .where(SessionReplayData.session_id == sid)
+                .values(page_screenshot=base64_data)
+            )
+        else:
+            # Create new record with screenshot
+            replay_data = SessionReplayData(
+                session_id=sid,
+                page_screenshot=base64_data,
+            )
+            db.add(replay_data)
+
+        await db.commit()
+        logger.info(f"[screenshot] Saved screenshot for session {sid}: {len(base64_data)} bytes")
+        return {"status": "saved"}
+
+    except Exception as e:
+        logger.error(f"[screenshot] Failed to save screenshot for session {sid}: {e}")
+        await db.rollback()
+        return {"status": "error", "message": "Failed to save screenshot"}
 
 
 @router.post("/sessions/{session_id}/close")
