@@ -114,6 +114,7 @@ export interface SessionListItem {
   arousal: number | null;
   ip_address: string | null;
   user_agent: string | null;
+  has_replay?: boolean;
 }
 
 export interface SessionListResponse {
@@ -183,6 +184,43 @@ export function fetchSessions(filters: SessionFilters = {}): Promise<SessionList
 
 export function fetchSessionDetail(id: string): Promise<SessionDetail> {
   return request(`/dashboard/sessions/${id}`);
+}
+
+// ── Session Replay ───────────────────────────────────────────
+
+export interface MousePathPoint {
+  x: number;
+  y: number;
+  timestamp: number;
+  scroll_x: number;
+  scroll_y: number;
+  viewport_width: number;
+  viewport_height: number;
+}
+
+export interface EmotionEventOut {
+  timestamp: string;
+  primary_emotion: string;
+  confidence: number;
+  valence: number | null;
+  arousal: number | null;
+}
+
+export interface SessionReplayResponse {
+  session_id: string;
+  has_replay: boolean;
+  mouse_path: MousePathPoint[] | null;
+  page_url: string | null;
+  page_title: string | null;
+  page_width: number | null;
+  page_height: number | null;
+  device_pixel_ratio: number | null;
+  emotions: EmotionEventOut[] | null;
+  duration_seconds: number | null;
+}
+
+export function fetchSessionReplay(id: string): Promise<SessionReplayResponse> {
+  return request(`/dashboard/sessions/${id}/replay`);
 }
 
 // ── Analytics ────────────────────────────────────────────────
