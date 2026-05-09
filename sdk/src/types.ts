@@ -165,7 +165,36 @@ export interface BatchPayload {
   page_url?: string;  // Current page URL (for session tracking)
   device_type?: string | null;  // Device type for session auto-creation
   country_code?: string | null;  // Country code for session auto-creation
+  mouse_path?: PathEntry[];  // Replay data: cursor coordinates + page changes
+  // Page metadata for replay (captured at session start)
+  page_title?: string;
+  page_width?: number;
+  page_height?: number;
+  device_pixel_ratio?: number;
 }
+
+// ── Mouse Path for Replay ─────────────────────────────────────────────
+
+/** A single point in the mouse path for replay visualization. */
+export interface MousePathPoint {
+  x: number;           // pageX: scroll-aware X coordinate
+  y: number;           // pageY: scroll-aware Y coordinate
+  timestamp: number;   // Unix timestamp (ms)
+  viewport_width: number;
+  viewport_height: number;
+  scroll_x: number;    // window.scrollX at time of capture
+  scroll_y: number;    // window.scrollY at time of capture
+}
+
+/** A page change event for SPA navigation tracking. */
+export interface PageChangeEvent {
+  type: "page_change";
+  url: string;         // New page URL
+  timestamp: number;   // Unix timestamp (ms)
+}
+
+/** Combined path entry - either a mouse point or a page change event. */
+export type PathEntry = MousePathPoint | PageChangeEvent;
 
 // ── Session ───────────────────────────────────────────────────────
 

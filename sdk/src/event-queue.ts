@@ -26,8 +26,9 @@
  * events are sent via navigator.sendBeacon().
  */
 
-import type { RawEvent, EventType, HIGH_PRIORITY_EVENTS, LOW_PRIORITY_EVENTS } from "./types";
+import type { RawEvent, EventType, HIGH_PRIORITY_EVENTS, LOW_PRIORITY_EVENTS, MousePathPoint } from "./types";
 import type { Transport } from "./transport";
+import type { MousePathTracker } from "./collectors";
 
 export class EventQueue {
   private queue: RawEvent[] = [];
@@ -43,6 +44,8 @@ export class EventQueue {
   // Store session context for auto-creation fallback
   private deviceType: string | null = null;
   private countryCode: string | null = null;
+  // Mouse path tracker for replay data
+  private mousePathTracker: MousePathTracker | null = null;
 
   // Import types dynamically for priority checking
   // Fallback sets in case dynamic import fails (mouse_summary is high priority)
@@ -82,6 +85,11 @@ export class EventQueue {
   /** Set country code for session auto-creation fallback. */
   setCountryCode(countryCode: string | null): void {
     this.countryCode = countryCode;
+  }
+
+  /** Set the mouse path tracker for replay data. */
+  setMousePathTracker(tracker: MousePathTracker | null): void {
+    this.mousePathTracker = tracker;
   }
 
   /** Get the current event count. */
@@ -189,6 +197,9 @@ export class EventQueue {
         page_url: pageUrl,
         device_type: this.deviceType,
         country_code: this.countryCode,
+        mouse_path: this.mousePathTracker?.getPath() ?? undefined,
+        // Include page metadata for replay
+        ...(this.mousePathTracker?.getPageMetadata() ?? {}),
       });
     } catch (err) {
       // Re-queue on failure (at the front)
@@ -218,6 +229,9 @@ export class EventQueue {
       page_url: pageUrl,
       device_type: this.deviceType,
       country_code: this.countryCode,
+      mouse_path: this.mousePathTracker?.getPath() ?? undefined,
+      // Include page metadata for replay
+      ...(this.mousePathTracker?.getPageMetadata() ?? {}),
     });
   }
 
