@@ -23,6 +23,7 @@ class SessionListItem(BaseModel):
     arousal: float | None = None
     ip_address: str | None = None
     user_agent: str | None = None
+    has_replay: bool = False
 
 
 class SessionListResponse(BaseModel):
@@ -228,7 +229,7 @@ class WhyAnalysisSummary(BaseModel):
 
 class EmotionTrendDay(BaseModel):
     date: str
-    emotions: dict  # e.g. {"confusion": 3, "delight": 5, "anxiety": 1}
+    emotions: dict  # e.g. {"confused": 3, "engaged": 5, "frustrated": 1}
     total: int
     conversion_rate: float | None = None
 
@@ -255,3 +256,40 @@ class AlertResponse(BaseModel):
 
 class AlertCountResponse(BaseModel):
     count: int = 0
+
+
+# ── Session Replay ──────────────────────────────────────────────────
+
+
+class MousePathPoint(BaseModel):
+    x: float
+    y: float
+    timestamp: int
+    scroll_x: float = 0
+    scroll_y: float = 0
+    viewport_width: int = 1920
+    viewport_height: int = 1080
+
+
+class EmotionEventOut(BaseModel):
+    timestamp: str
+    primary_emotion: str
+    confidence: float
+    valence: float | None = None
+    arousal: float | None = None
+
+
+class SessionReplayResponse(BaseModel):
+    session_id: str
+    has_replay: bool
+    # Mouse path data
+    mouse_path: list[MousePathPoint] | None = None
+    page_url: str | None = None
+    page_title: str | None = None
+    page_width: int | None = None
+    page_height: int | None = None
+    device_pixel_ratio: float | None = None
+    # Emotion data for syncing to cursor
+    emotions: list[EmotionEventOut] | None = None
+    # Session metadata
+    duration_seconds: int | None = None

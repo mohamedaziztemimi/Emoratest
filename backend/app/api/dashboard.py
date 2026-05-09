@@ -22,11 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import get_current_merchant
 from app.core.database import get_db
 from app.core.rate_limit import limiter
+from app.models.emotion_event import EmotionEvent
 from app.models.event import Event, EventEnriched
 from app.models.merchant import Merchant
 from app.models.session import Session
 from app.models.session_features import SessionFeatures
 from app.models.session_feedback import SessionFeedback
+from app.models.session_replay_data import SessionReplayData
 from app.schemas.dashboard import (
     AlertCountResponse,
     AlertResponse,
@@ -38,6 +40,7 @@ from app.schemas.dashboard import (
     ElementEmotionResponse,
     EmotionConversionItem,
     EmotionConversionResponse,
+    EmotionEventOut,
     EmotionTrendDay,
     EmotionTrendResponse,
     EventOut,
@@ -48,10 +51,12 @@ from app.schemas.dashboard import (
     HeatmapPoint,
     HeatmapResponse,
     HeatmapSession,
+    MousePathPoint,
     SessionDetailResponse,
     SessionFeaturesOut,
     SessionListItem,
     SessionListResponse,
+    SessionReplayResponse,
     WhyAnalysisSummary,
 )
 
@@ -71,7 +76,7 @@ async def get_emotion_pulse(
     """Get emotion score and pulse metrics for overview page.
 
     Returns weighted emotion score, trend, and session counts.
-    Emotion score = (satisfaction + delight) - (frustration + confusion), normalized 0-100.
+    Emotion score = engaged - (frustrated + confused + disengaged), normalized 0-100.
     """
     from sqlalchemy import Date, cast
 
@@ -368,9 +373,9 @@ async def get_problem_sessions(
 ):
     """Get recent sessions with negative primary emotions.
 
-    Returns sessions where primary_emotion is frustration, confusion, or anxiety.
+    Returns sessions where primary_emotion is frustrated, confused, or disengaged.
     """
-    negative_emotions = ["frustrated", "confused"]
+    negative_emotions = ["frustrated", "confused", "disengaged"]
 
     result = await db.execute(
         select(Session)
@@ -554,6 +559,15 @@ async def list_sessions(
     result = await db.execute(query)
     sessions = result.scalars().all()
 
+    # Check which sessions have replay data
+    session_ids = [s.id for s in sessions]
+    replay_check = await db.execute(
+        select(SessionReplayData.session_id).where(
+            SessionReplayData.session_id.in_(session_ids)
+        )
+    )
+    replay_session_ids = set(row[0] for row in replay_check.all())
+
     return SessionListResponse(
         sessions=[
             SessionListItem(
@@ -574,6 +588,7 @@ async def list_sessions(
                 arousal=s.arousal,
                 ip_address=s.ip_address,
                 user_agent=s.user_agent,
+                has_replay=s.id in replay_session_ids,
             )
             for s in sessions
         ],
@@ -679,6 +694,107 @@ async def get_session_detail(
             for e in events
         ],
         features=features_out,
+    )
+
+
+# ── GET /sessions/{id}/replay — emotion replay data (CONV-34) ────
+
+
+@router.get("/sessions/{session_id}/replay", response_model=SessionReplayResponse)
+@limiter.limit("200/minute")
+async def get_session_replay(
+    request: Request,
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get replay data for a session including mouse path and emotion timeline.
+
+    Returns mouse_path coordinates, page metadata, and emotion events
+    synchronized by timestamp for cursor visualization with emotion overlay.
+    """
+
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
+
+    # Verify session belongs to merchant
+    result = await db.execute(
+        select(Session).where(
+            Session.id == sid,
+            Session.merchant_id == merchant.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Load replay data
+    replay_result = await db.execute(
+        select(SessionReplayData).where(SessionReplayData.session_id == sid)
+    )
+    replay_data = replay_result.scalar_one_or_none()
+
+    # If no replay data, return has_replay: false
+    if replay_data is None:
+        return SessionReplayResponse(
+            session_id=str(sid),
+            has_replay=False,
+        )
+
+    # Calculate duration
+    duration_seconds = None
+    if session.ended_at and session.started_at:
+        duration_seconds = int((session.ended_at - session.started_at).total_seconds())
+
+    # Load emotion events for this session (synchronized to cursor)
+    emotion_result = await db.execute(
+        select(EmotionEvent)
+        .where(EmotionEvent.session_id == sid)
+        .order_by(EmotionEvent.timestamp)
+    )
+    emotion_events = emotion_result.scalars().all()
+
+    emotions_out = [
+        EmotionEventOut(
+            timestamp=e.timestamp.isoformat(),
+            primary_emotion=e.primary_emotion,
+            confidence=e.confidence,
+            valence=e.valence,
+            arousal=e.arousal,
+        )
+        for e in emotion_events
+    ]
+
+    # Convert mouse_path from dict to MousePathPoint objects
+    mouse_path_out = []
+    if replay_data.mouse_path:
+        for point in replay_data.mouse_path:
+            if isinstance(point, dict):
+                mouse_path_out.append(
+                    MousePathPoint(
+                        x=point.get("x", 0),
+                        y=point.get("y", 0),
+                        timestamp=point.get("timestamp", 0),
+                        scroll_x=point.get("scroll_x", 0),
+                        scroll_y=point.get("scroll_y", 0),
+                        viewport_width=point.get("viewport_width", 1920),
+                        viewport_height=point.get("viewport_height", 1080),
+                    )
+                )
+
+    return SessionReplayResponse(
+        session_id=str(sid),
+        has_replay=True,
+        mouse_path=mouse_path_out,
+        page_url=replay_data.page_url or session.page_url,
+        page_title=replay_data.page_title,
+        page_width=replay_data.page_width,
+        page_height=replay_data.page_height,
+        device_pixel_ratio=replay_data.device_pixel_ratio,
+        emotions=emotions_out,
+        duration_seconds=duration_seconds,
     )
 
 
@@ -1153,7 +1269,7 @@ async def get_emotion_trends(
     """Get 7-day emotion/friction trends for the chart.
 
     Returns daily averages for friction_score and abandonment_risk,
-    which can be mapped to confusion/frustration/delight in the UI.
+    which can be mapped to confused/frustrated/engaged in the UI.
     """
     from sqlalchemy import Date, cast
 
