@@ -296,6 +296,8 @@ export function SessionReplayViewer({
   const [highlightsMode, setHighlightsMode] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [currentHighlightIndex, setCurrentHighlightIndex] = useState(0);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(true);
 
   // ── FIX 1: Calculate duration properly from epoch timestamps ─────────
   // Timestamps are epoch milliseconds - calculate relative duration
@@ -341,6 +343,42 @@ export function SessionReplayViewer({
     setHighlights(detected);
   }, [mousePath, emotions, startTimeMs, endTimeMs]);
 
+  // ── Load screenshot for replay background ─────────────────────────────
+  useEffect(() => {
+    const loadScreenshot = async () => {
+      setScreenshotLoading(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/dashboard/sessions/${sessionId}/replay/screenshot`,
+          { credentials: "include" }
+        );
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setScreenshotUrl(url);
+        } else {
+          // Screenshot not available, will use wireframe fallback
+          setScreenshotUrl(null);
+        }
+      } catch {
+        // Error fetching screenshot, will use wireframe fallback
+        setScreenshotUrl(null);
+      } finally {
+        setScreenshotLoading(false);
+      }
+    };
+
+    loadScreenshot();
+
+    // Cleanup object URL on unmount
+    return () => {
+      if (screenshotUrl) {
+        URL.revokeObjectURL(screenshotUrl);
+      }
+    };
+  }, [sessionId]);
+
   // ── FIX 3: Proper coordinate transformation and drawing ───────────────
   const drawFrame = useCallback((time: number) => {
     const canvas = canvasRef.current;
@@ -355,22 +393,24 @@ export function SessionReplayViewer({
 
     if (mousePath.length === 0) return;
 
-    // Calculate scale: fit recorded viewport into canvas
-    // Guard against invalid dimensions
-    const safeViewportWidth = Math.max(recordedViewport.width, 800);
-    const safeViewportHeight = Math.max(recordedViewport.height, 600);
-    const scaleX = canvas.width / safeViewportWidth;
-    const scaleY = canvas.height / safeViewportHeight;
+    // Calculate scale: fit recorded PAGE into canvas (for screenshot alignment)
+    // The screenshot is the full page, so we scale based on page dimensions
+    const safePageWidth = Math.max(pageWidth || recordedViewport.width, 800);
+    const safePageHeight = Math.max(pageHeight || recordedViewport.height * 3, 1200);
+    const scaleX = canvas.width / safePageWidth;
+    const scaleY = canvas.height / safePageHeight;
     const scale = Math.min(scaleX, scaleY);
 
     // Calculate centering offset to maintain aspect ratio
-    const scaledWidth = safeViewportWidth * scale;
-    const scaledHeight = safeViewportHeight * scale;
+    const scaledWidth = safePageWidth * scale;
+    const scaledHeight = safePageHeight * scale;
     const offsetX = (canvas.width - scaledWidth) / 2;
     const offsetY = (canvas.height - scaledHeight) / 2;
 
-    // ── FIX 2: Draw wireframe background instead of iframe ─────────────
-    drawWireframeBackground(ctx, canvas.width, canvas.height, pageUrl, scaledWidth, scaledHeight, offsetX, offsetY);
+    // Only draw wireframe if no screenshot available
+    if (!screenshotUrl && !screenshotLoading) {
+      drawWireframeBackground(ctx, canvas.width, canvas.height, pageUrl, scaledWidth, scaledHeight, offsetX, offsetY);
+    }
 
     // Current time in milliseconds (relative to start)
     const currentTimestampMs = startTimeMs + time * 1000;
@@ -456,7 +496,7 @@ export function SessionReplayViewer({
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.stroke();
-  }, [mousePath, startTimeMs, getStateAtTime, recordedViewport, pageUrl]);
+  }, [mousePath, startTimeMs, getStateAtTime, recordedViewport, pageUrl, pageWidth, pageHeight, screenshotUrl, screenshotLoading]);
 
   // Draw wireframe background with grid and zone labels
   const drawWireframeBackground = (
@@ -759,19 +799,40 @@ export function SessionReplayViewer({
               </span>
             </div>
           )}
+          {screenshotLoading && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Loading screenshot...</span>
+            </div>
+          )}
+          {screenshotUrl && !screenshotLoading && (
+            <div className="flex items-center gap-2">
+              <span className="text-green-600 text-xs">✓ Screenshot loaded</span>
+            </div>
+          )}
         </div>
 
         {/* Main content */}
         <div className="flex">
           {/* Replay canvas */}
           <div ref={containerRef} className="flex-1 bg-gray-100 relative" style={{ minHeight: 400 }}>
-            <canvas ref={canvasRef} className="w-full h-full" />
+            {/* Screenshot background (behind canvas) */}
+            {screenshotUrl && (
+              <img
+                src={screenshotUrl}
+                alt="Page screenshot"
+                className="absolute inset-0 w-full h-full object-contain opacity-85"
+                style={{ zIndex: 0 }}
+              />
+            )}
+
+            {/* Canvas for cursor and trail (on top of screenshot) */}
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }} />
 
             {/* State label overlay */}
             {currentState !== "neutral" && (
               <div
                 className="absolute top-4 left-4 px-3 py-2 rounded-full text-sm font-medium text-white shadow-lg flex items-center gap-2"
-                style={{ backgroundColor: BEHAVIORAL_STATES[currentState].color }}
+                style={{ backgroundColor: BEHAVIORAL_STATES[currentState].color, zIndex: 2 }}
               >
                 <span>{BEHAVIORAL_STATES[currentState].emoji}</span>
                 <span>{BEHAVIORAL_STATES[currentState].label}</span>
@@ -779,7 +840,10 @@ export function SessionReplayViewer({
             )}
 
             {/* Time display */}
-            <div className="absolute bottom-20 left-4 px-3 py-2 bg-white rounded-lg shadow text-sm font-mono">
+            <div
+              className="absolute bottom-20 left-4 px-3 py-2 bg-white rounded-lg shadow text-sm font-mono"
+              style={{ zIndex: 2 }}
+            >
               {formatTime(currentTime)} / {formatTime(totalDurationSeconds)}
             </div>
           </div>

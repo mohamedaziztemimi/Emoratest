@@ -6,16 +6,22 @@ Authentication uses JWT bearer tokens (merchant login), not SDK keys.
 Endpoints:
     GET  /api/v1/dashboard/sessions              — paginated session list
     GET  /api/v1/dashboard/sessions/{id}          — full session detail
+    GET  /api/v1/dashboard/sessions/{id}/replay  — emotion replay data
+    GET  /api/v1/dashboard/sessions/{id}/replay/screenshot — page screenshot
     GET  /api/v1/dashboard/emotion-trends        — 7-day emotion/friction trends
     GET  /api/v1/dashboard/confusion-pages       — top pages by friction score
     GET  /api/v1/dashboard/analytics/friction-map - element friction heatmap
     GET  /api/v1/dashboard/analytics/funnel       — conversion funnel
 """
 
+import hashlib
+import os
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 from sqlalchemy import asc, case, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -796,6 +802,108 @@ async def get_session_replay(
         emotions=emotions_out,
         duration_seconds=duration_seconds,
     )
+
+
+# ── GET /sessions/{id}/replay/screenshot — page screenshot for replay ────
+
+
+@router.get("/sessions/{session_id}/replay/screenshot")
+@limiter.limit("60/minute")
+async def get_session_replay_screenshot(
+    request: Request,
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_current_merchant),
+):
+    """Get a screenshot of the page for session replay background.
+
+    Uses Playwright to capture the page, caches screenshots by URL hash.
+    Returns 404 if screenshot cannot be generated (page not accessible, auth required, etc).
+    """
+
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
+
+    # Verify session belongs to merchant
+    result = await db.execute(
+        select(Session).where(
+            Session.id == sid,
+            Session.merchant_id == merchant.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Load replay data to get page URL
+    replay_result = await db.execute(
+        select(SessionReplayData).where(SessionReplayData.session_id == sid)
+    )
+    replay_data = replay_result.scalar_one_or_none()
+
+    if replay_data is None or not replay_data.page_url:
+        raise HTTPException(status_code=404, detail="No replay data found")
+
+    page_url = replay_data.page_url
+    viewport_width = replay_data.viewport_width or 1920
+    viewport_height = replay_data.viewport_height or 1080
+    page_width = replay_data.page_width or viewport_width
+    page_height = replay_data.page_height or viewport_height * 3
+
+    # Create screenshots directory if it doesn't exist
+    screenshots_dir = Path("/app/screenshots")
+    screenshots_dir.mkdir(exist_ok=True)
+
+    # Generate cache filename from URL hash
+    url_hash = hashlib.sha256(page_url.encode()).hexdigest()[:16]
+    screenshot_path = screenshots_dir / f"{url_hash}.jpg"
+
+    # Return cached screenshot if it exists
+    if screenshot_path.exists():
+        return FileResponse(
+            screenshot_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    # Generate new screenshot using Playwright
+    try:
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page(
+                viewport={"width": viewport_width, "height": viewport_height}
+            )
+
+            # Set timeout and navigate
+            await page.goto(page_url, timeout=10000, wait_until="networkidle")
+
+            # Take full page screenshot
+            await page.screenshot(
+                path=str(screenshot_path),
+                full_page=True,
+                type="jpeg",
+                quality=70,
+            )
+
+            await browser.close()
+
+        # Return the new screenshot
+        return FileResponse(
+            screenshot_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    except Exception as e:
+        # Screenshot failed - return 404 so frontend falls back to wireframe
+        raise HTTPException(
+            status_code=404,
+            detail=f"Screenshot not available: {str(e)}",
+        ) from e
 
 
 # ── GET /analytics/friction-map (CONV-39) ─────────────────────────
