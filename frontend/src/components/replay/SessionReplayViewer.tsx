@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
-// Inline SVG icons to avoid external dependency
+// Inline SVG icons
 const XIcon = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -90,24 +90,18 @@ const HIGHLIGHT_INFO: Record<HighlightType, { icon: string; label: string; color
   hesitation: { icon: "🤔", label: "Hesitation", color: "#EAB308" },
 };
 
-function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[]): Highlight[] {
+function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[], startTimeMs: number, endTimeMs: number): Highlight[] {
   const highlights: Highlight[] = [];
 
   if (mousePath.length === 0) return highlights;
 
-  const timestamps = mousePath.map(p => p.timestamp);
-  const minTime = Math.min(...timestamps, 0);
-  const maxTime = Math.max(...timestamps, 0);
-
-  // 1. Detect rage clicks (3+ clicks within 2 seconds within 50px)
+  // 1. Detect rage clicks
   const clickGroups: MousePathPoint[][] = [];
   let currentGroup: MousePathPoint[] = [];
 
   for (const point of mousePath) {
-    // Filter points that could be clicks (you might need to add metadata to track actual clicks)
-    // For now, we'll use proximity and timing
-    const timeThreshold = 2000; // 2 seconds
-    const distanceThreshold = 50; // 50px
+    const timeThreshold = 2000;
+    const distanceThreshold = 50;
 
     if (currentGroup.length === 0) {
       currentGroup.push(point);
@@ -130,10 +124,10 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     clickGroups.push(currentGroup);
   }
 
-  // Add rage click highlights
   for (const group of clickGroups) {
+    const relativeTime = (group[0].timestamp - startTimeMs) / 1000;
     highlights.push({
-      timestamp: (group[0].timestamp - minTime) / 1000,
+      timestamp: relativeTime,
       type: "rage_click",
       state: "frustrated",
       description: `Rage click: ${group.length} rapid clicks`,
@@ -147,8 +141,9 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     const currState = mapToBehavioralState(emotions[i].primary_emotion);
     if (currState === "frustrated" && prevState !== "frustrated") {
       const emotionTime = new Date(emotions[i].timestamp).getTime();
+      const relativeTime = (emotionTime - startTimeMs) / 1000;
       highlights.push({
-        timestamp: (emotionTime - minTime) / 1000,
+        timestamp: relativeTime,
         type: "state_change",
         state: "frustrated",
         description: "Transitioned to frustrated",
@@ -157,19 +152,20 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     }
   }
 
-  // 3. Detect exit intents (mouse to top of viewport with high velocity)
+  // 3. Detect exit intents
   for (let i = 1; i < mousePath.length; i++) {
     const point = mousePath[i];
     const prevPoint = mousePath[i - 1];
-    const timeDiff = (point.timestamp - prevPoint.timestamp) / 1000; // seconds
+    const timeDiff = (point.timestamp - prevPoint.timestamp);
     if (timeDiff <= 0) continue;
 
-    const velocityY = Math.abs(point.y - prevPoint.y) / timeDiff;
+    const velocityY = Math.abs(point.y - prevPoint.y) / (timeDiff / 1000);
     const nearTop = point.y < 10 || point.scroll_y < 10;
 
     if (nearTop && velocityY > 500) {
+      const relativeTime = (point.timestamp - startTimeMs) / 1000;
       highlights.push({
-        timestamp: (point.timestamp - minTime) / 1000,
+        timestamp: relativeTime,
         type: "exit_intent",
         state: "disengaged",
         description: "Exit intent detected",
@@ -178,12 +174,13 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     }
   }
 
-  // 4. Detect long pauses (3+ seconds gap between events)
+  // 4. Detect long pauses
   for (let i = 1; i < mousePath.length; i++) {
     const timeDiff = (mousePath[i].timestamp - mousePath[i - 1].timestamp) / 1000;
     if (timeDiff >= 3) {
+      const relativeTime = (mousePath[i].timestamp - startTimeMs) / 1000;
       highlights.push({
-        timestamp: (mousePath[i].timestamp - minTime) / 1000,
+        timestamp: relativeTime,
         type: "long_pause",
         state: "confused",
         description: `Long pause: ${Math.round(timeDiff)}s`,
@@ -192,7 +189,7 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     }
   }
 
-  // 5. Detect erratic movements (velocity spikes above 3000px/s)
+  // 5. Detect erratic movements
   for (let i = 1; i < mousePath.length; i++) {
     const point = mousePath[i];
     const prevPoint = mousePath[i - 1];
@@ -203,8 +200,9 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     const velocity = distance / timeDiff;
 
     if (velocity > 3000) {
+      const relativeTime = (point.timestamp - startTimeMs) / 1000;
       highlights.push({
-        timestamp: (point.timestamp - minTime) / 1000,
+        timestamp: relativeTime,
         type: "erratic_movement",
         state: "confused",
         description: `Erratic movement: ${Math.round(velocity)}px/s`,
@@ -213,12 +211,13 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     }
   }
 
-  // 6. Detect hesitation (hesitating state near a click target)
+  // 6. Detect hesitation
   const hesitatingStates = emotions.filter(e => mapToBehavioralState(e.primary_emotion) === "hesitating");
   for (const emotion of hesitatingStates) {
     const emotionTime = new Date(emotion.timestamp).getTime();
+    const relativeTime = (emotionTime - startTimeMs) / 1000;
     highlights.push({
-      timestamp: (emotionTime - minTime) / 1000,
+      timestamp: relativeTime,
       type: "hesitation",
       state: "hesitating",
       description: "Hesitation detected",
@@ -226,7 +225,7 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     });
   }
 
-  // Sort by timestamp and deduplicate (keep only highlights 1+ seconds apart)
+  // Sort and deduplicate
   highlights.sort((a, b) => a.timestamp - b.timestamp);
   const deduplicated: Highlight[] = [];
   let lastTimestamp = -Infinity;
@@ -238,7 +237,7 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
     }
   }
 
-  // Prioritize frustrated and confused moments, max 20 highlights
+  // Prioritize frustrated and confused moments
   const prioritized = deduplicated.sort((a, b) => {
     const priorityOrder: Record<BehavioralState, number> = {
       frustrated: 1,
@@ -253,8 +252,6 @@ function detectHighlights(mousePath: MousePathPoint[], emotions: EmotionEvent[])
 
   return prioritized.slice(0, 20);
 }
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Map backend emotion names to 5 behavioral states
 function mapToBehavioralState(emotion: string): BehavioralState {
@@ -299,52 +296,27 @@ export function SessionReplayViewer({
   const [highlightsMode, setHighlightsMode] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [currentHighlightIndex, setCurrentHighlightIndex] = useState(0);
-  const [iframeLoadFailed, setIframeLoadFailed] = useState(false);
 
-  // Calculate time range from mouse_path
+  // ── FIX 1: Calculate duration properly from epoch timestamps ─────────
+  // Timestamps are epoch milliseconds - calculate relative duration
   const timestamps = mousePath.map(p => p.timestamp);
-  const minTime = Math.min(...timestamps, 0);
-  const maxTime = Math.max(...timestamps, 0);
-  const totalDuration = maxTime - minTime || 1;
+  const startTimeMs = timestamps.length > 0 ? Math.min(...timestamps) : 0;
+  const endTimeMs = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+  // Calculate duration in milliseconds, then convert to seconds
+  const durationMs = endTimeMs - startTimeMs;
+  const totalDurationSeconds = Math.max(0.1, durationMs / 1000); // Convert to seconds, minimum 0.1s
 
-  // Get viewport dimensions from first mouse path point (for iframe scaling)
+  // Get viewport dimensions from first mouse path point
   const recordedViewport = mousePath.length > 0 ? {
     width: mousePath[0].viewport_width || 1920,
     height: mousePath[0].viewport_height || 1080,
   } : { width: 1920, height: 1080 };
 
-  // Calculate scale to fit recorded viewport into container
-  const [iframeScale, setIframeScale] = useState(0.5);
-  const [iframeDimensions, setIframeDimensions] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    const updateIframeScale = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const scaleX = containerRect.width / recordedViewport.width;
-      const scaleY = containerRect.height / recordedViewport.height;
-      const scale = Math.min(scaleX, scaleY) * 0.9; // 90% fit with padding
-
-      setIframeScale(scale);
-      setIframeDimensions({
-        width: recordedViewport.width,
-        height: recordedViewport.height,
-      });
-    };
-
-    updateIframeScale();
-    window.addEventListener('resize', updateIframeScale);
-    return () => window.removeEventListener('resize', updateIframeScale);
-  }, [recordedViewport.width, recordedViewport.height]);
-
   // Get current state based on time
   const getStateAtTime = useCallback((time: number): BehavioralState => {
     if (!emotions.length) return "neutral";
 
-    // Find the emotion event closest to current time
-    const currentTimeMs = minTime + time * 1000;
+    const currentTimeMs = startTimeMs + time * 1000;
     let closestEmotion = emotions[0];
     let minDiff = Infinity;
 
@@ -357,20 +329,19 @@ export function SessionReplayViewer({
       }
     }
 
-    // Only use state if within 5 seconds
     if (minDiff < 5000) {
       return mapToBehavioralState(closestEmotion.primary_emotion);
     }
     return "neutral";
-  }, [emotions, minTime]);
+  }, [emotions, startTimeMs]);
 
   // Detect highlights on mount
   useEffect(() => {
-    const detected = detectHighlights(mousePath, emotions);
+    const detected = detectHighlights(mousePath, emotions, startTimeMs, endTimeMs);
     setHighlights(detected);
-  }, [mousePath, emotions]);
+  }, [mousePath, emotions, startTimeMs, endTimeMs]);
 
-  // Draw frame
+  // ── FIX 3: Proper coordinate transformation and drawing ───────────────
   const drawFrame = useCallback((time: number) => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -384,122 +355,224 @@ export function SessionReplayViewer({
 
     if (mousePath.length === 0) return;
 
-    // Calculate scale to fit viewport in canvas
-    const containerRect = container.getBoundingClientRect();
-    const scaleX = canvas.width / (pageWidth || containerRect.width);
-    const scaleY = canvas.height / (pageHeight || containerRect.height);
-    const scale = Math.min(scaleX, scaleY) * 0.9;
+    // Calculate scale: fit recorded viewport into canvas
+    // Guard against invalid dimensions
+    const safeViewportWidth = Math.max(recordedViewport.width, 800);
+    const safeViewportHeight = Math.max(recordedViewport.height, 600);
+    const scaleX = canvas.width / safeViewportWidth;
+    const scaleY = canvas.height / safeViewportHeight;
+    const scale = Math.min(scaleX, scaleY);
 
-    // Calculate current timestamp
-    const currentTimestamp = minTime + time * 1000;
+    // Calculate centering offset to maintain aspect ratio
+    const scaledWidth = safeViewportWidth * scale;
+    const scaledHeight = safeViewportHeight * scale;
+    const offsetX = (canvas.width - scaledWidth) / 2;
+    const offsetY = (canvas.height - scaledHeight) / 2;
+
+    // ── FIX 2: Draw wireframe background instead of iframe ─────────────
+    drawWireframeBackground(ctx, canvas.width, canvas.height, pageUrl, scaledWidth, scaledHeight, offsetX, offsetY);
+
+    // Current time in milliseconds (relative to start)
+    const currentTimestampMs = startTimeMs + time * 1000;
 
     // Find all points up to current time
+    // Include a small buffer to ensure the first point is visible at time=0
+    const bufferMs = 50; // 50ms buffer
     const pathPoints: typeof mousePath = [];
     for (const point of mousePath) {
-      if (point.timestamp <= currentTimestamp) {
+      if (point.timestamp <= currentTimestampMs + bufferMs) {
         pathPoints.push(point);
       } else {
         break;
       }
     }
 
-    if (pathPoints.length === 0) return;
-
-    // Draw trail with state-based coloring
-    const stateChanges: { time: number; state: BehavioralState }[] = [];
-    for (let i = 0; i < pathPoints.length; i += 10) {
-      const pointTime = pathPoints[i].timestamp - minTime;
-      const pointState = getStateAtTime(pointTime / 1000);
-      if (i === 0 || stateChanges[stateChanges.length - 1]?.state !== pointState) {
-        stateChanges.push({ time: pointTime / 1000, state: pointState });
-      }
+    // Always show at least the first point if available
+    if (pathPoints.length === 0 && mousePath.length > 0) {
+      pathPoints.push(mousePath[0]);
     }
 
-    // Draw trail segments
-    for (let segIdx = 0; segIdx < stateChanges.length - 1; segIdx++) {
-      const startState = stateChanges[segIdx];
-      const endState = stateChanges[segIdx + 1];
+    if (pathPoints.length === 0) return;
 
-      ctx.strokeStyle = BEHAVIORAL_STATES[startState.state].color;
-      ctx.lineWidth = 3;
+    // Get last 50 points for trail
+    const trailPoints = pathPoints.slice(-50);
+
+    // Draw trail line
+    if (trailPoints.length > 1) {
+      ctx.strokeStyle = "#3B82F6";
+      ctx.lineWidth = 2;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.5;
 
       ctx.beginPath();
-      let started = false;
+      for (let i = 0; i < trailPoints.length; i++) {
+        const point = trailPoints[i];
+        // Convert page coordinates to viewport coordinates, then scale
+        const viewportX = point.x - point.scroll_x;
+        const viewportY = point.y - point.scroll_y;
+        // Apply centering offset
+        const cx = viewportX * scale + offsetX;
+        const cy = viewportY * scale + offsetY;
 
-      for (const point of pathPoints) {
-        const pointTime = (point.timestamp - minTime) / 1000;
-        if (pointTime >= startState.time && pointTime <= endState.time) {
-          const cx = canvas.width / 2 + (point.x - (pageWidth || 0) / 2) * scale / (devicePixelRatio || 1);
-          const cy = canvas.height / 2 + (point.y - (pageHeight || 0) / 2) * scale / (devicePixelRatio || 1);
-          if (!started) {
-            ctx.moveTo(cx, cy);
-            started = true;
-          } else {
-            ctx.lineTo(cx, cy);
-          }
+        if (i === 0) {
+          ctx.moveTo(cx, cy);
+        } else {
+          ctx.lineTo(cx, cy);
         }
       }
       ctx.stroke();
+      ctx.globalAlpha = 1;
     }
-
-    ctx.globalAlpha = 1;
 
     // Draw current cursor position
     const lastPoint = pathPoints[pathPoints.length - 1];
-    const cx = canvas.width / 2 + (lastPoint.x - (pageWidth || 0) / 2) * scale / (devicePixelRatio || 1);
-    const cy = canvas.height / 2 + (lastPoint.y - (pageHeight || 0) / 2) * scale / (devicePixelRatio || 1);
+    const viewportX = lastPoint.x - lastPoint.scroll_x;
+    const viewportY = lastPoint.y - lastPoint.scroll_y;
+    // Apply centering offset
+    const cx = viewportX * scale + offsetX;
+    const cy = viewportY * scale + offsetY;
 
-    // Draw cursor glow
+    // Get current state color
     const state = getStateAtTime(time);
     const stateColor = BEHAVIORAL_STATES[state].color;
 
-    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 20);
-    gradient.addColorStop(0, stateColor + "80");
+    // Draw cursor glow (larger, more visible)
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
+    gradient.addColorStop(0, stateColor + "CC");
     gradient.addColorStop(1, stateColor + "00");
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 30, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw cursor dot
+    // Draw cursor dot (12px diameter = 6px radius)
     ctx.fillStyle = stateColor;
     ctx.beginPath();
-    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
     ctx.fill();
 
     // Draw cursor border
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.stroke();
-  }, [mousePath, minTime, getStateAtTime, pageWidth, pageHeight, devicePixelRatio]);
+  }, [mousePath, startTimeMs, getStateAtTime, recordedViewport, pageUrl]);
 
-  // Animation loop (with highlights mode support)
-  // Use refs to avoid infinite re-renders from changing currentTime
+  // Draw wireframe background with grid and zone labels
+  const drawWireframeBackground = (
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    canvasHeight: number,
+    url: string | null,
+    scaledWidth: number,
+    scaledHeight: number,
+    offsetX: number,
+    offsetY: number
+  ) => {
+    // Fill entire canvas background
+    ctx.fillStyle = "#F9FAFB";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Draw grid pattern on entire canvas
+    ctx.strokeStyle = "#E5E7EB";
+    ctx.lineWidth = 1;
+
+    const gridSize = 40;
+    for (let x = 0; x < canvasWidth; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvasHeight; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
+      ctx.stroke();
+    }
+
+    // Draw the viewport area (the actual page area)
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(offsetX, offsetY, scaledWidth, scaledHeight);
+    ctx.strokeStyle = "#D1D5DB";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(offsetX, offsetY, scaledWidth, scaledHeight);
+
+    // Draw browser chrome mockup at top of viewport area
+    const chromeHeight = 36;
+    ctx.fillStyle = "#F3F4F6";
+    ctx.fillRect(offsetX + 4, offsetY + 4, scaledWidth - 8, chromeHeight);
+    ctx.strokeStyle = "#D1D5DB";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(offsetX + 4, offsetY + 4, scaledWidth - 8, chromeHeight);
+
+    // URL bar
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(offsetX + 12, offsetY + 10, scaledWidth - 24, 20);
+    ctx.fillStyle = "#9CA3AF";
+    ctx.font = "11px monospace";
+    ctx.textAlign = "left";
+    const displayUrl = url || "https://example.com/page";
+    const maxWidth = scaledWidth - 40;
+    const truncatedUrl = displayUrl.length > 50 ? displayUrl.slice(0, 47) + "..." : displayUrl;
+    ctx.fillText(truncatedUrl, offsetX + 16, offsetY + 24);
+
+    // Draw zone labels (positioned relative to viewport area)
+    ctx.fillStyle = "#9CA3AF";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+
+    // Header zone (top section after chrome)
+    const headerY = offsetY + chromeHeight + 30;
+    ctx.fillText("Header / Nav", offsetX + scaledWidth / 2, headerY);
+
+    // Draw a subtle divider line
+    ctx.strokeStyle = "#E5E7EB";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + scaledHeight * 0.2);
+    ctx.lineTo(offsetX + scaledWidth, offsetY + scaledHeight * 0.2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Content zone (middle)
+    ctx.fillText("Content", offsetX + scaledWidth / 2, offsetY + scaledHeight / 2);
+
+    // Draw a subtle divider line
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + scaledHeight * 0.85);
+    ctx.lineTo(offsetX + scaledWidth, offsetY + scaledHeight * 0.85);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Footer zone (bottom)
+    ctx.fillText("Footer", offsetX + scaledWidth / 2, offsetY + scaledHeight - 15);
+  };
+
+  // Animation loop
   const playbackRef = useRef({
     isPlaying,
     currentTime,
-    totalDuration,
+    totalDuration: totalDurationSeconds,
     playbackSpeed,
     highlightsMode,
     highlights,
     currentHighlightIndex,
   });
 
-  // Update ref when values change
   useEffect(() => {
     playbackRef.current = {
       isPlaying,
       currentTime,
-      totalDuration,
+      totalDuration: totalDurationSeconds,
       playbackSpeed,
       highlightsMode,
       highlights,
       currentHighlightIndex,
     };
-  }, [isPlaying, currentTime, totalDuration, playbackSpeed, highlightsMode, highlights, currentHighlightIndex]);
+  }, [isPlaying, currentTime, totalDurationSeconds, playbackSpeed, highlightsMode, highlights, currentHighlightIndex]);
 
   useEffect(() => {
     if (!playbackRef.current.isPlaying) return;
@@ -512,17 +585,15 @@ export function SessionReplayViewer({
       const elapsed = (timestamp - startTime) / 1000 * playbackRef.current.playbackSpeed;
 
       let newTime: number;
-      const ref = playbackRef.current; // Capture current ref values
+      const ref = playbackRef.current;
 
       if (ref.highlightsMode && ref.highlights.length > 0) {
-        // Skip to highlights mode: play 3 seconds around each highlight
         const currentHighlight = ref.highlights[ref.currentHighlightIndex];
         const highlightStart = Math.max(0, currentHighlight.timestamp - 1.5);
         const highlightEnd = Math.min(ref.totalDuration, currentHighlight.timestamp + 1.5);
 
         newTime = Math.min(lastTime + elapsed, highlightEnd);
 
-        // Move to next highlight when we finish this one
         if (newTime >= highlightEnd && ref.currentHighlightIndex < ref.highlights.length - 1) {
           const nextIdx = ref.currentHighlightIndex + 1;
           playbackRef.current.currentHighlightIndex = nextIdx;
@@ -531,7 +602,7 @@ export function SessionReplayViewer({
           const nextStart = Math.max(0, nextHighlight.timestamp - 1.5);
           lastTime = nextStart;
           setCurrentTime(nextStart);
-          startTime = timestamp; // Reset timing
+          startTime = timestamp;
           animationRef.current = requestAnimationFrame(animate);
           return;
         }
@@ -541,7 +612,6 @@ export function SessionReplayViewer({
           return;
         }
       } else {
-        // Normal playback
         newTime = Math.min(lastTime + elapsed, ref.totalDuration);
         if (newTime >= ref.totalDuration) {
           setIsPlaying(false);
@@ -564,7 +634,7 @@ export function SessionReplayViewer({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying]); // Only depend on isPlaying state
+  }, [isPlaying, drawFrame, getStateAtTime]);
 
   // Setup canvas size
   useEffect(() => {
@@ -576,19 +646,15 @@ export function SessionReplayViewer({
       const rect = container.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height;
-      // Redraw current frame
-      const ctx = canvas.getContext("2d");
-      if (ctx && playbackRef.current) {
-        // Trigger a redraw by updating a forced ref
+      if (playbackRef.current) {
         drawFrame(playbackRef.current.currentTime);
       }
     };
 
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-
     return () => window.removeEventListener("resize", resizeCanvas);
-  }, [drawFrame]); // Only redraw when drawFrame changes (should be stable due to useCallback)
+  }, [drawFrame]);
 
   // Draw initial frame
   useEffect(() => {
@@ -605,19 +671,19 @@ export function SessionReplayViewer({
         setCurrentTime(t => Math.max(0, t - 5));
         setIsPlaying(false);
       } else if (e.code === "ArrowRight") {
-        setCurrentTime(t => Math.min(totalDuration, t + 5));
+        setCurrentTime(t => Math.min(totalDurationSeconds, t + 5));
         setIsPlaying(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [totalDuration]);
+  }, [totalDurationSeconds]);
 
   const togglePlay = () => setIsPlaying(p => !p);
 
   const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = (parseFloat(e.target.value) / 100) * totalDuration;
+    const newTime = (parseFloat(e.target.value) / 100) * totalDurationSeconds;
     setCurrentTime(newTime);
     setCurrentState(getStateAtTime(newTime));
     if (!isPlaying) {
@@ -625,6 +691,7 @@ export function SessionReplayViewer({
     }
   };
 
+  // ── FIX 1: Format time as M:SS (relative seconds, not epoch) ───────────
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -639,7 +706,7 @@ export function SessionReplayViewer({
     let currentState: BehavioralState = "neutral";
     let segmentStart = 0;
 
-    for (let t = 0; t <= totalDuration; t += 0.5) {
+    for (let t = 0; t <= totalDurationSeconds; t += 0.5) {
       const state = getStateAtTime(t);
       if (state !== currentState) {
         segments.push({ start: segmentStart, end: t, state: currentState });
@@ -647,7 +714,7 @@ export function SessionReplayViewer({
         segmentStart = t;
       }
     }
-    segments.push({ start: segmentStart, end: totalDuration, state: currentState });
+    segments.push({ start: segmentStart, end: totalDurationSeconds, state: currentState });
 
     return segments.filter(s => s.end - s.start > 0.1);
   })();
@@ -662,26 +729,6 @@ export function SessionReplayViewer({
             <p className="text-sm text-gray-500">{pageTitle || pageUrl || "Unknown page"}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Share replay button */}
-            <button
-              onClick={() => {
-                const shareUrl = `${window.location.origin}/dashboard/sessions/${sessionId}`;
-                navigator.clipboard.writeText(shareUrl);
-                // Brief visual feedback
-                const btn = document.activeElement as HTMLButtonElement;
-                if (btn) {
-                  const originalText = btn.innerHTML;
-                  btn.innerHTML = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
-                  setTimeout(() => btn.innerHTML = originalText, 1500);
-                }
-              }}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="Copy link to this replay"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
-              </svg>
-            </button>
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -695,7 +742,7 @@ export function SessionReplayViewer({
         <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-gray-500">Duration:</span>
-            <span className="font-medium text-gray-900">{formatTime(totalDuration || 0)}</span>
+            <span className="font-medium text-gray-900">{formatTime(totalDurationSeconds)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500">Data points:</span>
@@ -703,7 +750,7 @@ export function SessionReplayViewer({
           </div>
           {currentState !== "neutral" && (
             <div className="flex items-center gap-2">
-              <span className="text-gray-500">Dominant state:</span>
+              <span className="text-gray-500">State:</span>
               <span
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
                 style={{ backgroundColor: BEHAVIORAL_STATES[currentState].color }}
@@ -712,63 +759,13 @@ export function SessionReplayViewer({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">Session ID:</span>
-            <span className="font-mono text-xs text-gray-600">{sessionId.slice(0, 8)}...</span>
-          </div>
         </div>
 
         {/* Main content */}
         <div className="flex">
           {/* Replay canvas */}
-          <div ref={containerRef} className="flex-1 bg-gray-100 relative overflow-hidden" style={{ minHeight: 400 }}>
-            {/* Page context iframe - shows the actual page in background */}
-            {pageUrl && !iframeLoadFailed && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 overflow-hidden">
-                <iframe
-                  src={pageUrl}
-                  className="absolute"
-                  style={{
-                    width: `${iframeDimensions.width}px`,
-                    height: `${iframeDimensions.height}px`,
-                    pointerEvents: 'none',
-                    transform: `scale(${iframeScale})`,
-                    transformOrigin: 'center center',
-                    border: 'none',
-                    opacity: 0.85,
-                  }}
-                  sandbox="allow-same-origin allow-scripts"
-                  onError={() => setIframeLoadFailed(true)}
-                  onLoad={(e) => {
-                    const iframe = e.target as HTMLIFrameElement;
-                    try {
-                      // Check if iframe loaded successfully
-                      if (iframe.contentWindow?.location?.href) {
-                        setIframeLoadFailed(false);
-                      }
-                    } catch {
-                      // Cross-origin error - iframe failed to load
-                      setIframeLoadFailed(true);
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Fallback: show page URL when iframe fails */}
-            {iframeLoadFailed && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                <div className="text-center p-6">
-                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25" />
-                  </svg>
-                  <p className="text-sm text-gray-600 mb-1">Page preview unavailable</p>
-                  <p className="text-xs text-gray-500 font-mono break-all max-w-md">{pageUrl}</p>
-                </div>
-              </div>
-            )}
-
-            <canvas ref={canvasRef} className="relative z-10 w-full h-full" />
+          <div ref={containerRef} className="flex-1 bg-gray-100 relative" style={{ minHeight: 400 }}>
+            <canvas ref={canvasRef} className="w-full h-full" />
 
             {/* State label overlay */}
             {currentState !== "neutral" && (
@@ -783,7 +780,7 @@ export function SessionReplayViewer({
 
             {/* Time display */}
             <div className="absolute bottom-20 left-4 px-3 py-2 bg-white rounded-lg shadow text-sm font-mono">
-              {formatTime(currentTime)} / {formatTime(totalDuration)}
+              {formatTime(currentTime)} / {formatTime(totalDurationSeconds)}
             </div>
           </div>
 
@@ -812,9 +809,9 @@ export function SessionReplayViewer({
                 Session Info
               </h3>
               <div className="text-xs text-gray-600 space-y-1">
-                <div>Duration: {formatTime(totalDuration || 0)}</div>
+                <div>Duration: {formatTime(totalDurationSeconds)}</div>
                 <div>Points: {mousePath.length}</div>
-                <div>Emotions: {emotions.length}</div>
+                <div>Viewport: {recordedViewport.width}x{recordedViewport.height}</div>
               </div>
             </div>
 
@@ -831,16 +828,16 @@ export function SessionReplayViewer({
           </div>
         </div>
 
-        {/* Timeline scrubber with state bar and highlight markers */}
+        {/* Timeline scrubber */}
         <div className="px-6 py-4 bg-white border-t border-gray-200">
-          {/* State timeline bar with highlight markers */}
+          {/* State timeline bar */}
           <div className="relative h-2 rounded-full overflow-hidden flex mb-3">
             {timelineSegments.map((seg, i) => (
               <div
                 key={i}
                 className="h-full"
                 style={{
-                  width: `${((seg.end - seg.start) / totalDuration) * 100}%`,
+                  width: `${((seg.end - seg.start) / totalDurationSeconds) * 100}%`,
                   backgroundColor: BEHAVIORAL_STATES[seg.state].color,
                 }}
                 title={`${BEHAVIORAL_STATES[seg.state].label}: ${formatTime(seg.start)} - ${formatTime(seg.end)}`}
@@ -851,7 +848,7 @@ export function SessionReplayViewer({
               <div
                 key={i}
                 className="absolute top-0 w-1.5 h-full flex items-center justify-center cursor-pointer group"
-                style={{ left: `${(hl.timestamp / totalDuration) * 100}%` }}
+                style={{ left: `${(hl.timestamp / totalDurationSeconds) * 100}%` }}
                 onClick={() => {
                   setCurrentTime(hl.timestamp);
                   setCurrentState(getStateAtTime(hl.timestamp));
@@ -863,7 +860,6 @@ export function SessionReplayViewer({
                   className="w-2 h-2 rounded-full border-2 border-white shadow-sm"
                   style={{ backgroundColor: HIGHLIGHT_INFO[hl.type].color }}
                 />
-                {/* Tooltip on hover */}
                 <div className="absolute bottom-full mb-2 hidden group-hover:block whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded">
                   {hl.icon} {hl.description}
                 </div>
@@ -871,17 +867,15 @@ export function SessionReplayViewer({
             ))}
           </div>
 
-          {/* Scrubber with Skip to Highlights button */}
+          {/* Scrubber controls */}
           <div className="flex items-center gap-4">
             <button
               onClick={togglePlay}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </button>
 
-            {/* Skip to Highlights button */}
             {highlights.length > 0 && (
               <button
                 onClick={() => {
@@ -895,7 +889,6 @@ export function SessionReplayViewer({
                     ? "bg-orange-100 text-orange-700 border border-orange-300"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
-                title={highlightsMode ? "Exit highlights mode" : "Play only key moments"}
               >
                 <SkipForwardIcon />
                 {highlightsMode ? `Highlight ${currentHighlightIndex + 1}/${highlights.length}` : "Skip to Highlights"}
@@ -906,7 +899,7 @@ export function SessionReplayViewer({
               type="range"
               min="0"
               max="100"
-              value={(currentTime / totalDuration) * 100 || 0}
+              value={(currentTime / totalDurationSeconds) * 100 || 0}
               onChange={handleScrub}
               className="flex-1 h-2 bg-gray-200 rounded-full appearance-none cursor-pointer"
             />
@@ -956,9 +949,6 @@ export function SessionReplayViewer({
                 </button>
               ))}
             </div>
-            {highlights.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No key moments detected in this session.</p>
-            )}
           </div>
         )}
       </div>
