@@ -49,21 +49,22 @@ interface PageDetailInsight {
   }>;
 }
 
-// New 4-emotion system — consolidated from old 8 emotions
+// New 5 behavioral states — consolidated from old 8 emotions
 const EMOTION_CONFIG: Record<string, { color: string; label: string }> = {
   frustrated: { color: "#EF4444", label: "Frustrated" },
   confused: { color: "#F59E0B", label: "Confused" },
-  engaged: { color: "#10B981", label: "Engaged" },
+  hesitating: { color: "#EAB308", label: "Hesitating" },
+  engaged: { color: "#22C55E", label: "Engaged" },
   disengaged: { color: "#6B7280", label: "Disengaged" },
   // Fallback for old data (will be consolidated on backend)
   frustration: { color: "#EF4444", label: "Frustrated" },
   anxiety: { color: "#EF4444", label: "Frustrated" },
   confusion: { color: "#F59E0B", label: "Confused" },
-  focus: { color: "#10B981", label: "Engaged" },
-  satisfaction: { color: "#10B981", label: "Engaged" },
-  delight: { color: "#10B981", label: "Engaged" },
+  hesitation: { color: "#EAB308", label: "Hesitating" },
+  focus: { color: "#22C55E", label: "Engaged" },
+  satisfaction: { color: "#22C55E", label: "Engaged" },
+  delight: { color: "#22C55E", label: "Engaged" },
   boredom: { color: "#6B7280", label: "Disengaged" },
-  hesitation: { color: "#6B7280", label: "Disengaged" },
   insufficient_data: { color: "#D1D5DB", label: "N/A" },
   unknown: { color: "#9CA3AF", label: "Unknown" },
   none: { color: "#D1D5DB", label: "None" },
