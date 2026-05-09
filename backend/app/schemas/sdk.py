@@ -23,6 +23,12 @@ class SessionCreateRequest(BaseModel):
     country_code: str | None = None
     device_type: str | None = Field(None, pattern=r"^(desktop|mobile|tablet)$")
     environment: str | None = Field("production", pattern=r"^(test|production)$")
+    # Emotion replay fields (optional for backward compatibility)
+    mouse_path: list[dict] | None = Field(None, description="Mouse coordinate array for replay")
+    page_title: str | None = Field(None, description="Page title at session start")
+    page_width: int | None = Field(None, description="Full page width in pixels")
+    page_height: int | None = Field(None, description="Full page height in pixels")
+    device_pixel_ratio: float | None = Field(1.0, description="Device pixel ratio")
 
 
 class SessionCreateResponse(BaseModel):
@@ -74,3 +80,9 @@ class EventBatchRequest(BaseModel):
     page_url: str | None = None  # For auto-creating sessions if needed
     device_type: str | None = Field(None, pattern=r"^(desktop|mobile|tablet)$")  # Device type for session auto-creation
     country_code: str | None = Field(None, min_length=2, max_length=2)  # ISO country code for session auto-creation
+    # Emotion replay fields (optional for backward compatibility)
+    mouse_path: list[dict] | None = Field(None, description="Mouse coordinate array for replay")
+    page_title: str | None = Field(None, description="Page title")
+    page_width: int | None = Field(None, description="Full page width in pixels")
+    page_height: int | None = Field(None, description="Full page height in pixels")
+    device_pixel_ratio: float | None = Field(1.0, description="Device pixel ratio")
