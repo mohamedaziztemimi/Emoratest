@@ -362,27 +362,14 @@ export class SessionManager {
     }
   }
 
-  /** Make and persist sampling decision. */
+  /** Make sampling decision (not cached - fresh each session). */
   private makeSamplingDecision(rate: number): boolean {
-    try {
-      // Check if we already decided
-      const existing = localStorage.getItem(SAMPLING_DECISION_KEY);
-      if (existing !== null) {
-        return existing === "true";
-      }
+    const sampledIn = Math.random() < rate;
 
-      // Make new decision
-      const sampledIn = Math.random() < rate;
-      localStorage.setItem(SAMPLING_DECISION_KEY, sampledIn ? "true" : "false");
-
-      if (this.debug) {
-        console.debug(`[EmoraTest] Sampling decision: ${sampledIn ? "TRACKED" : "SKIPPED"} (rate: ${rate})`);
-      }
-
-      return sampledIn;
-    } catch {
-      // localStorage unavailable - default to tracking
-      return true;
+    if (this.debug) {
+      console.debug(`[EmoraTest] Sampling decision: ${sampledIn ? "TRACKED" : "SKIPPED"} (rate: ${rate})`);
     }
+
+    return sampledIn;
   }
 }
