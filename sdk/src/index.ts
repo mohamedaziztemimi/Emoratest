@@ -27,14 +27,12 @@ import {
   collectMouseMove,
   collectScroll,
   collectVisibility,
-  collectMousePath,
-  collectPageChanges,
-  MousePathTracker,
 } from "./collectors";
 import { initSurvey } from "./survey";
 import { EventQueue } from "./event-queue";
 import { SessionManager } from "./session";
 import { Transport } from "./transport";
+import { RRWebRecorder } from "./rrweb-recorder";
 import type { SurveyTrigger, SurveyPosition } from "./survey";
 import type {
   EmoraTestConfig,
@@ -64,120 +62,13 @@ let config: EmoraTestConfig | null = null;
 let transport: Transport | null = null;
 let queue: EventQueue | null = null;
 let sessionManager: SessionManager | null = null;
-let mousePathTracker: MousePathTracker | null = null;
+let rrwebRecorder: RRWebRecorder | null = null;
 let cleanups: (() => void)[] = [];
 let initialized = false;
 let pendingInit: EmoraTestConfig | null = null; // Store config when waiting for consent
 let consentGiven = false;
-let screenshotCaptured = false; // Track if screenshot was already captured
 
-// ── Screenshot capture using html2canvas ─────────────────────────────
-
-/**
- * Load html2canvas dynamically from CDN.
- * Returns Promise that resolves when script is loaded or rejects on error.
- */
-function loadHtml2Canvas(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (typeof window !== "undefined" && (window as any).html2canvas) {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load html2canvas"));
-    document.head.appendChild(script);
-  });
-}
-
-/**
- * Capture a screenshot of the current page using html2canvas.
- * Returns base64 JPEG data URL or null on failure.
- */
-async function captureScreenshot(): Promise<string | null> {
-  try {
-    const html2canvas = (window as any).html2canvas;
-    if (!html2canvas) return null;
-
-    const canvas = await html2canvas(document.body, {
-      scale: 0.5, // Half resolution to keep size small
-      useCORS: true,
-      logging: false,
-      windowWidth: window.innerWidth,
-      windowHeight: document.documentElement.scrollHeight,
-      allowTaint: true,
-    });
-
-    return canvas.toDataURL("image/jpeg", 0.5); // JPEG at 50% quality
-  } catch (e) {
-    if (config?.debug) {
-      console.error("[EmoraTest] Screenshot capture failed:", e);
-    }
-    return null;
-  }
-}
-
-/**
- * Send screenshot to backend.
- * Silently fails on error - doesn't break event tracking.
- */
-async function sendScreenshot(sessionId: string, dataUrl: string): Promise<void> {
-  try {
-    const response = await fetch(`${config?.apiUrl}/api/v1/sessions/${sessionId}/screenshot`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-SDK-Key": config!.sdkKey,
-      },
-      body: JSON.stringify({ screenshot: dataUrl }),
-    });
-
-    if (!response.ok && config?.debug) {
-      console.debug("[EmoraTest] Screenshot upload failed:", response.status);
-    }
-  } catch (e) {
-    // Silently fail - screenshot is optional
-    if (config?.debug) {
-      console.error("[EmoraTest] Screenshot upload error:", e);
-    }
-  }
-}
-
-/**
- * Schedule screenshot capture after page load.
- * Waits 5 seconds for page to fully render before capturing.
- */
-function scheduleScreenshot(sessionId: string): void {
-  // Load html2canvas first, then wait for page to render
-  loadHtml2Canvas()
-    .then(() => {
-      // Wait 5 seconds for page to fully render
-      setTimeout(async () => {
-        if (screenshotCaptured) return; // Only capture once per session
-
-        const dataUrl = await captureScreenshot();
-        if (dataUrl) {
-          await sendScreenshot(sessionId, dataUrl);
-          screenshotCaptured = true;
-          if (config?.debug) {
-            console.debug("[EmoraTest] Screenshot captured and uploaded");
-          }
-        }
-      }, 5000);
-    })
-    .catch(() => {
-      // html2canvas failed to load - silently skip
-      if (config?.debug) {
-        console.debug("[EmoraTest] html2canvas not available, skipping screenshot");
-      }
-    });
-}
-
-// ── End screenshot capture ────────────────────────────────────────────
+// ── Screenshot capture removed - will be replaced with rrweb ─────────────
 
 // ── Feature Flag state ────────────────────────────────────────
 
@@ -347,19 +238,27 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
   );
   sessionManager = new SessionManager(transport, config.debug!);
 
-  // Initialize mouse path tracker for replay
-  mousePathTracker = new MousePathTracker();
-  // Capture page metadata at session start
-  mousePathTracker.capturePageMetadata();
-  queue.setMousePathTracker(mousePathTracker);
-
   // Create session — backend uses X-SDK-Key header to find merchant
   // Pass sampling rate and environment from config
   const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
 
-  // Schedule screenshot capture (runs asynchronously, doesn't block init)
-  scheduleScreenshot(session.sessionId);
+  // Start rrweb recording (fails silently if rrweb doesn't load)
+  if (session.sampledIn) {
+    try {
+      rrwebRecorder = new RRWebRecorder();
+      rrwebRecorder.start();
+      if (config.debug) {
+        console.debug("[EmoraTest] rrweb recording started");
+      }
+    } catch (err) {
+      if (config.debug) {
+        console.warn("[EmoraTest] rrweb recording failed to start (continuing without replay):", err);
+      }
+      rrwebRecorder = null;
+    }
+  }
+
   // Store device/country context for session auto-creation fallback
   queue.setDeviceType(sessionManager.getDeviceType());
   queue.setCountryCode(sessionManager.getCountryCode());
@@ -385,8 +284,6 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     collectScroll(queue, getActiveVariants),
     collectExitIntent(queue, getActiveVariants),
     collectVisibility(queue, getActiveVariants),
-    collectMousePath(mousePathTracker, 100), // 100ms throttle = 10fps for replay
-    collectPageChanges(mousePathTracker), // Track SPA navigation
   ];
 
   // Handle page unload — close session and flush events
@@ -396,6 +293,22 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
     if (queue) {
       queue.flushBeacon();
     }
+
+    // Send rrweb events if recording
+    if (rrwebRecorder && rrwebRecorder.isRecording() && sessionManager) {
+      const sessionId = sessionManager.getSessionId();
+      if (sessionId) {
+        const recording = rrwebRecorder.stop();
+        if (recording && transport) {
+          transport.sendBeaconRRWeb(sessionId, {
+            events: recording.events,
+            duration_ms: recording.durationMs,
+            events_count: recording.eventsCount,
+          });
+        }
+      }
+    }
+
     // Close session via beacon (marks as abandon if no outcome set)
     if (sessionManager) {
       sessionManager.endBeacon();
@@ -435,6 +348,28 @@ export async function init(userConfig: EmoraTestConfig): Promise<void> {
 export async function destroy(): Promise<void> {
   if (!initialized) return;
 
+  // Stop rrweb recording and send events
+  if (rrwebRecorder && rrwebRecorder.isRecording() && sessionManager && transport) {
+    const sessionId = sessionManager.getSessionId();
+    if (sessionId) {
+      const recording = rrwebRecorder.stop();
+      if (recording) {
+        try {
+          await transport.sendRRWebEvents(sessionId, {
+            events: recording.events,
+            duration_ms: recording.durationMs,
+            events_count: recording.eventsCount,
+          });
+        } catch (err) {
+          if (config?.debug) {
+            console.warn("[EmoraTest] Failed to send rrweb events:", err);
+          }
+        }
+      }
+    }
+  }
+  rrwebRecorder = null;
+
   // Flush remaining events
   if (queue) {
     await queue.flush();
@@ -454,7 +389,6 @@ export async function destroy(): Promise<void> {
   transport = null;
   queue = null;
   sessionManager = null;
-  mousePathTracker = null;
   initialized = false;
 }
 
@@ -706,19 +640,27 @@ export async function enableTracking(): Promise<void> {
   );
   sessionManager = new SessionManager(transport, config.debug!);
 
-  // Initialize mouse path tracker for replay
-  mousePathTracker = new MousePathTracker();
-  // Capture page metadata at session start
-  mousePathTracker.capturePageMetadata();
-  queue.setMousePathTracker(mousePathTracker);
-
   // Create session — backend uses X-SDK-Key header to find merchant
   // Pass sampling rate and environment from config
   const session = await sessionManager.start(config.samplingRate!, config.environment!);
   queue.setSessionId(session.sessionId);
 
-  // Schedule screenshot capture (runs asynchronously, doesn't block init)
-  scheduleScreenshot(session.sessionId);
+  // Start rrweb recording (fails silently if rrweb doesn't load)
+  if (session.sampledIn) {
+    try {
+      rrwebRecorder = new RRWebRecorder();
+      rrwebRecorder.start();
+      if (config.debug) {
+        console.debug("[EmoraTest] rrweb recording started");
+      }
+    } catch (err) {
+      if (config.debug) {
+        console.warn("[EmoraTest] rrweb recording failed to start (continuing without replay):", err);
+      }
+      rrwebRecorder = null;
+    }
+  }
+
   // Store device/country context for session auto-creation fallback
   queue.setDeviceType(sessionManager.getDeviceType());
   queue.setCountryCode(sessionManager.getCountryCode());
@@ -744,8 +686,6 @@ export async function enableTracking(): Promise<void> {
     collectScroll(queue, getActiveVariants),
     collectExitIntent(queue, getActiveVariants),
     collectVisibility(queue, getActiveVariants),
-    collectMousePath(mousePathTracker, 100), // 100ms throttle = 10fps for replay
-    collectPageChanges(mousePathTracker), // Track SPA navigation
   ];
 
   // Handle page unload — close session and flush events

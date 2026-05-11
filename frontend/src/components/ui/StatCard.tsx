@@ -127,7 +127,7 @@ export function StatCard({
           className={clsx(
             "inline-flex items-center px-2 py-0.5 rounded-[var(--et-radius-sm)] text-[12px] font-medium",
             deltaPositive
-              ? "bg-[var(--et-satisfaction)]/20 text-[var(--et-satisfaction)]"
+              ? "bg-[var(--et-engaged)]/20 text-[var(--et-engaged)]"
               : "bg-[var(--et-frustration)]/20 text-[var(--et-frustration)]"
           )}
         >

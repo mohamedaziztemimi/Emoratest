@@ -23,15 +23,14 @@ from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.merchant import Merchant
 from app.models.session import Session
-from app.models.session_replay_data import SessionReplayData
 from app.schemas.sdk import (
     EventBatchRequest,
-    ScreenshotRequest,
     SessionCreateRequest,
     SessionCreateResponse,
     SessionOutcomeRequest,
     SessionFeedbackRequest,
     SurveyConfigResponse,
+    RRWebEventsRequest,
 )
 
 
@@ -302,19 +301,6 @@ async def create_session(
 
     db.add(session)
 
-    # Store replay data if provided (emotion replay feature)
-    if body.mouse_path:
-        replay_data = SessionReplayData(
-            session_id=session_id,
-            mouse_path=body.mouse_path,
-            page_url=body.page_url,
-            page_title=body.page_title,
-            page_width=body.page_width,
-            page_height=body.page_height,
-            device_pixel_ratio=body.device_pixel_ratio,
-        )
-        db.add(replay_data)
-
     # Increment session count
     from sqlalchemy import update as sql_update
     await db.execute(
@@ -420,87 +406,7 @@ async def update_outcome(
 # ── POST /sessions/{id}/screenshot — page screenshot for replay ────────────
 
 
-@router.post("/sessions/{session_id}/screenshot")
-@limiter.limit("60/minute")
-async def upload_screenshot(
-    request: Request,
-    session_id: str,
-    body: ScreenshotRequest,
-    db: AsyncSession = Depends(get_db),
-    merchant: Merchant = Depends(get_merchant_from_sdk_key),
-):
-    """Receive and store page screenshot captured by SDK via html2canvas.
-
-    Accepts base64-encoded JPEG data URL. Strips the data:image/jpeg;base64, prefix
-    and stores the raw base64 string in session_replay_data.page_screenshot.
-
-    Silently returns 200 on errors to avoid breaking SDK operation.
-    """
-
-    try:
-        sid = uuid.UUID(session_id)
-    except ValueError:
-        return {"status": "error", "message": "Invalid session ID"}
-
-    # Validate screenshot size (max 2MB after base64 decoding ~1.5MB of image data)
-    max_size = 2_000_000  # 2MB base64 string limit
-    if len(body.screenshot) > max_size:
-        logger.warning(f"[screenshot] Screenshot too large for session {sid}: {len(body.screenshot)} bytes")
-        return {"status": "error", "message": "Screenshot too large"}
-
-    # Strip data URL prefix if present
-    base64_data = body.screenshot
-    if base64_data.startswith("data:image/"):
-        # Remove "data:image/jpeg;base64," or similar prefix
-        comma_idx = base64_data.find(",")
-        if comma_idx >= 0:
-            base64_data = base64_data[comma_idx + 1:]
-
-    try:
-        # Verify it's valid base64 by attempting to decode
-        import base64
-
-        decoded = base64.b64decode(base64_data, validate=True)
-
-        # Check decoded size (should be reasonable for a JPEG)
-        if len(decoded) > 1_500_000:  # 1.5MB decoded limit
-            logger.warning(f"[screenshot] Decoded screenshot too large for session {sid}: {len(decoded)} bytes")
-            return {"status": "error", "message": "Screenshot too large"}
-    except Exception as e:
-        logger.warning(f"[screenshot] Invalid base64 data for session {sid}: {e}")
-        return {"status": "error", "message": "Invalid screenshot data"}
-
-    # Update or create session_replay_data record
-    try:
-        result = await db.execute(
-            select(SessionReplayData).where(SessionReplayData.session_id == sid)
-        )
-        replay_data = result.scalar_one_or_none()
-
-        if replay_data:
-            # Update existing record
-            await db.execute(
-                update(SessionReplayData)
-                .where(SessionReplayData.session_id == sid)
-                .values(page_screenshot=base64_data)
-            )
-        else:
-            # Create new record with screenshot
-            replay_data = SessionReplayData(
-                session_id=sid,
-                page_screenshot=base64_data,
-            )
-            db.add(replay_data)
-
-        await db.commit()
-        logger.info(f"[screenshot] Saved screenshot for session {sid}: {len(base64_data)} bytes")
-        return {"status": "saved"}
-
-    except Exception as e:
-        logger.error(f"[screenshot] Failed to save screenshot for session {sid}: {e}")
-        await db.rollback()
-        return {"status": "error", "message": "Failed to save screenshot"}
-
+# Screenshot endpoint removed - will be replaced with rrweb
 
 @router.post("/sessions/{session_id}/close")
 @limiter.limit("2000/minute")
@@ -588,6 +494,80 @@ async def submit_feedback(
     await db.commit()
 
     return {"status": "recorded"}
+
+
+# ── rrweb Recording ─────────────────────────────────────────────
+
+@router.post("/sessions/{session_id}/rrweb")
+@limiter.limit("1000/minute")
+async def store_rrweb_events(
+    request: Request,
+    session_id: str,
+    body: RRWebEventsRequest,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_from_sdk_key),
+):
+    """Store rrweb DOM recording events for session replay."""
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
+
+    # Verify session exists and belongs to merchant
+    result = await db.execute(
+        select(Session.id, Session.page_url).where(
+            Session.id == sid,
+            Session.merchant_id == merchant.id,
+        )
+    )
+    session = result.first()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    import json
+    events_json = json.dumps(body.events)
+    compressed_size_bytes = len(events_json.encode("utf-8"))
+
+    # Reject if payload too large (> 5MB)
+    MAX_PAYLOAD_BYTES = 5 * 1024 * 1024
+    if compressed_size_bytes > MAX_PAYLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Payload too large: {compressed_size_bytes} bytes (max {MAX_PAYLOAD_BYTES})",
+        )
+
+    # Check if replay data already exists for this session
+    from app.models.session_replay_data import SessionReplayData
+    from sqlalchemy.dialects.postgresql import insert
+
+    # Get page_url from session
+    page_url = session[1]
+
+    # Upsert rrweb data
+    await db.execute(
+        insert(SessionReplayData)
+        .values(
+            session_id=sid,
+            rrweb_events=body.events,  # List[dict] stored as JSONB
+            events_count=body.events_count,
+            compressed_size_bytes=compressed_size_bytes,
+            recording_duration_ms=body.duration_ms,
+            page_url=page_url,
+        )
+        .on_conflict_do_update(
+            index_elements=["session_id"],
+            set_=dict(
+                rrweb_events=body.events,
+                events_count=body.events_count,
+                compressed_size_bytes=compressed_size_bytes,
+                recording_duration_ms=body.duration_ms,
+            )
+        )
+    )
+
+    await db.commit()
+
+    return {"status": "stored", "events_count": body.events_count, "size_bytes": compressed_size_bytes}
 
 
 # ── Event ingestion ────────────────────────────────────────────
@@ -693,53 +673,7 @@ async def ingest_events(
     db.add_all(events)
     await db.commit()
 
-    # Store replay data if provided (emotion replay feature)
-    # Use upsert to handle cases where data already exists
-    try:
-        if body.mouse_path and len(body.mouse_path) > 0:
-            logger.info(f"[session_replay] Received mouse_path with {len(body.mouse_path)} points for session {sid}")
-            from sqlalchemy import insert
-
-            # Check if replay data already exists for this session
-            existing_result = await db.execute(
-                select(SessionReplayData.session_id).where(SessionReplayData.session_id == sid)
-            )
-            existing = existing_result.scalar_one_or_none()
-
-            if existing:
-                # Update existing record - merge mouse_path entries
-                logger.info(f"[session_replay] Updating existing replay data for session {sid}")
-                await db.execute(
-                    update(SessionReplayData)
-                    .where(SessionReplayData.session_id == sid)
-                    .values(
-                        mouse_path=body.mouse_path,  # Replace with latest data
-                        page_url=body.page_url or page_url,
-                        page_title=body.page_title if body.page_title else SessionReplayData.page_title,
-                        page_width=body.page_width if body.page_width else SessionReplayData.page_width,
-                        page_height=body.page_height if body.page_height else SessionReplayData.page_height,
-                    )
-                )
-            else:
-                # Create new replay data record
-                logger.info(f"[session_replay] Creating new replay data for session {sid}")
-                replay_data = SessionReplayData(
-                    session_id=sid,
-                    mouse_path=body.mouse_path,
-                    page_url=body.page_url or page_url,
-                    page_title=body.page_title,
-                    page_width=body.page_width,
-                    page_height=body.page_height,
-                    device_pixel_ratio=body.device_pixel_ratio,
-                )
-                db.add(replay_data)
-            await db.commit()
-            logger.info(f"[session_replay] Successfully saved replay data for session {sid}")
-        elif body.mouse_path is not None and len(body.mouse_path) == 0:
-            logger.warning(f"[session_replay] Received empty mouse_path array for session {sid}")
-    except Exception as e:
-        logger.error(f"[session_replay] Failed to save replay data for session {sid}: {e}", exc_info=True)
-        # Don't fail the entire request - log and continue
+    # Mouse path replay removed - will be replaced with rrweb
 
     # Enqueue background feature processing (CONV-34)
     from app.services.feature_worker import enqueue_session_processing

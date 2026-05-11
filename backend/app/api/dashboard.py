@@ -6,8 +6,6 @@ Authentication uses JWT bearer tokens (merchant login), not SDK keys.
 Endpoints:
     GET  /api/v1/dashboard/sessions              — paginated session list
     GET  /api/v1/dashboard/sessions/{id}          — full session detail
-    GET  /api/v1/dashboard/sessions/{id}/replay  — emotion replay data
-    GET  /api/v1/dashboard/sessions/{id}/replay/screenshot — page screenshot
     GET  /api/v1/dashboard/emotion-trends        — 7-day emotion/friction trends
     GET  /api/v1/dashboard/confusion-pages       — top pages by friction score
     GET  /api/v1/dashboard/analytics/friction-map - element friction heatmap
@@ -562,14 +560,17 @@ async def list_sessions(
     result = await db.execute(query)
     sessions = result.scalars().all()
 
-    # Check which sessions have replay data
+    # Check has_replay for each session in a single query
     session_ids = [s.id for s in sessions]
-    replay_check = await db.execute(
-        select(SessionReplayData.session_id).where(
-            SessionReplayData.session_id.in_(session_ids)
+    has_replay_map: dict[uuid.UUID, bool] = {}
+    if session_ids:
+        replay_result = await db.execute(
+            select(SessionReplayData.session_id).where(
+                SessionReplayData.session_id.in_(session_ids)
+            )
         )
-    )
-    replay_session_ids = set(row[0] for row in replay_check.all())
+        for row in replay_result:
+            has_replay_map[row[0]] = True
 
     return SessionListResponse(
         sessions=[
@@ -591,7 +592,7 @@ async def list_sessions(
                 arousal=s.arousal,
                 ip_address=s.ip_address,
                 user_agent=s.user_agent,
-                has_replay=s.id in replay_session_ids,
+                has_replay=has_replay_map.get(s.id, False),
             )
             for s in sessions
         ],
@@ -700,7 +701,7 @@ async def get_session_detail(
     )
 
 
-# ── GET /sessions/{id}/replay — emotion replay data (CONV-34) ────
+# ── GET /sessions/{id}/replay — rrweb replay data ───────────────────
 
 
 @router.get("/sessions/{session_id}/replay", response_model=SessionReplayResponse)
@@ -711,155 +712,62 @@ async def get_session_replay(
     db: AsyncSession = Depends(get_db),
     merchant: Merchant = Depends(get_current_merchant),
 ):
-    """Get replay data for a session including mouse path and emotion timeline.
-
-    Returns mouse_path coordinates, page metadata, and emotion events
-    synchronized by timestamp for cursor visualization with emotion overlay.
-    """
-
+    """Get rrweb replay data for a session including emotion overlay."""
     try:
         sid = uuid.UUID(session_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid session ID") from exc
 
-    # Verify session belongs to merchant
+    # Verify session exists and belongs to merchant
     result = await db.execute(
-        select(Session).where(
-            Session.id == sid,
-            Session.merchant_id == merchant.id,
-        )
+        select(Session).where(Session.id == sid, Session.merchant_id == merchant.id)
     )
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Load replay data
+    # Get rrweb data
     replay_result = await db.execute(
         select(SessionReplayData).where(SessionReplayData.session_id == sid)
     )
     replay_data = replay_result.scalar_one_or_none()
 
-    # If no replay data, return has_replay: false
     if replay_data is None:
         return SessionReplayResponse(
-            session_id=str(sid),
             has_replay=False,
+            events=[],
+            duration_ms=0,
+            events_count=0,
+            emotions=[],
+            page_url=session.page_url,
         )
 
-    # Calculate duration
-    duration_seconds = None
-    if session.ended_at and session.started_at:
-        duration_seconds = int((session.ended_at - session.started_at).total_seconds())
-
-    # Load emotion events for this session (synchronized to cursor)
+    # Get emotion events for overlay
     emotion_result = await db.execute(
-        select(EmotionEvent)
-        .where(EmotionEvent.session_id == sid)
-        .order_by(EmotionEvent.timestamp)
+        select(EmotionEvent).where(EmotionEvent.session_id == sid).order_by(EmotionEvent.ts)
     )
     emotion_events = emotion_result.scalars().all()
 
-    emotions_out = [
-        EmotionEventOut(
-            timestamp=e.timestamp.isoformat(),
-            primary_emotion=e.primary_emotion,
-            confidence=e.confidence,
-            valence=e.valence,
-            arousal=e.arousal,
+    # Convert emotion events to overlay format (Unix timestamp in seconds)
+    emotions_out = []
+    for ee in emotion_events:
+        ts_timestamp = ee.ts.timestamp() if hasattr(ee.ts, 'timestamp') else 0
+        emotions_out.append(
+            EmotionEventOut(
+                timestamp=ts_timestamp,
+                emotion=ee.emotion or "unknown",
+                confidence=ee.confidence,
+            )
         )
-        for e in emotion_events
-    ]
-
-    # Convert mouse_path from dict to MousePathPoint objects
-    mouse_path_out = []
-    if replay_data.mouse_path:
-        for point in replay_data.mouse_path:
-            if isinstance(point, dict):
-                mouse_path_out.append(
-                    MousePathPoint(
-                        x=point.get("x", 0),
-                        y=point.get("y", 0),
-                        timestamp=point.get("timestamp", 0),
-                        scroll_x=point.get("scroll_x", 0),
-                        scroll_y=point.get("scroll_y", 0),
-                        viewport_width=point.get("viewport_width", 1920),
-                        viewport_height=point.get("viewport_height", 1080),
-                    )
-                )
 
     return SessionReplayResponse(
-        session_id=str(sid),
         has_replay=True,
-        mouse_path=mouse_path_out,
-        page_url=replay_data.page_url or session.page_url,
-        page_title=replay_data.page_title,
-        page_width=replay_data.page_width,
-        page_height=replay_data.page_height,
-        device_pixel_ratio=replay_data.device_pixel_ratio,
+        events=replay_data.rrweb_events,  # JSONB stored as dict/list
+        duration_ms=replay_data.recording_duration_ms,
+        events_count=replay_data.events_count,
         emotions=emotions_out,
-        duration_seconds=duration_seconds,
+        page_url=replay_data.page_url,
     )
-
-
-# ── GET /sessions/{id}/replay/screenshot — page screenshot for replay ────
-
-
-@router.get("/sessions/{session_id}/replay/screenshot")
-@limiter.limit("60/minute")
-async def get_session_replay_screenshot(
-    request: Request,
-    session_id: str,
-    db: AsyncSession = Depends(get_db),
-    merchant: Merchant = Depends(get_current_merchant),
-):
-    """Get a screenshot of the page for session replay background.
-
-    Returns the base64-encoded JPEG screenshot captured by the SDK via html2canvas.
-    Returns 404 if no screenshot exists (frontend falls back to wireframe).
-    """
-
-    import base64
-
-    try:
-        sid = uuid.UUID(session_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid session ID") from exc
-
-    # Verify session belongs to merchant
-    result = await db.execute(
-        select(Session).where(
-            Session.id == sid,
-            Session.merchant_id == merchant.id,
-        )
-    )
-    session = result.scalar_one_or_none()
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    # Load replay data to get screenshot
-    replay_result = await db.execute(
-        select(SessionReplayData).where(SessionReplayData.session_id == sid)
-    )
-    replay_data = replay_result.scalar_one_or_none()
-
-    if replay_data is None or not replay_data.page_screenshot:
-        raise HTTPException(status_code=404, detail="Screenshot not available")
-
-    # Decode base64 and return as image
-    try:
-        image_data = base64.b64decode(replay_data.page_screenshot)
-        from fastapi.responses import Response
-
-        return Response(
-            content=image_data,
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Failed to decode screenshot: {str(e)}",
-        ) from e
 
 
 # ── GET /analytics/friction-map (CONV-39) ─────────────────────────

@@ -1,19 +1,18 @@
 /* ────────────────────────────────────────────────────────
-   EmotionBadge - Emotion type badge with score
+   EmotionBadge - Behavioral state badge with score
+   5 Behavioral States: frustrated, confused, hesitating, engaged, disengaged
    ──────────────────────────────────────────────────────── */
 
 import { clsx } from "clsx";
 import { getEmotionConfig } from "@/lib/theme";
 
 export type EmotionType =
-  | "confusion"
-  | "frustration"
-  | "delight"
-  | "anxiety"
-  | "satisfaction"
-  | "hesitation"
-  | "focus"
-  | "boredom";
+  | "frustrated"
+  | "confused"
+  | "hesitating"
+  | "engaged"
+  | "disengaged"
+  | "insufficient_data";
 
 type BadgeSize = "sm" | "md";
 

@@ -63,17 +63,17 @@ const EMOTION_COLORS = {
 const LEGACY_EMOTION_COLORS = {
   frustration: "#EF4444",
   confusion: "#F59E0B",
-  delight: "#10B981",
-  satisfaction: "#059669",
-  focus: "#3B82F6",
-  anxiety: "#F97316",
-  hesitation: "#8B5CF6",
+  hesitation: "#EAB308",
+  focus: "#22C55E",
+  satisfaction: "#22C55E",
+  delight: "#22C55E",
+  anxiety: "#EF4444",
   boredom: "#6B7280",
 } as const;
 
 const getEmotionColor = (emotion: string): string => {
   const normalized = emotion.toLowerCase();
-  // Check new 4 emotions first
+  // Check new 5 behavioral states first
   if (normalized in EMOTION_COLORS) {
     return EMOTION_COLORS[normalized as keyof typeof EMOTION_COLORS];
   }

@@ -7,6 +7,12 @@
 
 import type { BatchPayload, SessionCreatePayload, SessionCreateResponse, OutcomeType } from "./types";
 
+export interface RRWebEventsPayload {
+  events: Record<string, unknown>[];
+  duration_ms: number;
+  events_count: number;
+}
+
 export class Transport {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
@@ -202,6 +208,39 @@ export class Transport {
     const blob = new Blob([JSON.stringify({})], { type: "application/json" });
     return navigator.sendBeacon(
       `${this.baseUrl}/api/v1/sessions/${sessionId}/close?sdk_key=${this.headers["X-SDK-Key"]}`,
+      blob,
+    );
+  }
+
+  /**
+   * Send rrweb DOM recording events.
+   * Used for session replay functionality.
+   */
+  async sendRRWebEvents(sessionId: string, payload: RRWebEventsPayload): Promise<void> {
+    if (this.disabled) {
+      return;
+    }
+
+    const res = await fetch(`${this.baseUrl}/api/v1/sessions/${sessionId}/rrweb`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      this.handleAuthError(res);
+      throw new Error(`RRWeb events upload failed: ${res.status} ${res.statusText}`);
+    }
+  }
+
+  /**
+   * Send rrweb events via sendBeacon (for page unload).
+   */
+  sendBeaconRRWeb(sessionId: string, payload: RRWebEventsPayload): boolean {
+    if (typeof navigator === "undefined" || !navigator.sendBeacon) return false;
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    return navigator.sendBeacon(
+      `${this.baseUrl}/api/v1/sessions/${sessionId}/rrweb?sdk_key=${this.headers["X-SDK-Key"]}`,
       blob,
     );
   }

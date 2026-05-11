@@ -11,12 +11,12 @@ const FEATURES = [
   {
     icon: "🔥",
     title: "Page Insights",
-    description: "See which pages cause the most friction. Every page ranked by behavioral states (frustrated, confused, engaged, disengaged) with actionable breakdowns.",
+    description: "See which pages cause frustration, confusion, or hesitation. Every page ranked by emotional friction with actionable breakdowns across 5 behavioral states.",
   },
   {
     icon: "🧠",
-    title: "Behavioral Emotion Detection",
-    description: "Our ML model detects frustration, confusion, engagement, and disengagement from mouse behavior patterns. No cameras. No surveys. Just behavior.",
+    title: "5-State Behavioral ML Classifier",
+    description: "Our XGBoost model detects frustrated, confused, hesitating, engaged, and disengaged states from mouse behavior with 80%+ accuracy. No cameras. No surveys. Just behavior.",
   },
   {
     icon: "🔍",
@@ -26,7 +26,7 @@ const FEATURES = [
   {
     icon: "🎯",
     title: "Session Explorer",
-    description: "Browse every user session with behavioral labels. Filter by frustrated, confused, engaged, or disengaged sessions. Click into any session to see the full breakdown and behavior signals.",
+    description: "Browse every user session with emotion labels. Filter by frustrated, confused, delighted, or any of the 8 emotions. Click into any session to see the full breakdown and behavior signals.",
   },
   {
     icon: "📊",

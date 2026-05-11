@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mouse Path Test - EmoraTest SDK</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #007BFF; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.info { background: #d1ecf1; color: #0c5460; }
+    .test-area { border: 2px dashed #007BFF; padding: 100px 20px; margin: 20px 0; text-align: center; }
+    button { padding: 10px 20px; margin: 5px; font-size: 14px; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Mouse Path Test - EmoraTest SDK</h1>
+
+  <div id="status" class="status info">
+    Initializing...
+  </div>
+
+  <div class="test-area">
+    <h3>Move your mouse here for 30 seconds</h3>
+    <p>Then check the Network tab to see the mouse_path data</p>
+  </div>
+
+  <div>
+    <button onclick="startTest()">Start 30s Test</button>
+    <button onclick="checkPath()">Check Mouse Path</button>
+    <button onclick="sendEvents()">Send Events Now</button>
+  </div>
+
+  <div id="results" class="status info" style="display: none;">
+    <h3>Mouse Path Results:</h3>
+    <pre id="path-output"></pre>
+  </div>
+
+  <script src="/sdk/emoratest.umd.js"></script>
+  <script>
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+    const pathOutput = document.getElementById('path-output');
+
+    // Initialize SDK with debug mode
+    EmoraTest.init({
+      sdkKey: 'test-key-12345',
+      apiUrl: 'http://localhost:8000',
+      debug: true,
+      flushIntervalMs: 30000, // Flush after 30s for testing
+      mouseMoveThrottleMs: 100
+    });
+
+    statusEl.innerHTML = '✅ SDK Initialized! Move your mouse around...';
+    statusEl.className = 'status success';
+
+    let testTimer = null;
+
+    function startTest() {
+      statusEl.innerHTML = '⏱️ Test started! Move your mouse around for 30 seconds...';
+      let seconds = 30;
+
+      testTimer = setInterval(() => {
+        seconds--;
+        statusEl.innerHTML = `⏱️ Test running... ${seconds}s remaining. Move your mouse!`;
+
+        if (seconds <= 0) {
+          clearInterval(testTimer);
+          statusEl.innerHTML = '✅ Test complete! Check Network tab for mouse_path data.';
+          statusEl.className = 'status success';
+          sendEvents();
+        }
+      }, 1000);
+    }
+
+    function checkPath() {
+      // Try to access the internal mouse path tracker
+      // Note: This is for testing only - the tracker is internal
+      statusEl.innerHTML = 'ℹ️ Check the Network tab for the batch payload with mouse_path';
+      statusEl.className = 'status info';
+    }
+
+    function sendEvents() {
+      // Trigger a flush
+      statusEl.innerHTML = '📤 Sending events... Check Network tab for mouse_path array';
+      statusEl.className = 'status info';
+    }
+
+    // Log when events are sent
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+      if (args[0] && args[0].includes('/events/batch')) {
+        console.log('📤 Events batch sent!');
+        // Try to log the payload
+        const requestBody = args[1]?.body;
+        if (requestBody) {
+          try {
+            const parsed = JSON.parse(requestBody);
+            console.log('📦 Batch payload:', parsed);
+            console.log(`📍 mouse_path entries: ${parsed.mouse_path?.length || 0}`);
+
+            if (parsed.mouse_path && parsed.mouse_path.length > 0) {
+              console.log('📝 Sample mouse_path entry:', parsed.mouse_path[0]);
+              statusEl.innerHTML = `✅ Success! ${parsed.mouse_path.length} mouse_path points sent! Check console for details.`;
+              statusEl.className = 'status success';
+
+              // Show results
+              resultsEl.style.display = 'block';
+              pathOutput.textContent = JSON.stringify({
+                count: parsed.mouse_path.length,
+                sample: parsed.mouse_path.slice(0, 3),
+                last: parsed.mouse_path[parsed.mouse_path.length - 1]
+              }, null, 2);
+            }
+          } catch (e) {
+            console.log('Request body:', requestBody);
+          }
+        }
+      }
+      return originalFetch.apply(this, args);
+    };
+  </script>
+</body>
+</html>

@@ -11,19 +11,19 @@ type DashboardPersona = "growth" | "pm" | "ux" | "cro";
 
 interface EmotionTrendData {
   day: string;
-  confusion: number;
-  delight: number;
-  frustration: number;
+  confused: number;
+  engaged: number;
+  frustrated: number;
 }
 
 const EMOTION_TREND_DATA: EmotionTrendData[] = [
-  { day: "Mon", confusion: 23, delight: 45, frustration: 12 },
-  { day: "Tue", confusion: 28, delight: 52, frustration: 15 },
-  { day: "Wed", confusion: 31, delight: 48, frustration: 18 },
-  { day: "Thu", confusion: 25, delight: 55, frustration: 14 },
-  { day: "Fri", confusion: 27, delight: 58, frustration: 13 },
-  { day: "Sat", confusion: 22, delight: 62, frustration: 10 },
-  { day: "Sun", confusion: 20, delight: 65, frustration: 8 },
+  { day: "Mon", confused: 23, engaged: 45, frustrated: 12 },
+  { day: "Tue", confused: 28, engaged: 52, frustrated: 15 },
+  { day: "Wed", confused: 31, engaged: 48, frustrated: 18 },
+  { day: "Thu", confused: 25, engaged: 55, frustrated: 14 },
+  { day: "Fri", confused: 27, engaged: 58, frustrated: 13 },
+  { day: "Sat", confused: 22, engaged: 62, frustrated: 10 },
+  { day: "Sun", confused: 20, engaged: 65, frustrated: 8 },
 ];
 
 const CONFUSION_ZONES = [
@@ -49,7 +49,7 @@ function EmotionSparkline() {
   const yScale = (val: number) => height - padding.bottom - (val / 100) * (height - padding.top - padding.bottom);
 
   // Line path generator
-  const linePath = (emotion: "confusion" | "delight" | "frustration") => {
+  const linePath = (emotion: "confused" | "engaged" | "frustrated") => {
     return EMOTION_TREND_DATA.map((d, i) => {
       const x = xScale(i);
       const y = yScale(d[emotion]);
@@ -57,7 +57,7 @@ function EmotionSparkline() {
     }).join(" ");
   };
 
-  const colors = { confusion: "#F59E0B", delight: "#10B981", frustration: "#EF4444" };
+  const colors = { confused: "#F59E0B", engaged: "#22C55E", frustrated: "#EF4444" };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
@@ -132,25 +132,25 @@ function EmotionSparkline() {
             </text>
           ))}
 
-          {/* Emotion lines */}
+          {/* Behavioral state lines */}
           <path
-            d={linePath("confusion")}
+            d={linePath("confused")}
             fill="none"
-            stroke={colors.confusion}
+            stroke={colors.confused}
             strokeWidth="2"
             opacity="0.8"
           />
           <path
-            d={linePath("delight")}
+            d={linePath("engaged")}
             fill="none"
-            stroke={colors.delight}
+            stroke={colors.engaged}
             strokeWidth="2"
             opacity="0.8"
           />
           <path
-            d={linePath("frustration")}
+            d={linePath("frustrated")}
             fill="none"
-            stroke={colors.frustration}
+            stroke={colors.frustrated}
             strokeWidth="2"
             opacity="0.8"
           />
@@ -171,9 +171,9 @@ function EmotionSparkline() {
           {/* Data points on hover */}
           {hoveredData && hoverX !== null && (
             <>
-              <circle cx={hoverX} cy={yScale(hoveredData.confusion ?? 0)} r="4" fill={colors.confusion} />
-              <circle cx={hoverX} cy={yScale(hoveredData.delight ?? 0)} r="4" fill={colors.delight} />
-              <circle cx={hoverX} cy={yScale(hoveredData.frustration ?? 0)} r="4" fill={colors.frustration} />
+              <circle cx={hoverX} cy={yScale(hoveredData.confused ?? 0)} r="4" fill={colors.confused} />
+              <circle cx={hoverX} cy={yScale(hoveredData.engaged ?? 0)} r="4" fill={colors.engaged} />
+              <circle cx={hoverX} cy={yScale(hoveredData.frustrated ?? 0)} r="4" fill={colors.frustrated} />
             </>
           )}
         </svg>
@@ -194,19 +194,19 @@ function EmotionSparkline() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#F59E0B]" />
                 <span className="text-[var(--et-text-muted)]">
-                  Confusion: <span className="text-[var(--et-text-primary)]">{hoveredData.confusion}%</span>
+                  Confused: <span className="text-[var(--et-text-primary)]">{hoveredData.confused}%</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#10B981]" />
+                <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
                 <span className="text-[var(--et-text-muted)]">
-                  Delight: <span className="text-[var(--et-text-primary)]">{hoveredData.delight}%</span>
+                  Engaged: <span className="text-[var(--et-text-primary)]">{hoveredData.engaged}%</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
                 <span className="text-[var(--et-text-muted)]">
-                  Frustration: <span className="text-[var(--et-text-primary)]">{hoveredData.frustration}%</span>
+                  Frustrated: <span className="text-[var(--et-text-primary)]">{hoveredData.frustrated}%</span>
                 </span>
               </div>
             </div>
@@ -275,7 +275,7 @@ export function MiniDashboard({ persona = "growth", className }: MiniDashboardPr
               Conversion Lift This Week
             </h4>
             <div className="flex items-end gap-3">
-              <span className="text-3xl font-bold text-[var(--et-satisfaction)]">
+              <span className="text-3xl font-bold text-[var(--et-engaged)]">
                 +12.4%
               </span>
               <span className="text-[12px] text-[var(--et-text-muted)] mb-1">
@@ -509,7 +509,7 @@ export function MiniDashboard({ persona = "growth", className }: MiniDashboardPr
                   </span>
                 </div>
                 {suggestion.lift && (
-                  <div className="text-[10px] text-[var(--et-satisfaction)]">
+                  <div className="text-[10px] text-[var(--et-engaged)]">
                     {suggestion.lift} est. lift
                   </div>
                 )}

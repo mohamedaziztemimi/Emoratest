@@ -17,7 +17,7 @@ const STEPS: FunnelStep[] = [
   { label: "Landing", color: "var(--et-blue)", dropoff: 25 },
   { label: "Product", color: "var(--et-purple)", dropoff: 35 },
   { label: "Checkout", color: "#8B5CF6", dropoff: 45 },
-  { label: "Purchase", color: "var(--et-delight)", dropoff: 0 },
+  { label: "Purchase", color: "var(--et-engaged)", dropoff: 0 },
 ];
 
 const PARTICLE_COUNT = 20;
@@ -89,20 +89,20 @@ export function LottieFunnel({ className, speed = 1 }: LottieFunnelProps) {
             // At first dropoff point
             if (idx % 3 === 0) {
               newState = "dropping";
-              newColor = "var(--et-confusion)";
+              newColor = "var(--et-confused)";
               newX -= 15;
             }
           } else if (newY > 60 && newY < 65 && p.state === "flowing") {
             // At second dropoff point
             if (idx % 2 === 0) {
               newState = "dropping";
-              newColor = "var(--et-confusion)";
+              newColor = "var(--et-confused)";
               newX += 15;
             }
           } else if (newY > 85 && p.state === "flowing") {
             // Reached bottom
             newState = "completed";
-            newColor = "var(--et-delight)";
+            newColor = "var(--et-engaged)";
           }
 
           // Animate dropping particles
@@ -211,7 +211,7 @@ export function LottieFunnel({ className, speed = 1 }: LottieFunnelProps) {
             y="40"
             textAnchor="middle"
             className="text-[2.5px] font-bold"
-            fill="var(--et-confusion)"
+            fill="var(--et-confused)"
           >
             -{dropoffCount}%
           </text>
@@ -228,15 +228,15 @@ export function LottieFunnel({ className, speed = 1 }: LottieFunnelProps) {
 
         {/* Success indicator */}
         <g style={{ opacity: currentStep >= 3 ? 1 : 0, transition: "opacity 0.4s" }}>
-          <circle cx="50" cy="95" r="1.5" fill="var(--et-delight)" className="animate-pulse" />
+          <circle cx="50" cy="95" r="1.5" fill="var(--et-engaged)" className="animate-pulse" />
           <text
             x="50"
             y="98"
             textAnchor="middle"
             className="text-[1.5px]"
-            fill="var(--et-delight)"
+            fill="var(--et-engaged)"
           >
-            delight!
+            engaged!
           </text>
         </g>
       </svg>

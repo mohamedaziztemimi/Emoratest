@@ -178,16 +178,13 @@ def recommend_interventions(
         except Exception:
             pass
 
-    # Emotion-specific guidance
+    # Behavioral state-specific guidance
     emotion_guidance = {
-        "confusion": "Users appear confused — consider simplifying content or navigation.",
-        "frustration": "Users show frustration — check for broken or unresponsive elements.",
-        "hesitation": "Users are hesitating — add trust signals or clearer CTAs.",
-        "anxiety": "Users seem anxious — provide reassurance or simplify the process.",
-        "boredom": "Users appear disengaged — consider more engaging content or clearer value.",
-        "satisfaction": "Users are satisfied — maintain the current experience.",
-        "delight": "Users are delighted — consider what's working well.",
-        "focus": "Users are focused — the page is engaging effectively.",
+        "frustrated": "Users show frustration — check for broken or unresponsive elements.",
+        "confused": "Users appear confused — consider simplifying content or navigation.",
+        "hesitating": "Users are hesitating — add trust signals or clearer CTAs.",
+        "engaged": "Users are engaged — the page is working well.",
+        "disengaged": "Users appear disengaged — consider more engaging content or clearer value.",
     }
 
     scored: list[tuple[float, InterventionTemplate]] = []

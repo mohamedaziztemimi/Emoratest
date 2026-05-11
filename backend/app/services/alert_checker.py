@@ -222,29 +222,23 @@ def _send_webhook_notification(webhook_url: str, payload: dict) -> None:
 
 def _send_slack_webhook(webhook_url: str, payload: dict) -> None:
     """Send formatted Slack webhook notification."""
-    # Emotion emoji mapping
+    # Behavioral state emoji mapping
     emotion_emojis = {
-        "confusion": "😕",
-        "frustration": "😤",
-        "delight": "😊",
-        "anxiety": "😰",
-        "hesitation": "🤔",
-        "focus": "🎯",
-        "boredom": "😴",
-        "satisfaction": "😌",
+        "frustrated": "😤",
+        "confused": "😕",
+        "hesitating": "🤔",
+        "engaged": "😊",
+        "disengaged": "😴",
     }
     emoji = emotion_emojis.get(payload.get("emotion", ""), "⚠️")
 
-    # Color based on emotion severity
+    # Color based on behavioral state severity
     emotion_colors = {
-        "confusion": "warning",
-        "frustration": "danger",
-        "delight": "good",
-        "anxiety": "warning",
-        "hesitation": "warning",
-        "focus": "good",
-        "boredom": "#6B7280",
-        "satisfaction": "good",
+        "frustrated": "danger",
+        "confused": "warning",
+        "hesitating": "warning",
+        "engaged": "good",
+        "disengaged": "#6B7280",
     }
     color = emotion_colors.get(payload.get("emotion", ""), "warning")
 

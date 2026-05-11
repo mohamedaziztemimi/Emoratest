@@ -211,17 +211,15 @@ class SegmentPreviewResponse(BaseModel):
 # ── Emotion Profile Schema ───────────────────────────────────────
 
 class EmotionProfileOut(BaseModel):
-    """Emotional profile of a segment."""
+    """Behavioral profile of a segment (5 states)."""
 
     segment_id: str
     dominant_emotion: str
-    frustration_avg: float
-    confusion_avg: float
-    delight_avg: float
-    anxiety_avg: float
-    focus_avg: float
-    satisfaction_avg: float
-    hesitation_avg: float
+    frustrated_avg: float
+    confused_avg: float
+    hesitating_avg: float
+    engaged_avg: float
+    disengaged_avg: float
     conversion_rate: float
     total_users: int
 

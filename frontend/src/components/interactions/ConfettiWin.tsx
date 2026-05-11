@@ -13,7 +13,7 @@ export interface ConfettiWinProps {
 }
 
 const PARTICLE_COUNT = 40;
-const COLORS = ["var(--et-blue)", "var(--et-purple)", "var(--et-confusion)", "var(--et-delight)"];
+const COLORS = ["var(--et-blue)", "var(--et-purple)", "var(--et-confused)", "var(--et-engaged)"];
 
 export function ConfettiWin({ trigger, message }: ConfettiWinProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);

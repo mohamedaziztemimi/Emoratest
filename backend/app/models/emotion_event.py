@@ -100,14 +100,13 @@ class EmotionEvent(Base):
         return self.confidence >= threshold
 
     def is_negative_emotion(self) -> bool:
-        """Check if this is a negative emotion."""
-        negative_emotions = {"confusion", "frustration", "anxiety", "boredom"}
-        return self.primary_emotion in negative_emotions
+        """Check if this is a negative behavioral state."""
+        negative_states = {"frustrated", "confused", "disengaged"}
+        return self.primary_emotion in negative_states
 
     def is_positive_emotion(self) -> bool:
-        """Check if this is a positive emotion."""
-        positive_emotions = {"delight", "satisfaction", "focus"}
-        return self.primary_emotion in positive_emotions
+        """Check if this is a positive behavioral state."""
+        return self.primary_emotion in {"engaged"}
 
     def get_emotion_sentiment(self) -> str:
         """Get sentiment category (positive, negative, neutral)."""
@@ -166,21 +165,21 @@ class EmotionSession(Base):
     )
     variant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=True)
 
-    # ── Emotion Summary ───────────────────────────────────────────────
+    # ── Behavioral State Summary ───────────────────────────────────────────────
 
     dominant_emotion: Mapped[str] = mapped_column(String(32), nullable=True)
 
-    # Emotion timeline: list of { timestamp, emotion, confidence }
+    # Behavioral state timeline: list of { timestamp, state, confidence }
     emotion_timeline: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
 
-    # Weighted emotion scores (0-1 range)
-    frustration_score: Mapped[float] = mapped_column(
+    # Weighted behavioral state scores (0-1 range)
+    frustrated_score: Mapped[float] = mapped_column(
         Float, nullable=False, server_default="0"
     )
-    confusion_score: Mapped[float] = mapped_column(
+    confused_score: Mapped[float] = mapped_column(
         Float, nullable=False, server_default="0"
     )
-    delight_score: Mapped[float] = mapped_column(
+    engaged_score: Mapped[float] = mapped_column(
         Float, nullable=False, server_default="0"
     )
 
@@ -207,24 +206,21 @@ class EmotionSession(Base):
     # ── Helper Methods ───────────────────────────────────────────────
 
     def get_primary_sentiment(self) -> str:
-        """Get sentiment of dominant emotion."""
+        """Get sentiment of dominant behavioral state."""
         emotion_to_sentiment = {
-            "confusion": "negative",
-            "frustration": "negative",
-            "anxiety": "negative",
-            "boredom": "negative",
-            "delight": "positive",
-            "satisfaction": "positive",
-            "focus": "positive",
-            "hesitation": "neutral",
+            "frustrated": "negative",
+            "confused": "negative",
+            "disengaged": "negative",
+            "engaged": "positive",
+            "hesitating": "neutral",
         }
         return emotion_to_sentiment.get(self.dominant_emotion, "neutral")
 
     def is_at_risk(self) -> bool:
-        """Check if session has negative emotion risk."""
+        """Check if session has negative behavioral state risk."""
         return (
-            self.frustration_score > 0.5
-            or self.confusion_score > 0.5
+            self.frustrated_score > 0.5
+            or self.confused_score > 0.5
             or (self.churn_risk is not None and self.churn_risk > 0.5)
         )
 
@@ -232,17 +228,17 @@ class EmotionSession(Base):
         self,
         emotion_scores: dict[str, float],
     ) -> None:
-        """Update weighted emotion scores from recent classifications.
+        """Update weighted behavioral state scores from recent classifications.
 
         Args:
-            emotion_scores: Dict of emotion to confidence score.
+            emotion_scores: Dict of behavioral state to confidence score.
         """
-        if "frustration" in emotion_scores:
-            self.frustration_score = emotion_scores["frustration"]
-        if "confusion" in emotion_scores:
-            self.confusion_score = emotion_scores["confusion"]
-        if "delight" in emotion_scores:
-            self.delight_score = emotion_scores["delight"]
+        if "frustrated" in emotion_scores:
+            self.frustrated_score = emotion_scores["frustrated"]
+        if "confused" in emotion_scores:
+            self.confused_score = emotion_scores["confused"]
+        if "engaged" in emotion_scores:
+            self.engaged_score = emotion_scores["engaged"]
 
     def to_dict(self) -> dict:
         """Serialize to dictionary."""
@@ -254,9 +250,9 @@ class EmotionSession(Base):
             "variant_id": str(self.variant_id) if self.variant_id else None,
             "dominant_emotion": self.dominant_emotion,
             "emotion_timeline": self.emotion_timeline,
-            "frustration_score": round(self.frustration_score, 4),
-            "confusion_score": round(self.confusion_score, 4),
-            "delight_score": round(self.delight_score, 4),
+            "frustrated_score": round(self.frustrated_score, 4),
+            "confused_score": round(self.confused_score, 4),
+            "engaged_score": round(self.engaged_score, 4),
             "converted": self.converted,
             "revenue": self.revenue,
             "churn_risk": self.churn_risk,

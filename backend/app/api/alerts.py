@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/v1/alerts", tags=["alerts"])
 
 class AlertRuleCreate(BaseModel):
     name: str = Field(..., description="Alert name")
-    emotion: str = Field(..., description="Emotion to track: frustration, confusion, anxiety, hesitation")
+    emotion: str = Field(..., description="Behavioral state to track: frustrated, confused, hesitating, engaged, disengaged")
     threshold: float = Field(..., gt=0, le=100, description="Threshold percentage (0-100)")
     page_url: str | None = Field(None, description="Page URL to monitor, null = any page")
     time_window: str = Field("1h", description="Time window: 1h, 24h, 7d")

@@ -3,13 +3,12 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
-import { fetchSessions, fetchSessionReplay, type SessionFilters, type SessionReplayResponse } from "@/lib/api";
+import { fetchSessions, type SessionFilters } from "@/lib/api";
 import { Card, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 import ErrorBox from "@/components/ui/ErrorBox";
 import EmptyState from "@/components/ui/EmptyState";
-import { SessionReplayViewer } from "@/components/replay/SessionReplayViewer";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -179,7 +178,6 @@ export default function SessionsPage() {
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [replaySession, setReplaySession] = useState<{ id: string; data: SessionReplayResponse } | null>(null);
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
   const fetcher = useCallback(() => fetchSessions(filters), [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -263,24 +261,6 @@ export default function SessionsPage() {
     setSelectedEmotion(emotion);
     setFilter("emotion", emotion || undefined);
   }, [setFilter]);
-
-  // Load replay data for a session
-  const loadReplay = useCallback(async (sessionId: string) => {
-    try {
-      const replayData = await fetchSessionReplay(sessionId);
-      if (!replayData.has_replay) {
-        alert("No replay data available for this session.");
-        return;
-      }
-      if (!replayData.mouse_path || replayData.mouse_path.length === 0) {
-        alert("Replay data exists but has no mouse movement points.");
-        return;
-      }
-      setReplaySession({ id: sessionId, data: replayData });
-    } catch (err) {
-      alert("Failed to load replay: " + (err instanceof Error ? err.message : "Unknown error"));
-    }
-  }, []);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -529,20 +509,22 @@ export default function SessionsPage() {
                       {formatTimeAgo(s.started_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {s.has_replay && (
+                      {s.has_replay ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            loadReplay(s.id);
+                            window.location.href = `/dashboard/sessions/${s.id}?replay=true`;
                           }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[hsl(var(--primary))] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                          title="Watch replay"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          title="View replay"
                         >
                           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                           </svg>
                           Replay
                         </button>
+                      ) : (
+                        <span className="text-[11px] text-[hsl(var(--muted-foreground))]">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
@@ -592,21 +574,7 @@ export default function SessionsPage() {
         </Card>
       )}
 
-      {/* Replay Modal */}
-      {replaySession && replaySession.data.has_replay && replaySession.data.mouse_path && (
-        <SessionReplayViewer
-          sessionId={replaySession.id}
-          mousePath={replaySession.data.mouse_path}
-          emotions={replaySession.data.emotions || []}
-          pageUrl={replaySession.data.page_url}
-          pageTitle={replaySession.data.page_title}
-          pageWidth={replaySession.data.page_width}
-          pageHeight={replaySession.data.page_height}
-          devicePixelRatio={replaySession.data.device_pixel_ratio}
-          durationSeconds={replaySession.data.duration_seconds}
-          onClose={() => setReplaySession(null)}
-        />
-      )}
+      {/* Replay removed - will be replaced with rrweb */}
     </div>
   );
 }

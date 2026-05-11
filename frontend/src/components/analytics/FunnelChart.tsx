@@ -29,16 +29,14 @@ export interface FunnelChartProps {
   width?: number;
 }
 
-// ── Emotion Utilities ────────────────────────────────────────
+// ── Behavioral State Utilities ────────────────────────────────────────
 
 const EMOTION_COLORS: Record<string, { bg: string; icon: string }> = {
-  confusion: { bg: "#F59E0B", icon: "😕" },
-  frustration: { bg: "#EF4444", icon: "😤" },
-  delight: { bg: "#10B981", icon: "😊" },
-  anxiety: { bg: "#8B5CF6", icon: "😰" },
-  satisfaction: { bg: "#3B82F6", icon: "😌" },
-  hesitation: { bg: "#FBBF24", icon: "🤔" },
-  focus: { bg: "#60A5FA", icon: "🎯" },
+  frustrated: { bg: "#EF4444", icon: "😤" },
+  confused: { bg: "#F59E0B", icon: "😕" },
+  hesitating: { bg: "#EAB308", icon: "🤔" },
+  engaged: { bg: "#22C55E", icon: "😊" },
+  disengaged: { bg: "#6B7280", icon: "😴" },
 };
 
 const getEmotionColor = (emotion: string) =>

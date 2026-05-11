@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, memo } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, memo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@/lib/hooks";
 import { fetchSessionDetail, fetchInterventionRecs } from "@/lib/api";
+import { SessionReplay } from "@/components/dashboard/SessionReplay";
 import {
   formatDate, formatRisk, formatDuration, formatPercent,
   riskVariant, outcomeVariant,
@@ -23,20 +24,20 @@ const EMOTION_COLORS: Record<string, string> = {
   insufficient_data: "#D1D5DB",
 };
 
-// Map old 8 emotions to new 4 emotions for backward compatibility
+// Map old 8 emotions to new 5 behavioral states for backward compatibility
 const EMOTION_CONSOLIDATION_MAP: Record<string, string> = {
   // Old names -> New names
   frustration: "frustrated",
   anxiety: "frustrated",
   confusion: "confused",
+  hesitation: "hesitating",
   focus: "engaged",
   satisfaction: "engaged",
   delight: "engaged",
   boredom: "disengaged",
-  hesitation: "disengaged",
 };
 
-// Helper to get the consolidated emotion name
+// Helper to get the consolidated behavioral state name
 function getConsolidatedEmotion(emotion: string): string {
   return EMOTION_CONSOLIDATION_MAP[emotion] || emotion;
 }
@@ -314,8 +315,99 @@ function formatEventDetails(e: { type: string; x: number | null; y: number | nul
   return parts.length > 0 ? parts.join(" • ") : "--";
 }
 
+// ── Key Moments Calculation ─────────────────────────────────────
+
+interface KeyMomentsCount {
+  rageClicks: number;
+  exitIntents: number;
+  scrollRetreats: number;
+  longPauses: number;
+  erraticMovements: number;
+  total: number;
+}
+
+function calculateKeyMoments(events: { type: string; metadata: Record<string, unknown> | null; velocity: number | null; ts: string }[]): KeyMomentsCount {
+  const counts = {
+    rageClicks: 0,
+    exitIntents: 0,
+    scrollRetreats: 0,
+    longPauses: 0,
+    erraticMovements: 0,
+    total: 0,
+  };
+
+  // Track timestamps for pause detection
+  let prevTimestamp: number | null = null;
+  const PAUSE_THRESHOLD_MS = 3000; // 3 seconds
+
+  for (const event of events) {
+    // Count rage clicks
+    if (event.metadata?.rage_click) {
+      counts.rageClicks++;
+    }
+
+    // Count exit intents
+    if (event.type === "exit_intent") {
+      counts.exitIntents++;
+    }
+
+    // Count scroll retreats
+    if (event.metadata?.is_retreat) {
+      counts.scrollRetreats++;
+    }
+
+    // Count long pauses (gaps of 3+ seconds between events)
+    if (prevTimestamp !== null) {
+      const currentTimestamp = new Date(event.ts).getTime();
+      const gap = currentTimestamp - prevTimestamp;
+      if (gap >= PAUSE_THRESHOLD_MS) {
+        counts.longPauses++;
+      }
+    }
+    prevTimestamp = new Date(event.ts).getTime();
+
+    // Count erratic movements (high velocity > 3000px/s)
+    if (event.velocity !== null && event.velocity > 3000) {
+      counts.erraticMovements++;
+    }
+  }
+
+  counts.total = counts.rageClicks + counts.exitIntents + counts.scrollRetreats + counts.longPauses + counts.erraticMovements;
+
+  return counts;
+}
+
+// Get dominant behavioral state from emotion scores
+function getDominantState(emotionScores: Record<string, number> | undefined): { state: string; percentage: number } {
+  if (!emotionScores || Object.keys(emotionScores).length === 0) {
+    return { state: "N/A", percentage: 0 };
+  }
+
+  // Consolidate old 8 emotions to new 5 behavioral states
+  const consolidated: Record<string, number> = {};
+  for (const [emotion, score] of Object.entries(emotionScores)) {
+    const mapped = getConsolidatedEmotion(emotion);
+    consolidated[mapped] = (consolidated[mapped] || 0) + score;
+  }
+
+  // Find the state with highest score
+  let maxScore = 0;
+  let dominantState = "unknown";
+  for (const [state, score] of Object.entries(consolidated)) {
+    if (score > maxScore) {
+      maxScore = score;
+      dominantState = state;
+    }
+  }
+
+  return { state: dominantState, percentage: Math.round(maxScore * 100) };
+}
+
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const showReplay = searchParams.get("replay") === "true";
+
   const sessionFetcher = useCallback(() => fetchSessionDetail(id), [id]);
   const interventionFetcher = useCallback(() => fetchInterventionRecs(id), [id]);
   const session = useQuery(sessionFetcher, [id], `session-${id}`);
@@ -330,35 +422,48 @@ export default function SessionDetailPage() {
 
   return (
     <div className="space-y-6 animate-slide-in">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))]">
-        <Link href="/dashboard/sessions" className="transition-colors hover:text-[hsl(var(--primary))]">
-          Sessions
-        </Link>
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-        </svg>
-        <span className="font-medium text-[hsl(var(--foreground))]">{s.id.slice(0, 12)}...</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">
-            Session
-          </h1>
-          <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{s.page_url}</p>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))]">
+          <Link href="/dashboard/sessions" className="transition-colors hover:text-[hsl(var(--primary))]">
+            Sessions
+          </Link>
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+          <span className="font-medium text-[hsl(var(--foreground))]">{s.id.slice(0, 12)}...</span>
         </div>
-        <Badge variant={outcomeVariant(s.outcome)}>{(() => {
-          // If session ended but outcome is still unknown, show "Left" (matches sessions list behavior)
-          if (s.outcome === "unknown" && s.ended_at) {
-            return "Left";
-          }
-          return OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome;
-        })()}</Badge>
-      </div>
 
-      {/* Top Stat Cards .  Prompt 21 */}
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[26px] font-bold tracking-tight text-[hsl(var(--foreground))]">
+              Session
+            </h1>
+            <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{s.page_url}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {s.has_replay && !showReplay && (
+              <Link
+                href={`?replay=true`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                View Replay
+              </Link>
+            )}
+            <Badge variant={outcomeVariant(s.outcome)}>{(() => {
+              // If session ended but outcome is still unknown, show "Left" (matches sessions list behavior)
+              if (s.outcome === "unknown" && s.ended_at) {
+                return "Left";
+              }
+              return OUTCOME_LABELS[s.outcome as keyof typeof OUTCOME_LABELS] || s.outcome;
+            })()}</Badge>
+          </div>
+        </div>
+
+        {/* Top Stat Cards .  Prompt 21 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricBox label="Page URL" value={formatPageUrl(s.page_url)} />
         <MetricBox label="Duration" value={formatDuration(s.ended_at ? (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000 : null)} />
@@ -380,6 +485,77 @@ export default function SessionDetailPage() {
           variant={outcomeVariant(s.outcome)}
         />
       </div>
+
+      {/* Session Summary Card - Key Moments */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
+            Session Summary
+          </h2>
+          <p className="mt-0.5 text-[12px] text-[hsl(var(--muted-foreground))]">
+            Key behavioral moments detected during this session
+          </p>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Dominant Behavioral State */}
+            <div className="flex flex-col items-center justify-center rounded-xl border border-[hsl(var(--border))] p-5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Dominant State</span>
+              {(() => {
+                const dominant = getDominantState(s.emotion_scores);
+                return (
+                  <>
+                    <span
+                      className="mt-2 text-[28px] font-bold capitalize"
+                      style={{ color: EMOTION_COLORS[getConsolidatedEmotion(dominant.state)] || 'hsl(var(--foreground))' }}
+                    >
+                      {dominant.state === "N/A" ? "Unknown" : dominant.state}
+                    </span>
+                    <span className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">
+                      {dominant.percentage}% of session
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Key Moments Count */}
+            <div className="flex flex-col justify-center rounded-xl border border-[hsl(var(--border))] p-5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Key Moments</span>
+              {(() => {
+                const keyMoments = calculateKeyMoments(s.events);
+                return (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-[hsl(var(--foreground))]">🔥 Rage clicks</span>
+                      <span className="font-semibold text-[hsl(var(--foreground))]">{keyMoments.rageClicks}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-[hsl(var(--foreground))]">🚪 Exit intents</span>
+                      <span className="font-semibold text-[hsl(var(--foreground))]">{keyMoments.exitIntents}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-[hsl(var(--foreground))]">⚠️ Scroll retreats</span>
+                      <span className="font-semibold text-[hsl(var(--foreground))]">{keyMoments.scrollRetreats}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-[hsl(var(--foreground))]">⏸️ Long pauses</span>
+                      <span className="font-semibold text-[hsl(var(--foreground))]">{keyMoments.longPauses}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-[hsl(var(--foreground))]">⚡ Erratic moves</span>
+                      <span className="font-semibold text-[hsl(var(--foreground))]">{keyMoments.erraticMovements}</span>
+                    </div>
+                    {keyMoments.total === 0 && (
+                      <p className="mt-2 text-[12px] text-[hsl(var(--muted-foreground))]">No key moments detected</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
 
       {s.primary_emotion && (
         <Card>
@@ -588,6 +764,33 @@ export default function SessionDetailPage() {
           </svg>
         </Link>
       </div>
+
+      {/* rrweb Session Replay */}
+      {showReplay && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-[hsl(var(--foreground))]">
+                  Session Replay
+                </h2>
+                <p className="mt-0.5 text-[12px] text-[hsl(var(--muted-foreground))]">
+                  Watch exactly what happened during this session
+                </p>
+              </div>
+              <Link
+                href={`/dashboard/sessions/${s.id}`}
+                className="text-[13px] text-[hsl(var(--primary))] hover:underline"
+              >
+                Close replay
+              </Link>
+            </div>
+          </CardHeader>
+          <CardBody className="p-0">
+            <SessionReplay sessionId={s.id} />
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

@@ -282,9 +282,9 @@ class EmotionService:
 
         # Calculate scores
         emotion_scores = result.all_scores
-        frustration_score = emotion_scores.get("frustration", 0.0)
-        confusion_score = emotion_scores.get("confusion", 0.0)
-        delight_score = emotion_scores.get("delight", 0.0)
+        frustrated_score = emotion_scores.get("frustrated", 0.0)
+        confused_score = emotion_scores.get("confused", 0.0)
+        engaged_score = emotion_scores.get("engaged", 0.0)
 
         # Get outcome info if available
         converted = user_session.outcome == "purchase" if user_session else None
@@ -306,9 +306,9 @@ class EmotionService:
                 variant_id=variant_id,
                 dominant_emotion=result.primary_emotion,
                 emotion_timeline=emotion_timeline,
-                frustration_score=frustration_score,
-                confusion_score=confusion_score,
-                delight_score=delight_score,
+                frustrated_score=frustrated_score,
+                confused_score=confused_score,
+                engaged_score=engaged_score,
                 converted=converted,
                 revenue=revenue,
             )
@@ -569,14 +569,14 @@ class EmotionService:
             return 0.0
 
         # Calculate churn risk
-        frustration = session.frustration_score
-        confusion = session.confusion_score
-        delight = session.delight_score
+        frustrated = session.frustrated_score
+        confused = session.confused_score
+        engaged = session.engaged_score
 
         churn_risk = (
-            frustration * 0.4 +
-            confusion * 0.3 +
-            (1.0 - min(delight, 1.0)) * 0.3
+            frustrated * 0.4 +
+            confused * 0.3 +
+            (1.0 - min(engaged, 1.0)) * 0.3
         )
 
         # Update and save
@@ -628,22 +628,22 @@ class EmotionService:
                 continue
 
             # Calculate averages
-            avg_frustration = sum(s.frustration_score for s in sessions) / len(sessions)
-            avg_confusion = sum(s.confusion_score for s in sessions) / len(sessions)
-            avg_delight = sum(s.delight_score for s in sessions) / len(sessions)
+            avg_frustrated = sum(s.frustrated_score for s in sessions) / len(sessions)
+            avg_confused = sum(s.confused_score for s in sessions) / len(sessions)
+            avg_engaged = sum(s.engaged_score for s in sessions) / len(sessions)
             conversion_rate = sum(1 for s in sessions if s.converted) / len(sessions)
 
-            # Identify primary emotion opportunity
+            # Identify primary behavioral state opportunity
             emotion_opportunity = None
-            if avg_frustration > 0.3:
-                emotion_opportunity = "frustration"
-            elif avg_confusion > 0.3:
-                emotion_opportunity = "confusion"
-            elif avg_delight > 0.5:
-                emotion_opportunity = "delight"
+            if avg_frustrated > 0.3:
+                emotion_opportunity = "frustrated"
+            elif avg_confused > 0.3:
+                emotion_opportunity = "confused"
+            elif avg_engaged > 0.5:
+                emotion_opportunity = "engaged"
 
             # Calculate scores
-            frustration_reduction = 1.0 - min(avg_frustration, 1.0)
+            frustration_reduction = 1.0 - min(avg_frustrated, 1.0)
             estimated_lift = (conversion_rate - 0.04) * 100  # Assume 4% baseline
 
             # ROI score

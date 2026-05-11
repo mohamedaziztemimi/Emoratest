@@ -1,4 +1,4 @@
-"""SessionReplayData model for emotion replay feature."""
+"""SessionReplayData model for rrweb-based session replay."""
 
 import uuid
 from datetime import datetime
@@ -11,7 +11,7 @@ from app.models.base import Base
 
 
 class SessionReplayData(Base):
-    """Stores mouse path and page metadata for session replay visualization."""
+    """Stores rrweb DOM recording events for session replay visualization."""
 
     __tablename__ = "session_replay_data"
 
@@ -24,19 +24,17 @@ class SessionReplayData(Base):
         nullable=False,
         unique=True,  # One replay record per session
     )
-    # Mouse path: array of {x, y, timestamp, viewport_width, viewport_height, scroll_x, scroll_y}
-    # and page_change events: {type: "page_change", url, timestamp}
-    mouse_path: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    # Page metadata captured at session start
+    # rrweb events array (DOM recording data)
+    rrweb_events: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+
+    # Recording metadata
+    events_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    compressed_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    recording_duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Page metadata
     page_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    page_title: Mapped[str | None] = mapped_column(Text, nullable=True)
-    page_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    page_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    device_pixel_ratio: Mapped[float | None] = mapped_column(Integer, nullable=True)
-
-    # Base64-encoded JPEG screenshot of the page (captured by SDK via html2canvas)
-    page_screenshot: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Timestamp when this record was created
     created_at: Mapped[datetime] = mapped_column(

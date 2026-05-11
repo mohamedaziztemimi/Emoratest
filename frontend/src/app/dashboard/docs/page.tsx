@@ -148,7 +148,7 @@ export default function DocsPage() {
               <section id="getting-started" className="mb-16 scroll-mt-8">
                 <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
                 <p className="text-[hsl(var(--muted-foreground))] mb-4">
-                  EmoraTest detects 4 behavioral states from user behavior patterns: frustrated, confused, engaged, and disengaged. Install the SDK to start tracking sessions and get emotion insights.
+                  EmoraTest detects 5 behavioral states from user behavior patterns: frustrated, confused, hesitating, engaged, and disengaged. Install the SDK to start tracking sessions and get behavioral insights.
                 </p>
                 <div className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))]">
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">

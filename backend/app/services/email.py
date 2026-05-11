@@ -454,29 +454,23 @@ If you didn't create an account, you can safely ignore this email.
         time_window: str,
     ) -> bool:
         """Send alert notification email when emotion threshold is exceeded."""
-        # Emoji mapping for emotions
+        # Emoji mapping for 5 behavioral states
         emotion_emojis = {
-            "confusion": "😕",
-            "frustration": "😤",
-            "delight": "😊",
-            "anxiety": "😰",
-            "hesitation": "🤔",
-            "focus": "🎯",
-            "boredom": "😴",
-            "satisfaction": "😌",
+            "frustrated": "😤",
+            "confused": "😕",
+            "hesitating": "🤔",
+            "engaged": "😊",
+            "disengaged": "😴",
         }
         emoji = emotion_emojis.get(emotion, "⚠️")
 
-        # Emotion colors
+        # Behavioral state colors
         emotion_colors = {
-            "confusion": "#F59E0B",
-            "frustration": "#EF4444",
-            "delight": "#10B981",
-            "anxiety": "#F97316",
-            "hesitation": "#8B5CF6",
-            "focus": "#3B82F6",
-            "boredom": "#6B7280",
-            "satisfaction": "#059669",
+            "frustrated": "#EF4444",
+            "confused": "#F59E0B",
+            "hesitating": "#EAB308",
+            "engaged": "#22C55E",
+            "disengaged": "#6B7280",
         }
         color = emotion_colors.get(emotion, "#007BFF")
 

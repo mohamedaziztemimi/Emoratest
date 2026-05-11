@@ -46,8 +46,8 @@ export default function PrivacyPage() {
               keystrokes, form inputs, screenshots, or camera/microphone data.
             </p>
             <p>
-              All behavioral data is processed to detect emotional patterns (frustration,
-              confusion, satisfaction, etc.) using machine learning. No individual
+              All behavioral data is processed to detect behavioral states (frustrated,
+              confused, engaged, etc.) using machine learning. No individual
               identification is possible from this data.
             </p>
           </div>

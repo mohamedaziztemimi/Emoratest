@@ -16,16 +16,16 @@
   --et-glass-blur: blur(12px);
   --et-glass-dark: rgba(0, 0, 0, 0.25);
 
-  /* Emotion Colors */
+  /* Behavioral State Colors (5 states refactored from 8 emotions) */
+  --et-frustrated: #EF4444;      /* red - rage clicks, erratic movement */
+  --et-confused: #F59E0B;        /* amber - back-and-forth scrolling, aimless hovering */
+  --et-hesitating: #EAB308;     /* yellow - hovering near CTAs without clicking */
+  --et-engaged: #22C55E;         /* green - steady movement, completing actions */
+  --et-disengaged: #6B7280;      /* gray - inactivity, fast scroll past content */
+
+  /* Legacy aliases (for migration) */
   --et-confusion: #F59E0B;
   --et-frustration: #EF4444;
-  --et-delight: #10B981;
-  --et-focus: #3B82F6;
-  --et-anxiety: #F97316;
-  --et-boredom: #6B7280;
-  --et-hesitation: #8B5CF6;
-  --et-satisfaction: #059669;
-  --et-satisfaction-emerald: #10B981;
 
   /* Dark Mode Base (default) */
   --et-bg-900: #0A0B0F;

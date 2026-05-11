@@ -27,14 +27,11 @@ interface AlertHistoryItem {
 }
 
 const EMOTIONS = [
-  { value: "frustration", label: "Frustrated", color: "#EF4444" },
-  { value: "confusion", label: "Confused", color: "#F59E0B" },
-  { value: "anxiety", label: "Anxious", color: "#F97316" },
-  { value: "hesitation", label: "Hesitating", color: "#8B5CF6" },
-  { value: "satisfaction", label: "Satisfied", color: "#10B981" },
-  { value: "delight", label: "Delighted", color: "#059669" },
-  { value: "boredom", label: "Bored", color: "#6B7280" },
-  { value: "focus", label: "Focused", color: "#3B82F6" },
+  { value: "frustrated", label: "Frustrated", color: "#EF4444" },
+  { value: "confused", label: "Confused", color: "#F59E0B" },
+  { value: "hesitating", label: "Hesitating", color: "#EAB308" },
+  { value: "engaged", label: "Engaged", color: "#22C55E" },
+  { value: "disengaged", label: "Disengaged", color: "#6B7280" },
 ];
 
 const TIME_WINDOWS = [

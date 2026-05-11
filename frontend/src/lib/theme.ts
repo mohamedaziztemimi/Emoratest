@@ -17,30 +17,37 @@ export interface EmotionConfig {
 
 /**
  * Emotion type to configuration mapping
+ * 5 Behavioral States (refactored from 8 emotions)
  */
 export const EMOTION_CONFIG: Record<string, EmotionConfig> = {
   frustrated: {
-    color: "var(--et-frustration)",
+    color: "#EF4444", // red
     label: "Frustrated",
     icon: "😤",
-    gradient: "linear-gradient(135deg, var(--et-frustration) 0%, #DC2626 100%)",
+    gradient: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
   },
   confused: {
-    color: "var(--et-confusion)",
+    color: "#F59E0B", // amber
     label: "Confused",
     icon: "😕",
     gradient: null,
   },
-  engaged: {
-    color: "var(--et-delight)",
-    label: "Engaged",
-    icon: "😊",
+  hesitating: {
+    color: "#EAB308", // yellow
+    label: "Hesitating",
+    icon: "🤔",
     gradient: null,
   },
+  engaged: {
+    color: "#22C55E", // green
+    label: "Engaged",
+    icon: "😊",
+    gradient: "linear-gradient(135deg, #22C55E 0%, #10B981 100%)",
+  },
   disengaged: {
-    color: "var(--et-boredom)",
+    color: "#6B7280", // gray
     label: "Disengaged",
-    icon: "😑",
+    icon: "😴",
     gradient: null,
   },
   insufficient_data: {

@@ -197,25 +197,25 @@ class _AsyncQueryAdapter:
         return result.all()
 
 
-# Map old 8 emotions to new 4 emotions for backward compatibility
+# Map old 8 emotions to new 5 behavioral states for backward compatibility
 EMOTION_CONSOLIDATION_MAP = {
     "frustration": "frustrated",
     "anxiety": "frustrated",
     "confusion": "confused",
+    "hesitation": "hesitating",
     "focus": "engaged",
     "satisfaction": "engaged",
     "delight": "engaged",
     "boredom": "disengaged",
-    "hesitation": "disengaged",
 }
 
 NEGATIVE_EMOTIONS = ["frustrated", "confused", "disengaged"]
 
-ALL_EMOTIONS = ["frustrated", "confused", "engaged", "disengaged"]
+ALL_BEHAVIORAL_STATES = ["frustrated", "confused", "hesitating", "engaged", "disengaged"]
 
 
 def _consolidate_emotion(emotion: str) -> str:
-    """Map old emotion names to new 4-emotion system."""
+    """Map old emotion names to new 5-state behavioral system."""
     return EMOTION_CONSOLIDATION_MAP.get(emotion, emotion)
 
 

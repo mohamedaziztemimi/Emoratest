@@ -83,7 +83,7 @@ function AfterMockup() {
         <path
           d="M 65 75 L 135 75 L 120 95 L 80 95 Z"
           fill="rgba(16,185,129,0.1)"
-          stroke="var(--et-delight)"
+          stroke="var(--et-engaged)"
           strokeWidth="0.5"
         />
 
@@ -172,8 +172,8 @@ export function BeforeAfterSlide({
         {after.stats && (
           <div className="mt-3 space-y-1">
             {after.stats.map((stat, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px] text-[var(--et-satisfaction)]">
-                <div className="w-1 h-1 rounded-full bg-[var(--et-satisfaction)]" />
+              <div key={i} className="flex items-center gap-2 text-[12px] text-[var(--et-engaged)]">
+                <div className="w-1 h-1 rounded-full bg-[var(--et-engaged)]" />
                 {stat}
               </div>
             ))}

@@ -23,7 +23,7 @@ class SessionListItem(BaseModel):
     arousal: float | None = None
     ip_address: str | None = None
     user_agent: str | None = None
-    has_replay: bool = False
+    has_replay: bool = False  # Whether rrweb replay data exists
 
 
 class SessionListResponse(BaseModel):
@@ -258,38 +258,21 @@ class AlertCountResponse(BaseModel):
     count: int = 0
 
 
-# ── Session Replay ──────────────────────────────────────────────────
-
-
-class MousePathPoint(BaseModel):
-    x: float
-    y: float
-    timestamp: int
-    scroll_x: float = 0
-    scroll_y: float = 0
-    viewport_width: int = 1920
-    viewport_height: int = 1080
+# ── Session Replay (rrweb) ──────────────────────────────────────────
 
 
 class EmotionEventOut(BaseModel):
-    timestamp: str
-    primary_emotion: str
-    confidence: float
-    valence: float | None = None
-    arousal: float | None = None
+    """Emotion event with timestamp for replay overlay."""
+    timestamp: float  # Unix timestamp in seconds
+    emotion: str  # frustrated, confused, engaged, disengaged, hesitating
+    confidence: float | None = None
 
 
 class SessionReplayResponse(BaseModel):
-    session_id: str
+    """Response for rrweb replay data request."""
     has_replay: bool
-    # Mouse path data
-    mouse_path: list[MousePathPoint] | None = None
+    events: list[dict] = []  # rrweb event array
+    duration_ms: int = 0
+    events_count: int = 0
+    emotions: list[EmotionEventOut] = []  # Emotion events for overlay
     page_url: str | None = None
-    page_title: str | None = None
-    page_width: int | None = None
-    page_height: int | None = None
-    device_pixel_ratio: float | None = None
-    # Emotion data for syncing to cursor
-    emotions: list[EmotionEventOut] | None = None
-    # Session metadata
-    duration_seconds: int | None = None

@@ -31,7 +31,7 @@
  */
 
 import type { EventQueue } from "./event-queue";
-import type { RawEvent, MousePathPoint, PageChangeEvent, PathEntry } from "./types";
+import type { RawEvent } from "./types";
 import { getElementId, isoNow, throttle } from "./utils";
 import { enrichEventElement } from "./semantic";
 
@@ -40,83 +40,6 @@ type MetadataProvider = () => Record<string, unknown> | null;
 
 // Default metadata provider (returns null)
 const defaultMetadataProvider: MetadataProvider = () => null;
-
-// ── Mouse Path Tracker for Replay ─────────────────────────────────────
-
-/** Page metadata captured at session start for replay. */
-export interface PageMetadata {
-  page_url: string;
-  page_title: string;
-  page_width: number;
-  page_height: number;
-  device_pixel_ratio: number;
-}
-
-/** Manages mouse path coordinate array and page metadata for replay visualization. */
-export class MousePathTracker {
-  private path: PathEntry[] = [];
-  private readonly maxPoints: number = 3000; // Max ~5 min at 10/sec
-  private pageMetadata: PageMetadata | null = null;
-
-  /** Capture page metadata (call once at session start). */
-  capturePageMetadata(): PageMetadata {
-    this.pageMetadata = {
-      page_url: window.location.href,
-      page_title: document.title,
-      page_width: document.documentElement.scrollWidth,
-      page_height: document.documentElement.scrollHeight,
-      device_pixel_ratio: window.devicePixelRatio || 1,
-    };
-    return this.pageMetadata;
-  }
-
-  /** Get the captured page metadata. */
-  getPageMetadata(): PageMetadata | null {
-    return this.pageMetadata;
-  }
-
-  /** Add a mouse point to the path. Silently ignores if max reached. */
-  addPoint(point: MousePathPoint): void {
-    if (this.path.length < this.maxPoints) {
-      this.path.push(point);
-    }
-  }
-
-  /** Add a page change event to the path (for SPA navigation). */
-  addPageChange(url: string): void {
-    // Always add page changes (they're rare and important)
-    // But enforce max limit for total entries
-    if (this.path.length < this.maxPoints) {
-      const event: PageChangeEvent = {
-        type: "page_change",
-        url,
-        timestamp: Date.now(),
-      };
-      this.path.push(event);
-    }
-  }
-
-  /** Get all recorded entries (mouse points + page changes). */
-  getPath(): PathEntry[] {
-    return this.path;
-  }
-
-  /** Clear all recorded points and metadata. */
-  clear(): void {
-    this.path = [];
-    this.pageMetadata = null;
-  }
-
-  /** Get current path length. */
-  getLength(): number {
-    return this.path.length;
-  }
-
-  /** Check if path is full (max points reached). */
-  isFull(): boolean {
-    return this.path.length >= this.maxPoints;
-  }
-}
 
 // ── Mouse Move Collector ──────────────────────────────────────
 //
@@ -430,92 +353,5 @@ export function collectVisibility(
   return () => document.removeEventListener("visibilitychange", handler);
 }
 
-// ── Mouse Path Collector for Replay ───────────────────────────────
-//
-// Records scroll-aware X/Y coordinates for visual replay.
-// This is SEPARATE from the regular mouse_move events:
-//   - Uses pageX/pageY (scroll-aware) instead of clientX/clientY
-//   - Throttled to 100ms (10fps) for compact storage
-//   - Max 3000 points per session (~5 min at 10fps)
-//   - Stored in MousePathTracker, NOT in EventQueue
-//   - Included in batch payloads as mouse_path array
-
-export function collectMousePath(
-  tracker: MousePathTracker,
-  throttleMs: number = 100, // 10fps = 100ms
-): Cleanup {
-  const handler = throttle((e: unknown) => {
-    const ev = e as MouseEvent;
-
-    // Don't record if tracker is full
-    if (tracker.isFull()) return;
-
-    // Use pageX/pageY for scroll-aware coordinates
-    // Include scroll position for accurate replay
-    const point: MousePathPoint = {
-      x: ev.pageX,
-      y: ev.pageY,
-      timestamp: Date.now(),
-      viewport_width: window.innerWidth,
-      viewport_height: window.innerHeight,
-      scroll_x: window.scrollX,
-      scroll_y: window.scrollY,
-    };
-
-    tracker.addPoint(point);
-  }, throttleMs);
-
-  document.addEventListener("mousemove", handler, { passive: true });
-  return () => document.removeEventListener("mousemove", handler);
-}
-
-// ── Page Change Tracker for SPA Navigation ─────────────────────────
-//
-// Detects URL changes in single-page apps (pushState, replaceState, popstate)
-// and adds page_change events to the mouse path for replay context.
-
-export function collectPageChanges(
-  tracker: MousePathTracker,
-): Cleanup {
-  const cleanups: (() => void)[] = [];
-
-  // Helper to record a page change
-  const recordPageChange = (url: string) => {
-    tracker.addPageChange(url);
-  };
-
-  // 1. Intercept pushState and replaceState
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-
-  history.pushState = function(...args) {
-    originalPushState.apply(this, args);
-    recordPageChange(window.location.href);
-  };
-
-  history.replaceState = function(...args) {
-    originalReplaceState.apply(this, args);
-    recordPageChange(window.location.href);
-  };
-
-  cleanups.push(() => {
-    history.pushState = originalPushState;
-    history.replaceState = originalReplaceState;
-  });
-
-  // 2. Listen for popstate (back/forward button)
-  const popstateHandler = () => {
-    recordPageChange(window.location.href);
-  };
-  window.addEventListener("popstate", popstateHandler);
-  cleanups.push(() => window.removeEventListener("popstate", popstateHandler));
-
-  // 3. Listen for hash changes (for hash-based routing)
-  const hashchangeHandler = () => {
-    recordPageChange(window.location.href);
-  };
-  window.addEventListener("hashchange", hashchangeHandler);
-  cleanups.push(() => window.removeEventListener("hashchange", hashchangeHandler));
-
-  return () => cleanups.forEach(fn => fn());
-}
+// ── End of collectors ────────────────────────────────────────────────
+// Mouse path replay functions have been removed - will be replaced with rrweb

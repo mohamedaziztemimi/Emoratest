@@ -16,7 +16,7 @@ export interface DemoModalProps {
 
 const STATS = [
   { label: "+32% lift", gradient: "from-[var(--et-blue)] to-[var(--et-purple)]" },
-  { label: "2min setup", gradient: "from-[var(--et-delight)] to-emerald-400" },
+  { label: "2min setup", gradient: "from-[var(--et-engaged)] to-emerald-400" },
   { label: "85% accuracy", gradient: "from-[var(--et-blue)] to-cyan-400" },
 ];
 

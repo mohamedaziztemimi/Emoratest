@@ -58,17 +58,15 @@ class SegmentSizeEstimate:
 
 @dataclass
 class EmotionProfile:
-    """Emotional profile of a segment."""
+    """Behavioral profile of a segment (5 states)."""
 
     segment_id: str
     dominant_emotion: str
-    frustration_avg: float
-    confusion_avg: float
-    delight_avg: float
-    anxiety_avg: float
-    focus_avg: float
-    satisfaction_avg: float
-    hesitation_avg: float
+    frustrated_avg: float
+    confused_avg: float
+    hesitating_avg: float
+    engaged_avg: float
+    disengaged_avg: float
     conversion_rate: float
     total_users: int
 
@@ -484,15 +482,13 @@ class TargetingService:
         total_users = sum(row.count for row in emotion_data)
         dominant_emotion = max(emotion_data, key=lambda x: x.count)[0]
 
-        # Initialize all emotions
+        # Initialize 5 behavioral states
         emotion_avgs = {
-            "frustration": 0.0,
-            "confusion": 0.0,
-            "delight": 0.0,
-            "anxiety": 0.0,
-            "focus": 0.0,
-            "satisfaction": 0.0,
-            "hesitation": 0.0,
+            "frustrated": 0.0,
+            "confused": 0.0,
+            "hesitating": 0.0,
+            "engaged": 0.0,
+            "disengaged": 0.0,
         }
 
         for emotion, _count, avg in emotion_data:
@@ -505,13 +501,11 @@ class TargetingService:
         return EmotionProfile(
             segment_id=segment_id,
             dominant_emotion=dominant_emotion,
-            frustration_avg=emotion_avgs["frustration"],
-            confusion_avg=emotion_avgs["confusion"],
-            delight_avg=emotion_avgs["delight"],
-            anxiety_avg=emotion_avgs["anxiety"],
-            focus_avg=emotion_avgs["focus"],
-            satisfaction_avg=emotion_avgs["satisfaction"],
-            hesitation_avg=emotion_avgs["hesitation"],
+            frustrated_avg=emotion_avgs["frustrated"],
+            confused_avg=emotion_avgs["confused"],
+            hesitating_avg=emotion_avgs["hesitating"],
+            engaged_avg=emotion_avgs["engaged"],
+            disengaged_avg=emotion_avgs["disengaged"],
             conversion_rate=conversion_rate,
             total_users=total_users,
         )

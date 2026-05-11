@@ -114,7 +114,7 @@ export interface SessionListItem {
   arousal: number | null;
   ip_address: string | null;
   user_agent: string | null;
-  has_replay?: boolean;
+  has_replay: boolean;  // Whether rrweb replay data exists
 }
 
 export interface SessionListResponse {
@@ -186,41 +186,25 @@ export function fetchSessionDetail(id: string): Promise<SessionDetail> {
   return request(`/dashboard/sessions/${id}`);
 }
 
-// ── Session Replay ───────────────────────────────────────────
+// ── Session Replay (rrweb) ─────────────────────────────────────
 
-export interface MousePathPoint {
-  x: number;
-  y: number;
+export interface EmotionEvent {
   timestamp: number;
-  scroll_x: number;
-  scroll_y: number;
-  viewport_width: number;
-  viewport_height: number;
-}
-
-export interface EmotionEventOut {
-  timestamp: string;
-  primary_emotion: string;
-  confidence: number;
-  valence: number | null;
-  arousal: number | null;
+  emotion: string;
+  confidence?: number;
 }
 
 export interface SessionReplayResponse {
-  session_id: string;
   has_replay: boolean;
-  mouse_path: MousePathPoint[] | null;
-  page_url: string | null;
-  page_title: string | null;
-  page_width: number | null;
-  page_height: number | null;
-  device_pixel_ratio: number | null;
-  emotions: EmotionEventOut[] | null;
-  duration_seconds: number | null;
+  events: unknown[];
+  duration_ms: number;
+  events_count: number;
+  emotions: EmotionEvent[];
+  page_url?: string;
 }
 
-export function fetchSessionReplay(id: string): Promise<SessionReplayResponse> {
-  return request(`/dashboard/sessions/${id}/replay`);
+export function fetchSessionReplay(sessionId: string): Promise<SessionReplayResponse> {
+  return request(`/dashboard/sessions/${sessionId}/replay`);
 }
 
 // ── Analytics ────────────────────────────────────────────────

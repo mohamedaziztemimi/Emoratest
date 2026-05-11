@@ -1,6 +1,7 @@
 import typescript from "@rollup/plugin-typescript";
 import terser from "@rollup/plugin-terser";
 import dts from "rollup-plugin-dts";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
 
 const input = "src/index.ts";
 
@@ -15,6 +16,7 @@ export default [
       sourcemap: true,
     },
     plugins: [
+      nodeResolve(),
       typescript({ tsconfig: "./tsconfig.json" }),
       terser(),
     ],
@@ -28,6 +30,7 @@ export default [
       sourcemap: true,
     },
     plugins: [
+      nodeResolve(),
       typescript({ tsconfig: "./tsconfig.json" }),
       terser(),
     ],

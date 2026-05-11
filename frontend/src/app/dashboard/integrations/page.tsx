@@ -44,9 +44,9 @@ const COMING_SOON_TYPES = new Set(COMING_SOON_INTEGRATIONS.map((t) => t.value));
 
 const EVENT_OPTIONS = [
   { value: "session.end", label: "Session End" },
-  { value: "emotion.frustration", label: "Frustration Detected" },
-  { value: "emotion.confusion", label: "Confusion Detected" },
-  { value: "emotion.delight", label: "Delight Detected" },
+  { value: "emotion.frustrated", label: "Frustrated Detected" },
+  { value: "emotion.confused", label: "Confused Detected" },
+  { value: "emotion.engaged", label: "Engaged Detected" },
   { value: "experiment.completed", label: "Experiment Completed" },
   { value: "flag.evaluated", label: "Flag Evaluated" },
 ];

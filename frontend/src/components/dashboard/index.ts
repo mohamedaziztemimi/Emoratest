@@ -1,2 +1,2 @@
-export { ReplayViewer } from "./ReplayViewer";
 export { CopyButton } from "./CopyButton";
+export { SessionReplay } from "./SessionReplay";

@@ -23,8 +23,8 @@ const STEPS = [
   {
     number: "03",
     title: "Emotions Are Detected",
-    description: "Our ML model analyzes behavior patterns and classifies each session into one of 4 behavioral states. Results appear on your dashboard within seconds of the session ending.",
-    tag: "4 behaviors detected",
+    description: "Our XGBoost model analyzes behavior patterns and classifies each session into one of 8 emotions. Results appear on your dashboard within seconds of the session ending.",
+    tag: "8 emotions detected",
   },
   {
     number: "04",

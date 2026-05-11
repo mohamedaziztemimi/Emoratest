@@ -143,8 +143,8 @@ class StatsService:
     ANOMALY_Z_THRESHOLD = 3.0
     DEFAULT_ANOMALY_WINDOW = 24  # hours
 
-    # Funnel emotion categories
-    FUNNEL_EMOTIONS = ["confusion", "frustration", "delight", "anxiety", "satisfaction"]
+    # Funnel behavioral state categories
+    FUNNEL_EMOTIONS = ["confused", "frustrated", "engaged", "disengaged"]
 
     # ── Core Stats ────────────────────────────────────────
 
@@ -550,13 +550,13 @@ class StatsService:
         funnels_steps: list[FunnelStep] = []
         visitors = 10000
 
-        # Emotion colors for visualization
+        # Behavioral state colors for visualization
         emotion_colors = {
-            "confusion": "#F59E0B",
-            "frustration": "#EF4444",
-            "delight": "#10B981",
-            "anxiety": "#8B5CF6",
-            "satisfaction": "#3B82F6",
+            "frustrated": "#EF4444",
+            "confused": "#F59E0B",
+            "hesitating": "#EAB308",
+            "engaged": "#22C55E",
+            "disengaged": "#6B7280",
         }
 
         # Generate mock funnel steps

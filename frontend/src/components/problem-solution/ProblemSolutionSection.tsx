@@ -140,7 +140,7 @@ export function ProblemSolutionSection() {
           </h2>
           <p className="text-[16px] text-[var(--et-text-muted)] leading-relaxed">
             Traditional analytics show what happened. EmoraTest shows why .  with ML
-            that reads confusion, frustration, and delight in real-time.
+            that reads confusion, frustration, and engagement in real-time.
           </p>
         </div>
 
