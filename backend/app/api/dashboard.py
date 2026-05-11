@@ -52,7 +52,6 @@ from app.schemas.dashboard import (
     HeatmapPoint,
     HeatmapResponse,
     HeatmapSession,
-    MousePathPoint,
     SessionDetailResponse,
     SessionFeaturesOut,
     SessionListItem,
