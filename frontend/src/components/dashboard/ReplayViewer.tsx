@@ -118,15 +118,16 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
 
   // Skip screenshot loading delay for auth-protected pages
   useEffect(() => {
-    if (!data?.page_url) return;
+    const pageUrl = data?.page_url;
+    if (!pageUrl) return;
 
     const authProtectedPaths = ["/dashboard", "/login", "/signup", "/settings", "/admin", "/account", "/auth"];
     const isAuthProtected = authProtectedPaths.some(path => {
       try {
-        const url = new URL(data.page_url);
+        const url = new URL(pageUrl);
         return url.pathname.includes(path);
       } catch {
-        return data.page_url.includes(path);
+        return pageUrl.includes(path);
       }
     });
 
