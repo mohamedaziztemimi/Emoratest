@@ -116,6 +116,25 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
     loadReplay();
   }, [sessionId]);
 
+  // Skip screenshot loading delay for auth-protected pages
+  useEffect(() => {
+    if (!data?.page_url) return;
+
+    const authProtectedPaths = ["/dashboard", "/login", "/signup", "/settings", "/admin", "/account", "/auth"];
+    const isAuthProtected = authProtectedPaths.some(path => {
+      try {
+        const url = new URL(data.page_url);
+        return url.pathname.includes(path);
+      } catch {
+        return data.page_url.includes(path);
+      }
+    });
+
+    if (isAuthProtected) {
+      setScreenshotLoaded(false);
+    }
+  }, [data]);
+
   // Calculate scale to fit canvas
   useEffect(() => {
     if (!data?.mouse_path || data.mouse_path.length === 0) return;
@@ -403,9 +422,20 @@ export function ReplayViewer({ sessionId }: ReplayViewerProps) {
     ? (currentIndex / (mousePathWithEmotions.length - 1)) * 100
     : 0;
 
-  // Build thum.io screenshot URL
+  // Build thum.io screenshot URL - skip for auth-protected pages
   const pageUrl = data?.page_url || "";
-  const screenshotUrl = pageUrl
+  const authProtectedPaths = ["/dashboard", "/login", "/signup", "/settings", "/admin", "/account", "/auth"];
+  const isAuthProtected = authProtectedPaths.some(path => {
+    try {
+      const url = new URL(pageUrl);
+      return url.pathname.includes(path);
+    } catch {
+      // If URL parsing fails, check string directly
+      return pageUrl.includes(path);
+    }
+  });
+
+  const screenshotUrl = pageUrl && !isAuthProtected
     ? `https://image.thum.io/get/width/1440/crop/900/${encodeURIComponent(pageUrl)}`
     : null;
 
